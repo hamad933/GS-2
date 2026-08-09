@@ -123,7 +123,7 @@ test('captures desktop S04 and S05 evidence', async ({ page }) => {
 test('captures mobile S04 and S05 evidence', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openHome(page);
-  await page.locator(S04).getByRole('button', { name: /نقاط الربط/ }).tap();
+  await page.locator(S04).getByRole('button', { name: /نقاط الربط/ }).click();
   await expect(page.locator(S04)).toHaveAttribute('data-active', 'integrations');
   await captureSection(page, S04, 'mobile-s04-anatomy.png');
   await captureSection(page, S05, 'mobile-s05-gateway.png');
