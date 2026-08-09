@@ -1,0 +1,81 @@
+name: Visual Evidence
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - codex/implement-living-system-hero-s01
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'playwright.config.ts'
+      - 'tests/visual/**'
+      - '.github/workflows/visual-evidence.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.head_ref == 'chore/gs-vis-qa-001' ||
+      github.event.pull_request.number == 2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify checked out commit
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Capture visual evidence
+        run: npx playwright test tests/visual/hero.visual.spec.ts --project=chromium --workers=1
+
+      - name: Verify screenshot files
+        shell: bash
+        run: |
+          for file in \
+            desktop-k01-need.png \
+            desktop-k03-build.png \
+            desktop-k04-launch.png \
+            mobile-k01-need.png \
+            mobile-k03-build.png; do
+            test -s "visual-evidence/$file"
+          done
+
+      - name: Upload visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: gs-visual-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: visual-evidence
+          if-no-files-found: error
+          retention-days: 7
