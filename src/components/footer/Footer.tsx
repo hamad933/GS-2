@@ -1,4 +1,3 @@
-import React from 'react';
 import { MailIcon } from 'lucide-react';
 
 export function Footer() {
