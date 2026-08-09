@@ -13,6 +13,33 @@ body,
 #root {
   height: 100%;
 }
+
+/* S04 + S05 — the visible surface resolves into one connected system, then settles. */
+.system-anatomy,.project-gateway { --w03-ink:#090d14; --w03-paper:#f0ece4; --w03-blue:#315ee8; position:relative; overflow:hidden; background:var(--w03-ink); color:var(--w03-paper); }
+.system-anatomy { min-height:1000px; padding:105px max(3rem,calc((100vw - 1460px)/2)) 130px; border-top:1px solid #ffffff0c; }
+.system-anatomy::before { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(115deg,transparent 35%,#ffffff05 35.1%,transparent 35.3%),repeating-linear-gradient(90deg,transparent 0 119px,#ffffff07 120px); }
+.anatomy-heading { position:relative; z-index:2; display:grid; grid-template-columns:.7fr 1.25fr .8fr; gap:5vw; align-items:start; }
+.anatomy-heading>p { margin:8px 0 0; color:#7f8895; font-size:11px; line-height:2; }.anatomy-heading>p span { margin-left:12px; color:#7993f5; }
+.anatomy-heading h2 { margin:0; font-family:'Noto Kufi Arabic'; font-size:clamp(2.35rem,3.7vw,4.25rem); font-weight:500; line-height:1.55; letter-spacing:-.055em; }
+.anatomy-field { position:relative; z-index:2; width:min(940px,90%); height:570px; margin:75px auto 0; }
+.anatomy-spine { position:absolute; top:0; right:42%; width:1px; height:100%; background:linear-gradient(transparent,#768397 8%,#768397 92%,transparent); }
+.anatomy-spine i { position:absolute; right:-4px; width:9px; height:9px; border:1px solid #718099; background:#0b1018; transform:rotate(45deg); }.anatomy-spine i:nth-child(1){top:8%}.anatomy-spine i:nth-child(2){top:29%}.anatomy-spine i:nth-child(3){top:50%}.anatomy-spine i:nth-child(4){top:71%}.anatomy-spine i:nth-child(5){top:92%}
+.anatomy-layers { position:absolute; inset:0 0 0 58%; display:grid; grid-template-rows:repeat(5,1fr); }
+.anatomy-layers button { position:relative; display:grid; grid-template-columns:42px 1fr 36px; align-items:center; min-height:70px; padding:0 20px; border:0; border-bottom:1px solid #ffffff18; color:#788391; text-align:right; transition:color .35s,transform .45s,background .35s; }
+.anatomy-layers button span { font-size:9px; }.anatomy-layers button strong { font-family:'Noto Kufi Arabic'; font-size:17px; font-weight:500; }.anatomy-layers button i { width:100%; height:1px; background:#596678; }
+.anatomy-layers button[aria-pressed="true"] { color:#f0ece4; transform:translateX(-18px); background:linear-gradient(90deg,#315ee81b,transparent); }.anatomy-layers button[aria-pressed="true"]::after { content:""; position:absolute; bottom:-1px; right:0; width:100%; height:1px; background:linear-gradient(90deg,transparent,#315ee8); }.anatomy-layers button[aria-pressed="true"] i { background:#315ee8; box-shadow:0 0 18px #315ee8; }
+.anatomy-layers button:focus-visible,.project-gateway a:focus-visible { outline:2px solid #8ba2fa; outline-offset:4px; }
+.anatomy-role { position:absolute; top:50%; left:3%; width:41%; padding:42px 8% 42px 42px; transform:translateY(-50%); border-right:1px solid #315ee8; background:linear-gradient(90deg,#101722,#0c121b); clip-path:polygon(0 0,95% 4%,100% 94%,5% 100%); }
+.anatomy-role small { color:#78879b; font-size:8px; }.anatomy-role strong { display:block; margin:15px 0; font-family:'Noto Kufi Arabic'; font-size:24px; font-weight:500; }.anatomy-role p { margin:0; color:#a1a9b4; font-size:11px; line-height:2.1; }
+.project-gateway { min-height:760px; display:grid; place-items:center; padding:120px 24px 140px; background:linear-gradient(#090d14,#0c1118); text-align:center; }
+.gateway-lines { position:absolute; inset:0; }.gateway-lines i { position:absolute; top:0; left:50%; width:1px; height:48%; transform-origin:top; background:linear-gradient(#586476,transparent); }.gateway-lines i:nth-child(1){transform:rotate(-54deg)}.gateway-lines i:nth-child(2){transform:rotate(-28deg)}.gateway-lines i:nth-child(3){transform:none}.gateway-lines i:nth-child(4){transform:rotate(28deg)}.gateway-lines i:nth-child(5){transform:rotate(54deg)}.gateway-lines span { position:absolute; top:47%; left:50%; width:7px; height:7px; transform:translate(-50%,-50%) rotate(45deg); border:1px solid #315ee8; background:#0c1118; box-shadow:0 0 28px #315ee86b; }
+.gateway-copy { position:relative; z-index:2; width:min(720px,100%); }.gateway-copy>p:first-child { color:#7e8998; font-size:10px; }.gateway-copy>p:first-child span { margin-left:10px; color:#7891ed; }.gateway-copy h2 { margin:28px 0 20px; font-family:'Noto Kufi Arabic'; font-size:clamp(2.3rem,4vw,4.5rem); font-weight:500; line-height:1.65; letter-spacing:-.055em; }.gateway-copy>p:nth-of-type(2) { max-width:520px; margin:0 auto; color:#929ba7; font-size:12px; line-height:2.1; }.gateway-copy a { width:min(420px,100%); min-height:68px; display:flex; align-items:center; justify-content:space-between; margin:42px auto 13px; padding:0 24px; border-top:1px solid #6f7d91; border-bottom:1px solid #273344; color:#f0ece4; font-family:'Noto Kufi Arabic'; font-size:14px; transition:border-color .3s,background .3s; }.gateway-copy a:hover { border-top-color:#315ee8; background:#315ee80b; }.gateway-copy a svg { width:18px; color:#7993f5; }.gateway-copy small { color:#697482; font-size:8px; }
+@media(max-width:900px) {
+  .system-anatomy { min-height:auto; padding:75px 18px 95px; }.anatomy-heading { display:block; }.anatomy-heading>p:first-child { margin-bottom:22px; }.anatomy-heading h2 { font-size:2rem; }.anatomy-heading>p:last-child { margin-top:20px; padding-top:18px; border-top:1px solid #ffffff16; font-size:10px; }
+  .anatomy-field { width:100%; height:auto; margin-top:45px; padding-bottom:190px; }.anatomy-spine { right:16px; height:390px; }.anatomy-spine i { display:none; }.anatomy-layers { position:relative; inset:auto; padding-right:28px; }.anatomy-layers button { grid-template-columns:30px 1fr 25px; min-height:72px; padding:0 12px; }.anatomy-layers button strong { font-size:13px; }.anatomy-layers button[aria-pressed="true"] { transform:translateX(-7px); }
+  .anatomy-role { top:auto; right:16px; bottom:0; left:auto; width:calc(100% - 32px); padding:25px 28px; transform:none; }.anatomy-role strong { margin:10px 0; font-size:17px; }.anatomy-role p { font-size:9px; }
+  .project-gateway { min-height:660px; padding:100px 20px 110px; }.gateway-lines i { height:38%; }.gateway-lines span { top:37%; }.gateway-copy h2 { font-size:2rem; }.gateway-copy>p:nth-of-type(2) { font-size:10px; }.gateway-copy a { min-height:62px; margin-top:34px; }
+}
 body {
   margin: 0;
   font-family: 'IBM Plex Sans Arabic', sans-serif;
