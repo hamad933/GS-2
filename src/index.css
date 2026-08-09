@@ -149,7 +149,8 @@ a:focus-visible {
 .resolution-flow svg { width:18px; padding:3px; border-radius:50%; background:#111722; color:white; }
 .resolution-flow i { flex:1; height:1px; background:#afb5bb; }
 .resolution-flow small { color:#7c858f; font-size:8px; white-space:nowrap; }
-.living-hero[data-stage="direction"] .need-selector button,.living-hero[data-stage="build"] .need-selector button,.living-hero[data-stage="launch"] .need-selector button { opacity:.08; pointer-events:none; }
+.living-hero[data-stage="direction"] .need-selector button { opacity:.08; pointer-events:none; }
+.living-hero[data-stage="build"] .need-selector button,.living-hero[data-stage="launch"] .need-selector button { opacity:0; visibility:hidden; pointer-events:none; }
 .living-hero[data-stage="direction"] .need-selector .selected { opacity:1; transform:translate(8%,-240%); background:#182230; }
 .living-hero[data-stage="direction"] .direction-selector { opacity:1; pointer-events:auto; transform:none; }
 .living-hero[data-stage="direction"] .system-seed { transform:scale(.94) translateX(7%); background:#0e151f; }
