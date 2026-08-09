@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface RequestTagProps {
   tone?: 'solid' | 'muted' | 'bronze' | 'emerald';
   className?: string;
