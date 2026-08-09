@@ -8,7 +8,7 @@ const NAV_LINK_ITEMS = [
 
 export function HeroNav() {
   return (
-    <nav className="relative z-30 flex items-center justify-between gap-4 px-6 py-6 sm:px-8 lg:px-12">
+    <nav className="hero-nav relative z-30 flex items-center justify-between gap-4 px-6 py-6 sm:px-8 lg:px-12">
       <div className="flex items-center gap-3">
         <LogoMark />
         <div className="text-right leading-none">
