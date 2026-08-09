@@ -69,13 +69,13 @@ jobs:
             desktop-k04-launch.png \
             mobile-k01-need.png \
             mobile-k03-build.png; do
-            test -s ".visual-evidence/$file"
+            test -s "visual-evidence/$file"
           done
 
       - name: Upload visual evidence
         uses: actions/upload-artifact@v4
         with:
           name: gs-visual-evidence-${{ github.event.pull_request.head.sha || github.sha }}
-          path: .visual-evidence
+          path: visual-evidence
           if-no-files-found: error
           retention-days: 7
