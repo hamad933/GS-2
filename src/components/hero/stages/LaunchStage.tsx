@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CircleCheckBigIcon, SendIcon, ServerIcon, CheckIcon, ShieldCheckIcon, PlusCircleIcon, PlayIcon, PauseIcon, CheckCircle2Icon } from 'lucide-react';
 import { BrowserWindow } from '../primitives/BrowserWindow';
 import { PhoneFrame } from '../primitives/PhoneFrame';
 import { PanelCard } from '../primitives/PanelCard';
-import { RequestTag } from '../primitives/RequestTag';
 import { ConnectorOverlay } from '../primitives/ConnectorOverlay';
 
 interface RequestItem {
