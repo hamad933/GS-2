@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react';
+import { Fragment } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeftIcon } from 'lucide-react';
 import { STAGE_COPY, CTA_PRIMARY, CTA_SECONDARY } from '../../data/heroContent';

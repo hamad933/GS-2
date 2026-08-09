@@ -1,4 +1,4 @@
-import React, { Fragment, useState } from 'react';
+import { Fragment, useState } from 'react';
 import { ChevronLeftIcon, CheckIcon, MonitorIcon, SmartphoneIcon, TabletIcon, NetworkIcon, CompassIcon, RouteIcon, PlayIcon, RefreshCwIcon, ArrowLeftIcon, FileTextIcon } from 'lucide-react';
 import { BrowserWindow } from '../primitives/BrowserWindow';
 import { PhoneFrame } from '../primitives/PhoneFrame';

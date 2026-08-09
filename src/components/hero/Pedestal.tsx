@@ -1,5 +1,3 @@
-import React from 'react';
-
 export function Pedestal() {
   return (
     <div className="pointer-events-none absolute inset-x-[-8%] bottom-[-10%] z-0 flex justify-center">
