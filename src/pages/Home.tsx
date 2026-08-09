@@ -2,9 +2,8 @@ import { HeroNav } from '../components/hero/HeroNav';
 import { LivingSystemHero } from '../components/hero/LivingSystemHero';
 import { SolutionsUniverse } from '../components/sections/SolutionsUniverse';
 import { ReferenceProof } from '../components/sections/ReferenceProof';
-import { HowWeWorkSection } from '../components/sections/HowWeWorkSection';
-import { QualitySection } from '../components/sections/QualitySection';
-import { CtaSection } from '../components/sections/CtaSection';
+import { SystemAnatomy } from '../components/sections/SystemAnatomy';
+import { ProjectGateway } from '../components/sections/ProjectGateway';
 import { Footer } from '../components/footer/Footer';
 
 export function Home() {
@@ -19,14 +18,8 @@ export function Home() {
       <SolutionsUniverse />
       <ReferenceProof />
 
-      {/* Section 06: How We Work */}
-      <HowWeWorkSection />
-
-      {/* Section 07: Quality Pillars */}
-      <QualitySection />
-
-      {/* Section 08: Call to Action */}
-      <CtaSection />
+      <SystemAnatomy />
+      <ProjectGateway />
 
       {/* Footer */}
       <Footer />

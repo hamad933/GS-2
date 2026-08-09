@@ -6,6 +6,8 @@ const EVIDENCE_DIR = resolve('visual-evidence');
 const HERO = '#hero';
 const S02 = '#solutions-universe';
 const S03 = '#reference-proof';
+const S04 = '#system-anatomy';
+const S05 = '#project-gateway';
 
 async function openHome(page: Page) {
   await page.goto('/');
@@ -106,6 +108,25 @@ test('captures mobile S02 and S03 evidence', async ({ page }) => {
   await page.locator(S03).getByRole('button', { name: /التجارة الرقمية وتجارب العلامات/ }).click();
   await expect(page.locator(S03)).toHaveAttribute('data-project', 'brand-commerce');
   await captureSection(page, S03, 'mobile-s03-proof.png');
+});
+
+test('captures desktop S04 and S05 evidence', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page);
+  await captureSection(page, S04, 'desktop-s04-anatomy-default.png');
+  await page.locator(S04).getByRole('button', { name: /البيانات/ }).click();
+  await expect(page.locator(S04)).toHaveAttribute('data-active', 'data');
+  await captureSection(page, S04, 'desktop-s04-anatomy-active.png');
+  await captureSection(page, S05, 'desktop-s05-gateway.png');
+});
+
+test('captures mobile S04 and S05 evidence', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openHome(page);
+  await page.locator(S04).getByRole('button', { name: /نقاط الربط/ }).tap();
+  await expect(page.locator(S04)).toHaveAttribute('data-active', 'integrations');
+  await captureSection(page, S04, 'mobile-s04-anatomy.png');
+  await captureSection(page, S05, 'mobile-s05-gateway.png');
 });
 
 test('honors prefers-reduced-motion in Chromium', async ({ page }) => {

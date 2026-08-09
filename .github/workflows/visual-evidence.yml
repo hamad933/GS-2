@@ -72,7 +72,12 @@ jobs:
             desktop-s02-active.png \
             desktop-s03-proof.png \
             mobile-s02-active.png \
-            mobile-s03-proof.png; do
+            mobile-s03-proof.png \
+            desktop-s04-anatomy-default.png \
+            desktop-s04-anatomy-active.png \
+            desktop-s05-gateway.png \
+            mobile-s04-anatomy.png \
+            mobile-s05-gateway.png; do
             test -s "visual-evidence/$file"
           done
 
