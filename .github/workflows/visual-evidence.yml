@@ -77,7 +77,15 @@ jobs:
             desktop-s04-anatomy-active.png \
             desktop-s05-gateway.png \
             mobile-s04-anatomy.png \
-            mobile-s05-gateway.png; do
+            mobile-s05-gateway.png \
+            desktop-home-full.png \
+            desktop-s01-s02-transition.png \
+            desktop-s03-s04-transition.png \
+            desktop-s05-footer.png \
+            tablet-home-full.png \
+            mobile-home-full.png \
+            mobile-s03-s04-transition.png \
+            mobile-s05-footer.png; do
             test -s "visual-evidence/$file"
           done
 

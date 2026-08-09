@@ -40,8 +40,8 @@ export function Footer() {
               <span>hello@generalsolutions.co</span>
             </a>
             <div className="flex gap-4 text-[10px] text-mineral-200/50 justify-start lg:justify-end">
-              <a href="#" className="hover:underline">الخصوصية</a>
-              <a href="#" className="hover:underline">الشروط والأحكام</a>
+              <span>الخصوصية</span>
+              <span>الشروط والأحكام</span>
             </div>
           </div>
 

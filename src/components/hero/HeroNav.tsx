@@ -1,9 +1,7 @@
 const NAV_LINK_ITEMS = [
-  { label: 'حلولنا', href: '#families' },
-  { label: 'منهجنا', href: '#process' },
-  { label: 'أعمالنا', href: '#models' },
-  { label: 'الموارد', href: '#goals' },
-  { label: 'عن الشركة', href: '#quality' },
+  { label: 'حلولنا', href: '#solutions-universe' },
+  { label: 'منهجنا', href: '#system-anatomy' },
+  { label: 'أعمالنا', href: '#reference-proof' },
 ];
 
 export function HeroNav() {
@@ -30,7 +28,7 @@ export function HeroNav() {
       </div>
 
       <a
-        href="#cta"
+        href="#project-gateway"
         className="rounded-full border border-navy-900/15 px-5 py-2 text-[13px] font-medium text-navy-900 transition-colors hover:bg-navy-900 hover:text-mineral-50">
         تواصل معنا
       </a>
