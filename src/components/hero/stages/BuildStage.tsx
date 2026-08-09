@@ -282,19 +282,27 @@ function BuildBrowser({
 
 function BuildPhone({ formSubmitted, clientCompany }: { formSubmitted: boolean; clientCompany: string }) {
   return (
-    <PhoneFrame>
-      <div className="flex min-h-[165px] flex-col gap-1.5 bg-navy-900 p-2 text-white sm:min-h-[185px]">
-        <div className="flex items-center justify-between border-b border-white/10 pb-1">
-          <span className="font-kufi text-[8px] font-bold text-bronze-300">عرض الجوال</span>
-          <span className="text-[7px] text-emerald-400">تجاوب 100%</span>
+    <PhoneFrame className="hidden md:block">
+      <div className="flex min-h-[160px] flex-col gap-2.5 bg-navy-900 p-3 text-white sm:min-h-[220px] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-bronze-500/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="flex items-center justify-between border-b border-white/10 pb-1.5 relative z-10">
+          <span className="font-kufi text-[9px] font-bold text-bronze-300">عرض الجوال</span>
+          <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shadow-sm">تجاوب 100%</span>
         </div>
-        <p className="font-bold text-[9.5px] text-white truncate">{clientCompany || 'حلول رقمية'}</p>
-        <div className="rounded-lg border border-white/15 bg-white/10 p-1.5 space-y-1">
-          <p className="text-[7.5px] font-semibold text-mineral-100">طلب خدمة (#GS-241)</p>
-          <div className={`h-4 rounded text-[7px] font-bold text-white flex items-center justify-center transition-all ${
-            formSubmitted ? 'bg-emerald-500' : 'bg-bronze-500'
-          }`}>
-            {formSubmitted ? '✓ تم الاستلام' : 'اختبار الإرسال'}
+        <div className="relative z-10 flex-1 flex flex-col justify-center space-y-3">
+          <div className="text-center space-y-1">
+            <div className="mx-auto h-6 w-6 rounded bg-bronze-500/20 flex items-center justify-center border border-bronze-500/30">
+              <span className="h-3 w-3 bg-bronze-400 rounded-sm" />
+            </div>
+            <p className="font-bold text-[10px] text-white truncate">{clientCompany || 'حلول رقمية'}</p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-2.5 space-y-2 backdrop-blur-sm shadow-inner">
+            <p className="text-[8px] font-semibold text-mineral-200">طلب خدمة (#GS-241)</p>
+            <div className={`h-6 rounded-md text-[8.5px] font-bold text-white flex items-center justify-center transition-all shadow-sm ${
+              formSubmitted ? 'bg-emerald-500 ring-2 ring-emerald-500/20 shadow-emerald-500/20' : 'bg-bronze-600 ring-2 ring-bronze-600/20 shadow-bronze-600/20'
+            }`}>
+              {formSubmitted ? '✓ تم الاستلام' : 'اختبار الإرسال'}
+            </div>
           </div>
         </div>
       </div>
@@ -318,35 +326,39 @@ function BuildSystemCard({ activeColor, setActiveColor, activeFont, setActiveFon
   ];
 
   return (
-    <PanelCard className="flex flex-col gap-2">
-      <div className="flex items-center justify-between border-b border-mineral-200 pb-1">
+    <PanelCard className="flex flex-col gap-2.5 relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl pointer-events-none transition-colors duration-700" style={{ backgroundColor: `${activeColor}15` }} />
+      <div className="flex items-center justify-between border-b border-mineral-200 pb-1.5 relative z-10">
         <div className="flex items-center gap-1.5">
-          <PaletteIcon className="h-3.5 w-3.5 text-bronze-600" />
-          <p className="font-kufi text-[11.5px] font-bold text-navy-900">نظام التصميم (Tokens)</p>
+          <PaletteIcon className="h-4 w-4 transition-colors duration-300" style={{ color: activeColor }} />
+          <p className="font-kufi text-[12px] font-bold text-navy-900">نظام التصميم (Tokens)</p>
         </div>
-        <span className="rounded bg-navy-900 px-1.5 py-0.5 text-[7.5px] font-mono text-white">v2.4</span>
+        <span className="rounded-md bg-navy-900 px-2 py-0.5 text-[8.5px] font-mono font-bold text-white shadow-sm">v2.4</span>
       </div>
 
       {/* Color Swatches */}
-      <div>
-        <div className="flex justify-between items-center mb-1">
-          <p className="text-[8.5px] font-semibold text-navy-900/70">الألوان التفاعلية:</p>
-          <span className="text-[7.5px] font-mono font-bold text-bronze-700">{activeColor}</span>
+      <div className="relative z-10">
+        <div className="flex justify-between items-center mb-1.5">
+          <p className="text-[9px] font-bold text-navy-900/80">الألوان التفاعلية:</p>
+          <span className="text-[8.5px] font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-mineral-200 shadow-2xs transition-colors duration-300" style={{ color: activeColor }}>{activeColor}</span>
         </div>
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-4 gap-1.5">
           {SWATCHES.map((item) => (
             <button
               key={item.name}
               type="button"
               onClick={() => setActiveColor(item.hex)}
-              className="flex flex-col items-center group">
+              className="flex flex-col items-center group/btn relative">
               <div
-                className={`h-4.5 w-full rounded border shadow-xs transition-all ${
-                  activeColor === item.hex ? 'ring-2 ring-bronze-500 scale-105' : 'border-black/10'
+                className={`h-5 w-full rounded-md border shadow-sm transition-all duration-300 ${
+                  activeColor === item.hex ? 'ring-2 ring-offset-1 scale-105 z-10' : 'border-black/10 hover:scale-105'
                 }`}
-                style={{ backgroundColor: item.hex }}
+                style={{ 
+                  backgroundColor: item.hex,
+                  ...(activeColor === item.hex ? { ringColor: item.hex } : {}) 
+                }}
               />
-              <span className="mt-0.5 text-[7px] font-mono text-navy-900/60 group-hover:text-navy-900">{item.name}</span>
+              <span className={`mt-1 text-[7.5px] font-mono font-semibold transition-colors ${activeColor === item.hex ? 'text-navy-900' : 'text-navy-900/50 group-hover/btn:text-navy-900/80'}`}>{item.name}</span>
             </button>
           ))}
         </div>

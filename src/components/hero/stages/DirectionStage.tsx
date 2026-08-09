@@ -270,20 +270,20 @@ function DirectionPhone({ activeNode }: { activeNode: SitemapNodeId }) {
   const node = NODE_DETAILS[activeNode];
 
   return (
-    <PhoneFrame>
-      <div className="flex min-h-[160px] flex-col gap-2 bg-white p-2.5 sm:min-h-[180px]">
+    <PhoneFrame className="hidden md:block">
+      <div className="flex min-h-[160px] flex-col gap-2.5 bg-mineral-50 p-3 sm:min-h-[220px]">
         <div className="flex items-center justify-between border-b border-mineral-200 pb-1.5">
           <span className="font-kufi text-[9px] font-bold text-navy-900">القائمة الهيكلية</span>
-          <span className="rounded bg-bronze-100 px-1.5 py-0.5 text-[7px] font-semibold text-bronze-800">جوال</span>
+          <span className="rounded-md bg-bronze-100 border border-bronze-200 px-1.5 py-0.5 text-[8px] font-semibold text-bronze-800 shadow-sm">موبايل</span>
         </div>
-        <div className="space-y-1.5">
-          <div className="rounded border border-bronze-400 bg-bronze-50 p-1.5 text-[8px] font-bold text-navy-900 flex items-center justify-between">
-            <span className="truncate">{node.name}</span>
-            <ChevronLeftIcon className="h-2.5 w-2.5 text-bronze-600 shrink-0" />
+        <div className="space-y-2.5 flex-1 flex flex-col justify-center">
+          <div className="rounded-lg border border-bronze-300 bg-white p-2.5 text-[9.5px] font-bold text-navy-900 flex items-center justify-between shadow-sm scale-[1.02] transition-all">
+            <span className="truncate flex items-center gap-1.5"><span className="h-1.5 w-1.5 bg-bronze-500 rounded-full animate-pulse"/>{node.name}</span>
+            <ChevronLeftIcon className="h-3 w-3 text-bronze-500 shrink-0" />
           </div>
-          <div className="rounded border border-mineral-200 bg-mineral-50 p-1.5 text-[7.5px] text-navy-900/70 flex justify-between items-center">
-            <span>مسار: <span className="font-mono text-bronze-700">{node.route}</span></span>
-            <span className="font-mono text-[7px] text-emerald-600 font-bold">{node.latency}</span>
+          <div className="rounded-md border border-mineral-200 bg-white p-2 text-[8px] text-navy-900/70 flex justify-between items-center shadow-sm">
+            <span className="flex items-center gap-1">مسار: <span className="font-mono text-bronze-700 bg-bronze-50 px-1 py-0.5 rounded border border-bronze-200">{node.route}</span></span>
+            <span className="font-mono text-[8px] text-emerald-700 font-bold bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">{node.latency}</span>
           </div>
         </div>
       </div>

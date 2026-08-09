@@ -155,13 +155,13 @@ function NeedBrowser({
         {/* Blueprint Top Navbar Wireframe */}
         <div
           onClick={() => setActiveSection('nav')}
-          className={`relative z-10 mb-3 flex cursor-pointer items-center justify-between rounded-md border transition-all p-2.5 ${
+          className={`relative z-10 mb-4 flex cursor-pointer items-center justify-between rounded-xl border px-4 py-3 transition-all ${
             activeSection === 'nav'
-              ? 'border-2 border-bronze-500 bg-bronze-50 shadow-sm'
-              : 'border-dashed border-mineral-300 bg-white hover:border-mineral-400'
+              ? 'border-2 border-bronze-500 bg-bronze-50 shadow-md ring-4 ring-bronze-500/10'
+              : 'border-dashed border-mineral-300 bg-white hover:border-mineral-400 hover:shadow-sm'
           }`}>
-          <div className="flex items-center gap-2">
-            <div className={`h-4 w-20 rounded ${highFidelity ? 'bg-navy-900' : 'bg-mineral-200'}`} />
+          <div className="flex items-center gap-2.5">
+            <div className={`h-5 w-24 rounded-md transition-colors ${highFidelity ? 'bg-navy-900 shadow-sm' : 'bg-mineral-200'}`} />
           </div>
           <div className="flex gap-2">
             {['الرئيسية', 'الخدمات', 'المشاريع', 'تواصل'].map((item) => (
@@ -172,10 +172,10 @@ function NeedBrowser({
                   e.stopPropagation();
                   handleButtonClick(item);
                 }}
-                className={`rounded px-2 py-0.5 text-[8px] transition-colors ${
+                className={`rounded-md px-3 py-1 text-[9px] transition-all ${
                   highFidelity
-                    ? 'font-bold text-navy-900 hover:text-bronze-600'
-                    : 'bg-mineral-50 text-mineral-400'
+                    ? 'font-bold text-navy-900 hover:bg-bronze-50 hover:text-bronze-700'
+                    : 'bg-mineral-50 text-mineral-400 hover:bg-mineral-100'
                 }`}>
                 {item}
               </button>
@@ -186,39 +186,44 @@ function NeedBrowser({
         {/* Hero Wireframe Section */}
         <div
           onClick={() => setActiveSection('hero')}
-          className={`relative z-10 mb-3 cursor-pointer rounded-xl border p-4 transition-all overflow-hidden ${
+          className={`relative z-10 mb-4 cursor-pointer rounded-2xl border p-5 transition-all overflow-hidden ${
             activeSection === 'hero'
-              ? 'border-2 border-bronze-500 bg-bronze-50 shadow-md'
-              : 'border-dashed border-mineral-300 bg-white hover:border-mineral-400 hover:shadow-sm'
+              ? 'border-2 border-bronze-500 bg-bronze-50 shadow-lg ring-4 ring-bronze-500/10'
+              : 'border-dashed border-mineral-300 bg-white hover:border-mineral-400 hover:shadow-md'
           }`}>
           {/* Faded Blueprint Image Background */}
-          <div className="absolute inset-0 opacity-10 mix-blend-multiply">
+          <div className="absolute inset-0 opacity-[0.08] mix-blend-multiply pointer-events-none transition-opacity">
             <img src="/architecture.webp" alt="Blueprint" className="w-full h-full object-cover" />
           </div>
           
-          <div className="relative z-10 flex items-start justify-between">
-            <div className="flex-1">
+          <div className="relative z-10 flex items-start justify-between gap-6">
+            <div className="flex-1 space-y-4">
               {activeSection === 'hero' && (
-                <span className="inline-block mb-3 rounded bg-white px-2 py-0.5 text-[9px] font-bold text-bronze-700 shadow-2xs border border-bronze-200">
+                <span className="inline-block mb-1 rounded-md bg-white px-2.5 py-1 text-[9px] font-bold text-bronze-700 shadow-sm border border-bronze-200 animate-fade-in-up">
                   قسم البطل
                 </span>
               )}
-              <div className={`h-6 w-3/4 rounded-md shadow-2xs ${highFidelity ? 'bg-navy-900' : 'bg-mineral-200'}`} />
-              <div className={`mt-3 h-3 w-1/2 rounded-sm ${highFidelity ? 'bg-navy-900/60' : 'bg-mineral-100'}`} />
-              <div className={`mt-2 h-3 w-2/5 rounded-sm ${highFidelity ? 'bg-navy-900/60' : 'bg-mineral-100'}`} />
+              <div className="space-y-2">
+                <div className={`h-8 w-4/5 rounded-lg shadow-sm transition-colors ${highFidelity ? 'bg-navy-900' : 'bg-mineral-200'}`} />
+                <div className={`h-8 w-3/5 rounded-lg shadow-sm transition-colors ${highFidelity ? 'bg-navy-900' : 'bg-mineral-200'}`} />
+              </div>
+              <div className="space-y-1.5 w-3/4">
+                <div className={`h-2.5 w-full rounded-md transition-colors ${highFidelity ? 'bg-navy-900/60' : 'bg-mineral-100'}`} />
+                <div className={`h-2.5 w-4/5 rounded-md transition-colors ${highFidelity ? 'bg-navy-900/60' : 'bg-mineral-100'}`} />
+              </div>
               
-              <div className="mt-5 flex items-center gap-3">
-                <div className={`h-8 w-28 rounded-md shadow-sm transition-all ${highFidelity ? 'bg-bronze-600' : 'border-2 border-dashed border-mineral-300 bg-mineral-50'}`} />
-                <div className={`h-8 w-28 rounded-md transition-all ${highFidelity ? 'border-2 border-mineral-300 bg-white' : 'border border-dashed border-mineral-200 bg-mineral-50/50'}`} />
+              <div className="pt-2 flex items-center gap-3">
+                <div className={`h-10 w-32 rounded-lg shadow-sm transition-all ${highFidelity ? 'bg-bronze-600' : 'border-2 border-dashed border-mineral-300 bg-mineral-50'}`} />
+                <div className={`h-10 w-32 rounded-lg transition-all ${highFidelity ? 'border border-mineral-300 bg-white shadow-sm' : 'border border-dashed border-mineral-200 bg-mineral-50/50'}`} />
               </div>
             </div>
             
             {/* Structural Graphic Placeholder */}
-            <div className="hidden sm:block w-32 shrink-0">
-              <div className={`w-full aspect-[4/3] rounded-lg border-2 ${highFidelity ? 'border-mineral-200 bg-mineral-100' : 'border-dashed border-mineral-300 bg-mineral-50'} flex flex-col items-center justify-center gap-2 relative overflow-hidden`}>
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-mineral-200/50 to-transparent" />
-                <div className={`h-10 w-16 rounded border ${highFidelity ? 'border-mineral-300 bg-white' : 'border-dashed border-mineral-300 bg-mineral-100'}`} />
-                <div className={`h-2 w-20 rounded-sm ${highFidelity ? 'bg-mineral-300' : 'bg-mineral-200'}`} />
+            <div className="hidden md:block w-40 shrink-0">
+              <div className={`w-full aspect-[4/3] rounded-xl border-2 transition-all shadow-inner relative overflow-hidden flex flex-col items-center justify-center gap-3 ${highFidelity ? 'border-mineral-200 bg-mineral-50' : 'border-dashed border-mineral-300 bg-mineral-50/50'}`}>
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-mineral-200/50 to-transparent opacity-50" />
+                <div className={`h-12 w-20 rounded-md border shadow-sm z-10 transition-colors ${highFidelity ? 'border-mineral-300 bg-white' : 'border-dashed border-mineral-300 bg-mineral-100'}`} />
+                <div className={`h-2 w-24 rounded-md z-10 transition-colors ${highFidelity ? 'bg-mineral-300' : 'bg-mineral-200'}`} />
               </div>
             </div>
           </div>
@@ -227,31 +232,33 @@ function NeedBrowser({
         {/* Services Wireframe Grid */}
         <div
           onClick={() => setActiveSection('services')}
-          className={`relative z-10 grid cursor-pointer grid-cols-3 gap-3 rounded-xl border p-4 transition-all ${
+          className={`relative z-10 grid cursor-pointer grid-cols-3 gap-4 rounded-2xl border p-5 transition-all ${
             activeSection === 'services'
-              ? 'border-2 border-bronze-500 bg-bronze-50 shadow-md'
-              : 'border-dashed border-mineral-300 bg-white/80 hover:border-mineral-400 hover:shadow-sm'
+              ? 'border-2 border-bronze-500 bg-bronze-50 shadow-lg ring-4 ring-bronze-500/10'
+              : 'border-dashed border-mineral-300 bg-white hover:border-mineral-400 hover:shadow-md'
           }`}>
           {activeSection === 'services' && (
-            <span className="absolute -top-2.5 right-3 rounded bg-white px-2 py-0.5 text-[9px] font-bold text-bronze-700 shadow-2xs border border-bronze-200">
+            <span className="absolute -top-3 right-4 rounded-md bg-white px-2.5 py-1 text-[9px] font-bold text-bronze-700 shadow-sm border border-bronze-200 animate-fade-in-up">
               قسم الخدمات
             </span>
           )}
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className={`rounded-lg border p-2.5 transition-all flex flex-col gap-2 ${
+              className={`rounded-xl border p-3 transition-all flex flex-col gap-3 group ${
                 highFidelity
-                  ? 'border-mineral-200 bg-white shadow-sm hover:shadow-md hover:-translate-y-0.5'
+                  ? 'border-mineral-200 bg-white shadow-sm hover:shadow-md hover:-translate-y-1'
                   : 'border-dashed border-mineral-300 bg-mineral-50'
               }`}>
-              <div className={`h-8 w-8 rounded-md flex items-center justify-center shrink-0 ${highFidelity ? 'bg-bronze-50 border border-bronze-100/50' : 'bg-mineral-200'}`}>
-                {highFidelity && <div className="h-4 w-4 bg-bronze-400 rounded-sm opacity-50" />}
+              <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${highFidelity ? 'bg-bronze-50 border border-bronze-100 group-hover:bg-bronze-100' : 'bg-mineral-200'}`}>
+                {highFidelity && <div className="h-5 w-5 bg-bronze-400 rounded-md opacity-60" />}
               </div>
-              <div className="space-y-1.5 w-full">
-                <div className={`h-2.5 w-3/4 rounded-sm ${highFidelity ? 'bg-navy-900' : 'bg-mineral-200'}`} />
-                <div className={`h-1.5 w-full rounded-sm ${highFidelity ? 'bg-navy-900/40' : 'bg-mineral-100'}`} />
-                <div className={`h-1.5 w-4/5 rounded-sm ${highFidelity ? 'bg-navy-900/40' : 'bg-mineral-100'}`} />
+              <div className="space-y-2 w-full">
+                <div className={`h-3 w-3/4 rounded-md transition-colors ${highFidelity ? 'bg-navy-900' : 'bg-mineral-200'}`} />
+                <div className="space-y-1.5">
+                  <div className={`h-2 w-full rounded-md transition-colors ${highFidelity ? 'bg-navy-900/40' : 'bg-mineral-100'}`} />
+                  <div className={`h-2 w-5/6 rounded-md transition-colors ${highFidelity ? 'bg-navy-900/40' : 'bg-mineral-100'}`} />
+                </div>
               </div>
             </div>
           ))}
@@ -264,19 +271,31 @@ function NeedBrowser({
 function NeedPhone({ activeSection }: { activeSection: WireframeSection }) {
   return (
     <PhoneFrame className="hidden md:block">
-      <div className="flex min-h-[160px] flex-col gap-2.5 bg-mineral-50 p-3 sm:min-h-[220px]">
-        <div className="flex items-center justify-between border-b border-dashed border-mineral-300 pb-1.5">
-          <span className="text-[9px] font-bold text-navy-900/60">عرض الجوال</span>
-          <span className="text-[8px] font-mono font-bold text-bronze-600">390px</span>
+      <div className="flex min-h-[160px] flex-col gap-3 bg-mineral-50 p-3 sm:min-h-[220px] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-20 h-20 bg-bronze-500/5 rounded-full blur-xl pointer-events-none" />
+        <div className="flex items-center justify-between border-b border-dashed border-mineral-300 pb-2 relative z-10">
+          <span className="text-[9.5px] font-bold text-navy-900/60">عرض الجوال</span>
+          <span className="text-[8.5px] font-mono font-bold text-bronze-700 bg-white px-1.5 py-0.5 rounded border border-mineral-200 shadow-sm">390px</span>
         </div>
-        <div className="h-3 w-3/4 rounded-sm bg-navy-900/20" />
-        <div className={`mt-1.5 rounded-lg border p-2.5 transition-all shadow-sm ${
-          activeSection === 'hero' ? 'border-bronze-500 bg-bronze-50 scale-[1.02] ring-1 ring-bronze-500/20' : 'border-dashed border-mineral-300 bg-white/60'
-        }`}>
-          <div className="h-2 w-full rounded-sm bg-bronze-400" />
-          <div className="mt-1.5 h-2 w-2/3 rounded-sm bg-bronze-300/80" />
+        
+        <div className="flex flex-col gap-2.5 relative z-10 flex-1">
+          {/* Header Mock */}
+          <div className={`h-4 w-full rounded-md transition-colors ${activeSection === 'nav' ? 'bg-navy-900 shadow-sm scale-[1.02]' : 'bg-navy-900/10'}`} />
+          
+          {/* Hero Mock */}
+          <div className={`rounded-xl border p-3 transition-all flex flex-col gap-2 ${
+            activeSection === 'hero' ? 'border-bronze-500 bg-bronze-50 shadow-md ring-2 ring-bronze-500/10 scale-[1.02]' : 'border-dashed border-mineral-300 bg-white/60'
+          }`}>
+            <div className="h-3 w-4/5 rounded-md bg-bronze-400" />
+            <div className="h-2 w-3/5 rounded-sm bg-bronze-300/80" />
+            <div className="h-10 w-full rounded-lg bg-bronze-200/50 mt-1" />
+          </div>
+          
+          {/* Services Mock */}
+          <div className={`h-12 w-full rounded-xl border transition-all ${
+            activeSection === 'services' ? 'border-bronze-500 bg-bronze-50 shadow-md ring-2 ring-bronze-500/10 scale-[1.02]' : 'border-dashed border-mineral-300 bg-white/60'
+          }`} />
         </div>
-        <div className="h-2 w-full rounded-sm bg-mineral-300" />
       </div>
     </PhoneFrame>
   );
@@ -399,23 +418,28 @@ interface NeedSecondaryCardProps {
 
 function NeedSecondaryCard({ goalsCount, completedCount }: NeedSecondaryCardProps) {
   return (
-    <PanelCard>
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <LayersIcon className="h-3.5 w-3.5 text-bronze-600" />
-        <p className="text-[10px] font-bold text-navy-900/70">مخرجات مرحلة الاحتياج</p>
+    <PanelCard className="relative overflow-hidden group">
+      <div className="absolute top-0 left-0 w-20 h-20 bg-bronze-500/5 rounded-full blur-xl pointer-events-none" />
+      <div className="flex items-center gap-2 mb-2.5 relative z-10">
+        <LayersIcon className="h-4 w-4 text-bronze-600" />
+        <p className="text-[11px] font-bold text-navy-900/80 group-hover:text-navy-900 transition-colors">مخرجات مرحلة الاحتياج</p>
       </div>
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1.5 relative z-10">
         {['واجهة العميل', 'بوابة الطلبات', 'لوحة التحكم', 'الربط البرمجي'].map((chip) => (
           <span
             key={chip}
-            className="rounded-full border border-bronze-500/30 bg-bronze-50 px-2 py-0.5 text-[8.5px] font-medium text-bronze-700">
+            className="rounded-md border border-bronze-200 bg-bronze-50/50 px-2.5 py-1 text-[9px] font-semibold text-bronze-800 shadow-sm transition-all hover:bg-bronze-100 hover:scale-105">
             {chip}
           </span>
         ))}
       </div>
-      <p className="mt-1.5 text-[8px] text-navy-900/60 font-semibold">
-        حالة الجاهزية: <span className="text-emerald-700 font-mono">{completedCount}/{goalsCount} مكتمل</span>
-      </p>
+      <div className="mt-3 flex items-center justify-between border-t border-mineral-200 pt-2 relative z-10">
+        <span className="text-[9px] text-navy-900/60 font-bold">حالة الجاهزية</span>
+        <span className="text-[9px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200 shadow-sm flex items-center gap-1">
+          <CheckCircle2Icon className="h-3 w-3" />
+          {completedCount}/{goalsCount} مكتمل
+        </span>
+      </div>
     </PanelCard>
   );
 }

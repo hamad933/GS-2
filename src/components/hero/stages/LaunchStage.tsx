@@ -265,20 +265,25 @@ function LaunchBrowser({
 
 function LaunchPhone({ activeReq }: { activeReq: RequestItem }) {
   return (
-    <PhoneFrame>
-      <div className="flex min-h-[165px] flex-col gap-2 bg-mineral-50 p-2.5 sm:min-h-[185px]">
-        <div className="flex items-center justify-between border-b border-mineral-200 pb-1">
-          <span className="text-[8px] font-bold text-navy-900">إشعار الجوال</span>
-          <RequestTag tone="solid" />
+    <PhoneFrame className="hidden md:block">
+      <div className="flex min-h-[160px] flex-col gap-2.5 bg-mineral-50 p-3 sm:min-h-[220px] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="flex items-center justify-between border-b border-mineral-200 pb-1.5 relative z-10">
+          <span className="font-kufi text-[9px] font-bold text-navy-900">إشعار الجوال</span>
+          <span className="text-[7.5px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200">الآن</span>
         </div>
-        <div className="rounded-lg border border-emerald-300 bg-emerald-50/80 p-2 space-y-1">
-          <div className="flex items-center gap-1 text-[8px] font-bold text-emerald-800">
-            <CheckIcon className="h-3 w-3 text-emerald-600" />
-            تم تأكيد الطلب
+        <div className="flex-1 flex flex-col justify-center relative z-10">
+          <div className="rounded-xl border border-emerald-200 bg-white p-3 space-y-2 shadow-sm scale-[1.02] transition-all">
+            <div className="flex items-center gap-1.5 text-[9px] font-bold text-emerald-800">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <CheckIcon className="h-2.5 w-2.5" />
+              </span>
+              تم تأكيد الطلب
+            </div>
+            <p className="text-[8.5px] text-navy-900/70 leading-relaxed font-medium">
+              عزيزي العميل، تم استلام طلبك رقم <span className="font-mono font-bold text-navy-900 bg-mineral-100 px-1 rounded">#{activeReq.id}</span> بنجاح وتحويله لغرفة العمليات.
+            </p>
           </div>
-          <p className="text-[7.5px] text-navy-900/80 leading-3">
-            عزيزي العميل، تم استلام طلبك رقم <span className="font-bold">#{activeReq.id}</span> وتحويله لغرفة العمليات.
-          </p>
         </div>
       </div>
     </PhoneFrame>
@@ -287,17 +292,20 @@ function LaunchPhone({ activeReq }: { activeReq: RequestItem }) {
 
 function LaunchSuccessCard({ activeReq }: { activeReq: RequestItem }) {
   return (
-    <PanelCard highlight className="text-center flex flex-col items-center justify-center py-2 space-y-1">
-      <CircleCheckBigIcon className="h-6 w-6 text-emerald-600" strokeWidth={2} />
-      <p className="font-kufi text-[10.5px] font-bold text-navy-900">
-        تم اعتماد الطلب #{activeReq.id}
+    <PanelCard highlight className="relative overflow-hidden text-center flex flex-col items-center justify-center py-3 space-y-1.5 shadow-sm">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/10 to-transparent pointer-events-none" />
+      <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 border border-emerald-200/50 shadow-sm mb-1">
+        <CircleCheckBigIcon className="h-5 w-5 text-emerald-600" strokeWidth={2.5} />
+      </div>
+      <p className="font-kufi text-[11px] font-bold text-navy-900 relative z-10">
+        تم اعتماد الطلب <span className="font-mono text-emerald-700 bg-emerald-50 px-1 rounded-sm border border-emerald-200/50">#{activeReq.id}</span>
       </p>
-      <p className="text-[8px] text-navy-900/60 font-semibold">{activeReq.client}</p>
-      <div className="mt-1">
-        <span className={`inline-block rounded px-2 py-0.5 text-[8px] font-bold ${
+      <p className="text-[9px] text-navy-900/60 font-semibold relative z-10">{activeReq.client}</p>
+      <div className="mt-2 relative z-10">
+        <span className={`inline-block rounded-md px-2.5 py-1 text-[8.5px] font-bold shadow-2xs transition-colors ${
           activeReq.status === 'مكتمل'
             ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-            : 'bg-bronze-100 text-bronze-800 border border-bronze-300'
+            : 'bg-bronze-50 text-bronze-800 border border-bronze-200'
         }`}>
           الحالة: {activeReq.status}
         </span>
