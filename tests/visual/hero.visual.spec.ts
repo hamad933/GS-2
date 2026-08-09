@@ -89,7 +89,7 @@ test('captures desktop S02 and S03 evidence', async ({ page }) => {
   await openHome(page);
   await captureSection(page, S02, 'desktop-s02-default.png');
 
-  await page.getByRole('button', { name: /الأنظمة التشغيلية والبوابات/ }).click();
+  await page.locator(S02).getByRole('button', { name: /الأنظمة التشغيلية والبوابات/ }).click();
   await expect(page.locator(S02)).toHaveAttribute('data-active', 'portals');
   await captureSection(page, S02, 'desktop-s02-active.png');
 
@@ -99,11 +99,11 @@ test('captures desktop S02 and S03 evidence', async ({ page }) => {
 test('captures mobile S02 and S03 evidence', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openHome(page);
-  await page.getByRole('button', { name: /العقارات والأصول/ }).click();
+  await page.locator(S02).getByRole('button', { name: /العقارات والأصول/ }).click();
   await expect(page.locator(S02)).toHaveAttribute('data-active', 'assets');
   await captureSection(page, S02, 'mobile-s02-active.png');
 
-  await page.getByRole('button', { name: /التجارة الرقمية وتجارب العلامات/ }).last().click();
+  await page.locator(S03).getByRole('button', { name: /التجارة الرقمية وتجارب العلامات/ }).click();
   await expect(page.locator(S03)).toHaveAttribute('data-project', 'brand-commerce');
   await captureSection(page, S03, 'mobile-s03-proof.png');
 });
