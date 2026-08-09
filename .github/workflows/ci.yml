@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - codex/gs-gov-rebase-001
+  pull_request:
+    branches:
+      - main
 
 jobs:
   bootstrap-lockfile:
