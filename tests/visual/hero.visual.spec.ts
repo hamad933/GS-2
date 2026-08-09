@@ -56,18 +56,22 @@ async function captureFullPage(page: Page, filename: string) {
 }
 
 async function captureTransition(page: Page, firstSelector: string, secondSelector: string, filename: string) {
-  const [firstBox, secondBox] = await Promise.all([
-    page.locator(firstSelector).boundingBox(),
-    page.locator(secondSelector).boundingBox(),
-  ]);
-  if (!firstBox || !secondBox) throw new Error(`Unable to locate transition ${firstSelector} → ${secondSelector}`);
+  const first = page.locator(firstSelector);
+  const second = page.locator(secondSelector);
+  await expect(first).toHaveCount(1);
+  await expect(second).toHaveCount(1);
 
-  const height = Math.min(900, firstBox.height / 2 + secondBox.height / 2);
-  const boundary = secondBox.y;
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error('Viewport size is unavailable for transition capture');
+
+  await second.evaluate((element) => {
+    const boundary = element.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo({ top: Math.max(0, boundary - window.innerHeight / 2), behavior: 'auto' });
+  });
+  await page.waitForTimeout(150);
   await page.screenshot({
     path: resolve(EVIDENCE_DIR, filename),
     animations: 'disabled',
-    clip: { x: 0, y: Math.max(0, boundary - height / 2), width: page.viewportSize()!.width, height },
   });
 }
 
