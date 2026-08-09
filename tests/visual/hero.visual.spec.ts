@@ -4,6 +4,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 const EVIDENCE_DIR = resolve('visual-evidence');
 const HERO = '#hero';
+const S02 = '#solutions-universe';
+const S03 = '#reference-proof';
 
 async function openHome(page: Page) {
   await page.goto('/');
@@ -40,6 +42,13 @@ async function captureHero(page: Page, filename: string) {
   });
 }
 
+async function captureSection(page: Page, selector: string, filename: string) {
+  const section = page.locator(selector);
+  await section.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(500);
+  await section.screenshot({ path: resolve(EVIDENCE_DIR, filename), animations: 'disabled' });
+}
+
 function durationsToMilliseconds(value: string) {
   return value.split(',').map((duration) => {
     const trimmed = duration.trim();
@@ -73,6 +82,30 @@ test('captures mobile K01 and K03 evidence', async ({ page }) => {
 
   await reachK03(page);
   await captureHero(page, 'mobile-k03-build.png');
+});
+
+test('captures desktop S02 and S03 evidence', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page);
+  await captureSection(page, S02, 'desktop-s02-default.png');
+
+  await page.getByRole('button', { name: /الأنظمة التشغيلية والبوابات/ }).click();
+  await expect(page.locator(S02)).toHaveAttribute('data-active', 'portals');
+  await captureSection(page, S02, 'desktop-s02-active.png');
+
+  await captureSection(page, S03, 'desktop-s03-proof.png');
+});
+
+test('captures mobile S02 and S03 evidence', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openHome(page);
+  await page.getByRole('button', { name: /العقارات والأصول/ }).click();
+  await expect(page.locator(S02)).toHaveAttribute('data-active', 'assets');
+  await captureSection(page, S02, 'mobile-s02-active.png');
+
+  await page.getByRole('button', { name: /التجارة الرقمية وتجارب العلامات/ }).last().click();
+  await expect(page.locator(S03)).toHaveAttribute('data-project', 'brand-commerce');
+  await captureSection(page, S03, 'mobile-s03-proof.png');
 });
 
 test('honors prefers-reduced-motion in Chromium', async ({ page }) => {

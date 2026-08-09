@@ -1,9 +1,7 @@
 import { HeroNav } from '../components/hero/HeroNav';
 import { LivingSystemHero } from '../components/hero/LivingSystemHero';
-import { SolutionFamiliesSection } from '../components/sections/SolutionFamiliesSection';
-import { GoalBasedSection } from '../components/sections/GoalBasedSection';
-import { CustomCompositionSection } from '../components/sections/CustomCompositionSection';
-import { SelectedModelsSection } from '../components/sections/SelectedModelsSection';
+import { SolutionsUniverse } from '../components/sections/SolutionsUniverse';
+import { ReferenceProof } from '../components/sections/ReferenceProof';
 import { HowWeWorkSection } from '../components/sections/HowWeWorkSection';
 import { QualitySection } from '../components/sections/QualitySection';
 import { CtaSection } from '../components/sections/CtaSection';
@@ -18,17 +16,8 @@ export function Home() {
       <HeroNav />
       <LivingSystemHero />
 
-      {/* Section 02: Solution Families */}
-      <SolutionFamiliesSection />
-
-      {/* Section 03: Goal-based Selection */}
-      <GoalBasedSection />
-
-      {/* Section 04: Custom Composition */}
-      <CustomCompositionSection />
-
-      {/* Section 05: Selected Models */}
-      <SelectedModelsSection />
+      <SolutionsUniverse />
+      <ReferenceProof />
 
       {/* Section 06: How We Work */}
       <HowWeWorkSection />
