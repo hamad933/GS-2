@@ -22,11 +22,11 @@ export function SolutionsUniverse() {
           <circle cx="500" cy="305" r="8" /><circle cx="500" cy="305" r="28" />
         </svg>
         <div className="universe-core" aria-hidden="true"><span>GS</span><small>نقطة الالتقاء</small></div>
-        <div className="family-branches" role="list" aria-label="عائلات الحلول الست">
+        <div className="family-branches" role="group" aria-label="عائلات الحلول الست">
           {solutionFamilies.map((family, index) => {
             const selected = family.id === active.id;
             return (
-              <button key={family.id} type="button" role="listitem" className={`family-branch branch-${index + 1}`} aria-pressed={selected}
+              <button key={family.id} type="button" className={`family-branch branch-${index + 1}`} aria-pressed={selected}
                 onPointerEnter={() => setActiveId(family.id)} onFocus={() => setActiveId(family.id)} onClick={() => setActiveId(family.id)}>
                 <i>0{index + 1}</i><span><strong>{family.title}</strong><small>{family.cue}</small></span><MoveLeft aria-hidden="true" />
               </button>

@@ -23,9 +23,7 @@ jobs:
   capture:
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      github.head_ref == 'chore/gs-vis-qa-001' ||
-      startsWith(github.head_ref, 'feature/gs-home-') ||
-      github.head_ref == 'codex/implement-living-system-hero-s01'
+      github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Check out exact tested commit
