@@ -1,5 +1,3 @@
-import React from 'react';
-
 const NAV_LINK_ITEMS = [
   { label: 'حلولنا', href: '#families' },
   { label: 'منهجنا', href: '#process' },
