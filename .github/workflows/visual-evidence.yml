@@ -23,8 +23,7 @@ jobs:
   capture:
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      github.head_ref == 'chore/gs-vis-qa-001' ||
-      github.event.pull_request.number == 2
+      github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Check out exact tested commit
@@ -68,7 +67,12 @@ jobs:
             desktop-k03-build.png \
             desktop-k04-launch.png \
             mobile-k01-need.png \
-            mobile-k03-build.png; do
+            mobile-k03-build.png \
+            desktop-s02-default.png \
+            desktop-s02-active.png \
+            desktop-s03-proof.png \
+            mobile-s02-active.png \
+            mobile-s03-proof.png; do
             test -s "visual-evidence/$file"
           done
 
