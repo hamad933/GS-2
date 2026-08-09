@@ -1,4 +1,3 @@
-import React from 'react';
 import { HeroCopy } from '../components/hero/HeroCopy';
 import { HeroNav } from '../components/hero/HeroNav';
 import { StageTabs } from '../components/hero/StageTabs';
