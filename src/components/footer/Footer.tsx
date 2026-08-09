@@ -2,7 +2,7 @@ import { MailIcon } from 'lucide-react';
 
 export function Footer() {
   return (
-    <footer className="border-t border-navy-800 bg-navy-950 py-12 text-white">
+    <footer className="border-t border-navy-700 bg-navy-900 py-12 text-white">
       <div className="mx-auto max-w-[1500px] px-4 sm:px-8 lg:px-12">
         <div className="grid gap-8 lg:grid-cols-12 lg:items-center">
           
@@ -40,8 +40,8 @@ export function Footer() {
               <span>hello@generalsolutions.co</span>
             </a>
             <div className="flex gap-4 text-[10px] text-mineral-200/50 justify-start lg:justify-end">
-              <a href="#" className="hover:underline">الخصوصية</a>
-              <a href="#" className="hover:underline">الشروط والأحكام</a>
+              <span>الخصوصية</span>
+              <span>الشروط والأحكام</span>
             </div>
           </div>
 
