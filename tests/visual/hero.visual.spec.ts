@@ -21,13 +21,13 @@ async function reachK03(page: Page) {
   await expect(hero).toHaveAttribute('data-stage', 'build');
   await expect(hero).toHaveAttribute('data-build', '0');
 
-  await page.getByRole('button', { name: 'اعتمد هذه البنية' }).click();
+  await page.getByRole('button', { name: 'اعتمد هذه البنية' }).press('Enter');
   await expect(hero).toHaveAttribute('data-build', '1');
 
-  await page.getByRole('button', { name: 'فعّل نظام الواجهة' }).click();
+  await page.getByRole('button', { name: 'فعّل نظام الواجهة' }).press('Enter');
   await expect(hero).toHaveAttribute('data-build', '2');
 
-  await page.getByRole('button', { name: 'افتح تجربة المنتج' }).click();
+  await page.getByRole('button', { name: 'افتح تجربة المنتج' }).press('Enter');
   await expect(hero).toHaveAttribute('data-build', '3');
   await expect(page.getByLabel('طلبك المختصر')).toBeVisible();
 }
