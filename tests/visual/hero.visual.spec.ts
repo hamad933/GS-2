@@ -21,13 +21,13 @@ async function reachK03(page: Page) {
   await expect(hero).toHaveAttribute('data-stage', 'build');
   await expect(hero).toHaveAttribute('data-build', '0');
 
-  await page.getByRole('button', { name: 'اعتمد هذه البنية' }).press('Enter');
+  await page.getByRole('button', { name: 'رتّب الرحلة حول الهدف' }).press('Enter');
   await expect(hero).toHaveAttribute('data-build', '1');
 
-  await page.getByRole('button', { name: 'فعّل نظام الواجهة' }).press('Enter');
+  await page.getByRole('button', { name: 'وحّد التجربة' }).press('Enter');
   await expect(hero).toHaveAttribute('data-build', '2');
 
-  await page.getByRole('button', { name: 'افتح تجربة المنتج' }).press('Enter');
+  await page.getByRole('button', { name: 'جرّب المسار' }).press('Enter');
   await expect(hero).toHaveAttribute('data-build', '3');
   await expect(page.getByLabel('طلبك المختصر')).toBeVisible();
 }
@@ -62,7 +62,7 @@ test('captures desktop K01, K03, and K04 evidence', async ({ page }) => {
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لاختبار التسليم');
   await page.getByRole('button', { name: /إرسال الطلب/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
-  await expect(page.getByText('اكتمل التسليم بوضوح')).toBeVisible();
+  await expect(page.getByText('تم الاستلام')).toBeVisible();
   await captureHero(page, 'desktop-k04-launch.png');
 });
 
