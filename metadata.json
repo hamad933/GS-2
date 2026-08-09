@@ -1,8 +1,0 @@
-{
-  "name": "General Solutions Digital Journey",
-  "description": "General Solutions Digital Journey showcase and interactive UI app.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}
