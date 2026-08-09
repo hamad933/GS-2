@@ -8,6 +8,7 @@ const S02 = '#solutions-universe';
 const S03 = '#reference-proof';
 const S04 = '#system-anatomy';
 const S05 = '#project-gateway';
+const FOOTER = 'footer:has-text("© 2026 General Solutions")';
 
 async function openHome(page: Page) {
   await page.goto('/');
@@ -234,7 +235,7 @@ test('captures final W04 desktop integration evidence', async ({ page }) => {
   await captureFullPage(page, 'desktop-home-full.png');
   await captureTransition(page, HERO, S02, 'desktop-s01-s02-transition.png');
   await captureTransition(page, S03, S04, 'desktop-s03-s04-transition.png');
-  await captureTransition(page, S05, 'footer', 'desktop-s05-footer.png');
+  await captureTransition(page, S05, FOOTER, 'desktop-s05-footer.png');
 });
 
 test('captures final W04 tablet integration evidence', async ({ page }) => {
@@ -248,5 +249,5 @@ test('captures final W04 mobile integration evidence', async ({ page }) => {
   await openHome(page);
   await captureFullPage(page, 'mobile-home-full.png');
   await captureTransition(page, S03, S04, 'mobile-s03-s04-transition.png');
-  await captureTransition(page, S05, 'footer', 'mobile-s05-footer.png');
+  await captureTransition(page, S05, FOOTER, 'mobile-s05-footer.png');
 });
