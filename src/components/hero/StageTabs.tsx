@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react';
+import { Fragment } from 'react';
 import { CheckIcon, ChevronLeftIcon, PauseIcon, PlayIcon } from 'lucide-react';
 import { STAGE_ORDER, STAGE_COPY } from '../../data/heroContent';
 
