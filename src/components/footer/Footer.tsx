@@ -25,8 +25,8 @@ export function Footer() {
           {/* Quick Nav Links (Col 5) */}
           <div className="lg:col-span-5 flex flex-wrap gap-x-6 gap-y-3 text-xs font-semibold text-mineral-200/80">
             <a href="#hero" className="hover:text-bronze-300 transition-colors">الرئيسية</a>
-            <a href="#families" className="hover:text-bronze-300 transition-colors">الحلول</a>
-            <a href="#models" className="hover:text-bronze-300 transition-colors">النماذج</a>
+            <a href="#solutions-universe" className="hover:text-bronze-300 transition-colors">الحلول</a>
+            <a href="#reference-proof" className="hover:text-bronze-300 transition-colors">النماذج</a>
             <a href="#system-anatomy" className="hover:text-bronze-300 transition-colors">بنية النظام</a>
             <a href="#project-gateway" className="hover:text-bronze-300 transition-colors">ابدأ مشروعك</a>
           </div>
