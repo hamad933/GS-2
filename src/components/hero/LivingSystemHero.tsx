@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Check, Compass, MousePointer2, Send, Sparkles } from 'lucide-react';
 import type { StageId } from '../../types/hero';
-import heroEnvironment from '../../assets/gs-w05/GS_A01_Hero_Architectural_Environment.png';
+import { heroCleanDataUrl } from '../../assets/gs-home-v2/heroCleanData';
 
 const NEEDS = [
   { id: 'service', label: 'إطلاق خدمة رقمية', short: 'خدمة رقمية' },
@@ -53,13 +53,10 @@ export function LivingSystemHero() {
 
   return (
     <section id="hero" className="living-hero" aria-labelledby="hero-title" data-stage={stage} data-build={buildStep}>
-      <img className="production-environment hero-environment" src={heroEnvironment} alt="" aria-hidden="true" fetchPriority="high" />
+      <img className="production-environment hero-environment" src={heroCleanDataUrl} alt="" aria-hidden="true" fetchPriority="high" />
       <div className="living-glow" aria-hidden="true" />
       <div className="living-shell">
         <div className="hero-copy-panel">
-          <div className="stage-constellation" aria-label={`المرحلة الحالية: ${STAGES[stageIndex].label}`}>
-            {STAGES.map((item, index) => <span key={item.id} className={index <= stageIndex ? 'reached' : ''}><i>{index + 1}</i><b>{item.label}</b></span>)}
-          </div>
           <p className="hero-kicker">{COPY[stage].kicker}</p>
           <h1 id="hero-title">{COPY[stage].title}</h1>
           <p className="hero-body">{COPY[stage].body}</p>
@@ -68,6 +65,10 @@ export function LivingSystemHero() {
         </div>
 
         <div className="system-field" aria-live="polite">
+          <div className="operating-wall-label" aria-hidden="true">
+            <span>GS / SYSTEM</span>
+            <strong>{stage === 'need' ? 'حدّد نقطة البداية' : stage === 'direction' ? 'شكّل اتجاه الحل' : stage === 'build' ? 'سطح البناء' : 'جاهزية المسار'}</strong>
+          </div>
           <div className="system-frame" aria-hidden="true"><span>01</span><i /><span>GENERAL SOLUTIONS / DIGITAL SYSTEM</span></div>
           <div className="system-seed" aria-hidden="true">
             <span className="seed-label">نقطة البداية</span>
@@ -107,6 +108,15 @@ export function LivingSystemHero() {
             </div>
           </div>
           <p className="system-caption"><span /> نظام واحد يتغيّر مع قرارك</p>
+        </div>
+
+        <div className="stage-constellation" aria-label={`المرحلة الحالية: ${STAGES[stageIndex].label}`}>
+          {STAGES.map((item, index) => (
+            <span key={item.id} className={index <= stageIndex ? 'reached' : ''} aria-current={item.id === stage ? 'step' : undefined}>
+              <i aria-hidden="true" />
+              <b>{item.label}</b>
+            </span>
+          ))}
         </div>
       </div>
     </section>
