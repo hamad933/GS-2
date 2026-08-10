@@ -3,6 +3,12 @@ import { ArrowLeft } from 'lucide-react';
 export function ProjectGateway() {
   return (
     <section id="project-gateway" className="project-gateway" aria-labelledby="gateway-title">
+      <div className="gateway-architecture" aria-hidden="true">
+        <div className="gateway-vault vault-outer"><i /><i /></div>
+        <div className="gateway-vault vault-middle"><i /><i /></div>
+        <div className="gateway-vault vault-inner"><span>GS</span></div>
+        <div className="gateway-path"><i /><i /><i /><i /></div>
+      </div>
       <div className="gateway-lines" aria-hidden="true"><i /><i /><i /><i /><i /><span /></div>
       <div className="gateway-copy">
         <p><span>05</span> نقطة البدء</p>

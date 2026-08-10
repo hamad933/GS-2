@@ -23,7 +23,7 @@ const COPY: Record<StageId, { kicker: string; title: string; body: string }> = {
   need: { kicker: 'من الحاجة إلى نظام متكامل', title: 'نبني أنظمة رقمية تتشكّل حول واقع عملك', body: 'نبدأ بما تريد تغييره فعلًا، ثم نجعل كل قرار في النظام امتدادًا لهذا الاحتياج.' },
   direction: { kicker: 'اتجاه واحد، بلا ضوضاء', title: 'اختر كيف يصل المستخدم', body: 'شكّل اتجاه الحل داخل النظام نفسه؛ اختيارك هو الذي يعيد ترتيب السطح ويبدأ البناء.' },
   build: { kicker: 'من الهيكل إلى التفاعل', title: 'نحوّل المسار إلى تجربة واضحة', body: 'تتشكّل الرحلة حول الهدف، ثم تتوحّد في سطحٍ واحد يمكنك تجربته بنفسك.' },
-  launch: { kicker: 'نتيجة هادئة ومتصلة', title: 'الفعل نفسه يبدأ التسليم', body: 'الطلب الذي أرسلته من السطح انتقل إلى مسار توضيحي مفهوم—لا ادعاء عن نظامٍ حي.' },
+  launch: { kicker: 'نتيجة هادئة ومتصلة', title: 'الفعل نفسه يبدأ التسليم', body: 'الطلب الذي أرسلته انتقل إلى مسار واضح، مع بقاء القرار النهائي بين يديك.' },
 };
 
 export function LivingSystemHero() {
@@ -83,7 +83,7 @@ export function LivingSystemHero() {
           </div>
 
           <div className="product-surface">
-            <header className="surface-top"><span className="surface-mark">GS</span><div><small>{need?.short || 'نظام يبدأ من احتياجك'}</small><strong>{stage === 'launch' ? 'مسار الطلب' : direction?.label || 'سطح واحد يتشكّل حول الهدف'}</strong></div><span className="surface-mode">{stage === 'launch' ? 'مثال توضيحي' : buildStep < 2 ? 'تشكيل التجربة' : 'معاينة المنتج'}</span></header>
+            <header className="surface-top"><span className="surface-mark">GS</span><div><small>{need?.short || 'نظام يبدأ من احتياجك'}</small><strong>{stage === 'launch' ? 'مسار الطلب' : direction?.label || 'سطح واحد يتشكّل حول الهدف'}</strong></div><span className="surface-mode">{stage === 'launch' ? 'مسار واضح' : buildStep < 2 ? 'تشكيل التجربة' : 'تجربة المنتج'}</span></header>
             <div className="build-phase" aria-label={`مرحلة تشكيل السطح ${buildStep + 1} من 4`}><span>0{Math.min(buildStep + 1, 4)}</span><p>{buildStep === 0 ? 'رتّب الرحلة حول الهدف' : buildStep === 1 ? 'وحّد التجربة' : buildStep === 2 ? 'قرّبها من المستخدم' : 'جرّب المسار'}</p></div>
             <div className="surface-content">
               <div className="surface-copy">
@@ -101,7 +101,7 @@ export function LivingSystemHero() {
               {stage === 'build' && buildStep === 1 && <button type="button" onClick={() => setBuildStep(2)}>وحّد التجربة <ArrowLeft /></button>}
               {stage === 'build' && buildStep === 2 && <button type="button" onClick={() => setBuildStep(3)}>جرّب المسار <Sparkles /></button>}
               {stage === 'build' && buildStep === 3 && <form onSubmit={(event) => { event.preventDefault(); submitProductAction(); }}><label htmlFor="hero-brief">طلبك المختصر</label><input id="hero-brief" value={brief} onChange={(event) => setBrief(event.target.value)} /><button type="submit" disabled={!brief.trim()}>إرسال الطلب <Send /></button></form>}
-              {stage === 'launch' && <div className="resolution-flow"><span><Check /> تم الاستلام</span><i /><span>المراجعة</span><i /><span>أُغلق بوضوح</span><small>تدفق توضيحي</small></div>}
+              {stage === 'launch' && <div className="resolution-flow"><span><Check /> تم الاستلام</span><i /><span>المراجعة</span><i /><span>خطوة تالية واضحة</span></div>}
             </div>
           </div>
           <p className="system-caption"><span /> نظام واحد يتغيّر مع قرارك</p>
