@@ -1,0 +1,58 @@
+name: Materialize W05 Production Assets
+
+on:
+  push:
+    branches:
+      - controller/gs-home-w05-production-assets
+    paths:
+      - .github/workflows/materialize-w05-production-assets.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout controller branch
+        uses: actions/checkout@v4
+        with:
+          ref: controller/gs-home-w05-production-assets
+          fetch-depth: 0
+
+      - name: Download exact approved asset pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 --retry-delay 2 \
+            'https://drive.usercontent.google.com/download?id=1Xq9qNZqyXWgfg4fg2wt3YqcfxIs_MsoV&export=download&confirm=t' \
+            -o /tmp/gs-w05-assets.zip
+          unzip -t /tmp/gs-w05-assets.zip
+          rm -rf /tmp/gs-w05-assets
+          mkdir -p /tmp/gs-w05-assets
+          unzip -q /tmp/gs-w05-assets.zip -d /tmp/gs-w05-assets
+
+      - name: Install exact production assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/visual src/assets/gs-w05
+          install -m 0644 /tmp/gs-w05-assets/00_GS_HOMEPAGE_VISUAL_MASTER_V1.png docs/visual/GS_HOMEPAGE_VISUAL_MASTER_V1.png
+          install -m 0644 /tmp/gs-w05-assets/01_GS_A01_Hero_Architectural_Environment.png src/assets/gs-w05/GS_A01_Hero_Architectural_Environment.png
+          install -m 0644 /tmp/gs-w05-assets/02_GS_A02_Solutions_Universe_Core.png src/assets/gs-w05/GS_A02_Solutions_Universe_Core.png
+          install -m 0644 /tmp/gs-w05-assets/03_GS_A03_Selected_Work_Theatre_Environment.png src/assets/gs-w05/GS_A03_Selected_Work_Theatre_Environment.png
+          install -m 0644 /tmp/gs-w05-assets/04_GS_A04_System_Anatomy_Object.png src/assets/gs-w05/GS_A04_System_Anatomy_Object.png
+          install -m 0644 /tmp/gs-w05-assets/05_GS_A05_Final_Gateway_Environment.png src/assets/gs-w05/GS_A05_Final_Gateway_Environment.png
+          rm .github/workflows/materialize-w05-production-assets.yml
+
+      - name: Commit materialized assets and remove bootstrap workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/visual/GS_HOMEPAGE_VISUAL_MASTER_V1.png src/assets/gs-w05 .github/workflows/materialize-w05-production-assets.yml
+          git diff --cached --stat
+          git commit -m 'chore(visual): add approved W05 production assets'
+          git push origin HEAD:controller/gs-home-w05-production-assets
