@@ -7,6 +7,7 @@ on:
       - main
       - codex/implement-living-system-hero-s01
       - codex/implement-visual-reconstruction-for-homepage
+      - controller/gs-home-w05-v2-visual-authority
     types: [opened, synchronize, reopened]
     paths:
       - 'src/**'
