@@ -788,3 +788,140 @@ a:focus-visible {
 @media (prefers-reduced-motion:reduce) {
   .living-hero *, .living-hero *::before, .living-hero *::after { animation-duration:.01ms!important; transition-duration:.01ms!important; scroll-behavior:auto!important; }
 }
+
+/* W05-V2-A Controller correction — K03/K04 share the mineral operating wall,
+   rather than resolving as a light application window over the environment. */
+@media (min-width:901px) {
+  .living-hero[data-stage="build"] .product-surface {
+    border:0;
+    border-top:1px solid #d6ad786b;
+    border-bottom:1px solid #d6ad782e;
+    background:
+      linear-gradient(90deg,#050b10f5 0 5px,#101a20ed 5px 72%,#071016c7),
+      radial-gradient(circle at 82% 18%,#315ee811,transparent 30%);
+    color:#e8e0d5;
+    clip-path:polygon(0 3%,96% 0,100% 8%,100% 91%,96% 91%,96% 97%,5% 100%,0 94%);
+    box-shadow:inset 5px 0 #d6ad782f,inset -1px 0 #d6ad781f,0 34px 68px #0009;
+  }
+  .living-hero[data-stage="build"] .product-surface::after {
+    inset:12px 0 13px 5px;
+    box-shadow:inset 1px 0 #d6ad7836,inset 0 1px #ffffff0a,inset 0 -1px #000b;
+  }
+  .living-hero[data-stage="build"] .surface-top {
+    border-bottom-color:#d6ad7828;
+    background:linear-gradient(90deg,#111d24e8,#091218a8);
+  }
+  .living-hero[data-stage="build"] .surface-mark { background:#d6ad78; color:#081018; }
+  .living-hero[data-stage="build"] .surface-top small,
+  .living-hero[data-stage="build"] .surface-mode { color:#a79d90; }
+  .living-hero[data-stage="build"] .surface-top strong,
+  .living-hero[data-stage="build"] .build-phase p,
+  .living-hero[data-stage="build"] .surface-copy strong { color:#eee5d9; }
+  .living-hero[data-stage="build"] .surface-mode {
+    border-right:1px solid #315ee85c;
+    background:#0c1821;
+  }
+  .living-hero[data-stage="build"] .surface-content {
+    background:
+      linear-gradient(90deg,transparent 49.8%,#d6ad7824 50%,transparent 50.2%),
+      linear-gradient(180deg,#0b151c9c,#071017d6);
+  }
+  .living-hero[data-stage="build"] .surface-copy small,
+  .living-hero[data-stage="build"] .build-phase span { color:#6f8fdc; }
+  .living-hero[data-stage="build"] .surface-copy p { color:#aaa195; }
+  .living-hero[data-stage="build"] .surface-visual,
+  .living-hero[data-stage="build"][data-build="0"] .surface-visual,
+  .living-hero[data-stage="build"][data-build="1"] .surface-visual,
+  .living-hero[data-stage="build"][data-build="2"] .surface-visual,
+  .living-hero[data-stage="build"][data-build="3"] .surface-visual {
+    border-top:1px solid #d6ad782d;
+    border-bottom:1px solid #000;
+    background:radial-gradient(circle at 48% 38%,#315ee82b,transparent 38%),#081119;
+    color:#eee5d9;
+  }
+  .living-hero[data-stage="build"] .surface-visual::before { border-color:#d6ad7828; }
+  .living-hero[data-stage="build"] .surface-visual svg { stroke:#9b8b77; }
+  .living-hero[data-stage="build"] .surface-workbench,
+  .living-hero[data-stage="build"][data-build="3"] .surface-workbench {
+    margin:0 24px;
+    padding:0;
+    border-top-color:#d6ad782c;
+    background:transparent;
+  }
+  .living-hero[data-stage="build"] .surface-workbench>button {
+    border-right:2px solid #d6ad78;
+    background:#101b23;
+    color:#eee5d9;
+  }
+  .living-hero[data-stage="build"] .surface-workbench label { color:#aaa195; }
+  .living-hero[data-stage="build"] .surface-workbench input {
+    border-bottom-color:#d6ad7861;
+    background:#0b151c;
+    color:#eee5d9;
+  }
+  .living-hero[data-stage="build"] .surface-workbench form button {
+    border-right:2px solid #6f8fdc;
+    background:#14233a;
+  }
+
+  .living-hero[data-stage="launch"] .living-glow {
+    left:41%;
+    width:14%;
+    opacity:.78;
+    background:linear-gradient(90deg,transparent,#e1b679a8,transparent);
+    filter:blur(10px);
+  }
+  .living-hero[data-stage="launch"] .product-surface {
+    top:28%;
+    left:5.5%;
+    width:27%;
+    height:39%;
+    border:0;
+    border-top:1px solid #d6ad7852;
+    border-bottom:1px solid #d6ad7824;
+    background:linear-gradient(90deg,#050b10e8 0 4px,#0c151bd1 4px 74%,#0710169c);
+    color:#ddd3c6;
+    clip-path:polygon(0 4%,96% 0,100% 9%,100% 88%,94% 88%,94% 96%,7% 100%,0 94%);
+    box-shadow:inset 4px 0 #d6ad7836,0 25px 52px #0007;
+  }
+  .living-hero[data-stage="launch"] .product-surface::after {
+    inset:10px 0 11px 4px;
+    box-shadow:inset 1px 0 #d6ad782b,inset 0 1px #ffffff08;
+  }
+  .living-hero[data-stage="launch"] .surface-top {
+    height:58px;
+    border-bottom-color:#d6ad781c;
+    background:transparent;
+  }
+  .living-hero[data-stage="launch"] .surface-mark { width:26px; height:26px; background:#d6ad78; color:#081018; }
+  .living-hero[data-stage="launch"] .surface-top small,
+  .living-hero[data-stage="launch"] .surface-mode { color:#948b80; }
+  .living-hero[data-stage="launch"] .surface-top strong,
+  .living-hero[data-stage="launch"] .surface-copy strong { color:#e8dfd3; }
+  .living-hero[data-stage="launch"] .surface-mode { border-right:1px solid #d6ad7847; background:transparent; }
+  .living-hero[data-stage="launch"] .build-phase,
+  .living-hero[data-stage="launch"] .surface-visual { display:none; }
+  .living-hero[data-stage="launch"] .surface-content {
+    min-height:142px;
+    display:block;
+    padding:27px 23px 15px;
+    background:linear-gradient(90deg,#d6ad7808,transparent);
+  }
+  .living-hero[data-stage="launch"] .surface-copy { gap:6px; }
+  .living-hero[data-stage="launch"] .surface-copy small { color:#a99378; }
+  .living-hero[data-stage="launch"] .surface-copy strong { font-size:16px; }
+  .living-hero[data-stage="launch"] .surface-copy p { max-width:330px; color:#9f978d; }
+  .living-hero[data-stage="launch"] .surface-workbench {
+    min-height:54px;
+    margin:0 22px;
+    padding:0;
+    border-top-color:#d6ad7824;
+    background:transparent;
+  }
+  .living-hero[data-stage="launch"] .resolution-flow { gap:8px; color:#8f877c; }
+  .living-hero[data-stage="launch"] .resolution-flow span { color:#a79e92; font-size:8px; }
+  .living-hero[data-stage="launch"] .resolution-flow span:first-child,
+  .living-hero[data-stage="launch"] .resolution-flow span:last-of-type { color:#dcd2c5; }
+  .living-hero[data-stage="launch"] .resolution-flow svg { background:#d6ad78; color:#081018; }
+  .living-hero[data-stage="launch"] .resolution-flow i { background:#d6ad7838; }
+}
