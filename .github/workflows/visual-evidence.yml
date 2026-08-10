@@ -63,36 +63,28 @@ jobs:
         shell: bash
         run: |
           for file in \
-            desktop-k01-need.png \
-            desktop-k03-build.png \
-            desktop-k04-launch.png \
-            mobile-k01-need.png \
-            mobile-k03-build.png \
-            desktop-s02-default.png \
-            desktop-s02-active.png \
-            desktop-s03-proof.png \
-            mobile-s02-active.png \
-            mobile-s03-proof.png \
-            desktop-s04-anatomy-default.png \
-            desktop-s04-anatomy-active.png \
-            desktop-s05-gateway.png \
-            mobile-s04-anatomy.png \
-            mobile-s05-gateway.png \
-            desktop-home-full.png \
-            desktop-s01-s02-transition.png \
-            desktop-s03-s04-transition.png \
-            desktop-s05-footer.png \
-            tablet-home-full.png \
-            mobile-home-full.png \
-            mobile-s03-s04-transition.png \
-            mobile-s05-footer.png; do
+            desktop-w05-home-full.png \
+            desktop-w05-hero-need.png \
+            desktop-w05-hero-build.png \
+            desktop-w05-hero-launch.png \
+            desktop-w05-solutions-active.png \
+            desktop-w05-project-rp01.png \
+            desktop-w05-project-rp02.png \
+            desktop-w05-anatomy-active.png \
+            desktop-w05-gateway.png \
+            tablet-w05-home-full.png \
+            mobile-w05-home-full.png \
+            mobile-w05-hero-build.png \
+            mobile-w05-solutions-active.png \
+            mobile-w05-project.png \
+            mobile-w05-anatomy.png; do
             test -s "visual-evidence/$file"
           done
 
       - name: Upload visual evidence
         uses: actions/upload-artifact@v4
         with:
-          name: gs-visual-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          name: gs-home-w05-reference-only-${{ github.event.pull_request.head.sha || github.sha }}
           path: visual-evidence
           if-no-files-found: error
           retention-days: 7

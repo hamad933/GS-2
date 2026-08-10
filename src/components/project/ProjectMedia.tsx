@@ -10,7 +10,7 @@ function Slot({ slot, className }: { slot: MediaSlot; className: string }) {
 export function ProjectMedia({ desktop, mobile, detail, label }: ProjectMediaProps) {
   return (
     <figure className="project-media" aria-label={label}>
-      <figcaption><span>مادة توضيحية</span><i /> جاهزة لاستبدال الوسائط</figcaption>
+      <figcaption><span>معاينة المشروع</span><i /> استكشف المشروع</figcaption>
       <Slot slot={desktop} className="media-desktop" />
       <Slot slot={mobile} className="media-mobile" />
       {detail && <Slot slot={detail} className="media-detail" />}

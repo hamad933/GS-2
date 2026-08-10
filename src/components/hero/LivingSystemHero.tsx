@@ -16,11 +16,11 @@ const DIRECTIONS = [
 
 const STAGES: { id: StageId; label: string }[] = [
   { id: 'need', label: 'الاحتياج' }, { id: 'direction', label: 'الاتجاه' },
-  { id: 'build', label: 'التصميم والتطوير' }, { id: 'launch', label: 'الإطلاق والتشغيل' },
+  { id: 'build', label: 'البناء' }, { id: 'launch', label: 'الإطلاق' },
 ];
 
 const COPY: Record<StageId, { kicker: string; title: string; body: string }> = {
-  need: { kicker: 'من الحاجة إلى أثرٍ واضح', title: 'نبني أنظمة رقمية', body: 'نبدأ بما تريد تغييره فعلًا، ثم نجعل كل قرارٍ في النظام امتدادًا لهذا الاحتياج.' },
+  need: { kicker: 'من الحاجة إلى نظام متكامل', title: 'نبني أنظمة رقمية تتشكّل حول واقع عملك', body: 'نبدأ بما تريد تغييره فعلًا، ثم نجعل كل قرار في النظام امتدادًا لهذا الاحتياج.' },
   direction: { kicker: 'اتجاه واحد، بلا ضوضاء', title: 'اختر كيف يصل المستخدم', body: 'شكّل اتجاه الحل داخل النظام نفسه؛ اختيارك هو الذي يعيد ترتيب السطح ويبدأ البناء.' },
   build: { kicker: 'من الهيكل إلى التفاعل', title: 'نحوّل المسار إلى تجربة واضحة', body: 'تتشكّل الرحلة حول الهدف، ثم تتوحّد في سطحٍ واحد يمكنك تجربته بنفسك.' },
   launch: { kicker: 'نتيجة هادئة ومتصلة', title: 'الفعل نفسه يبدأ التسليم', body: 'الطلب الذي أرسلته من السطح انتقل إلى مسار توضيحي مفهوم—لا ادعاء عن نظامٍ حي.' },
@@ -66,7 +66,7 @@ export function LivingSystemHero() {
         </div>
 
         <div className="system-field" aria-live="polite">
-          <div className="system-frame" aria-hidden="true"><span>01</span><i /><span>GS / SYSTEM</span></div>
+          <div className="system-frame" aria-hidden="true"><span>01</span><i /><span>GENERAL SOLUTIONS / DIGITAL SYSTEM</span></div>
           <div className="system-seed" aria-hidden="true">
             <span className="seed-label">نقطة البداية</span>
             <strong>{need?.short || 'احتياج واضح'}</strong>

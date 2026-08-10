@@ -9,9 +9,9 @@ export function SolutionsUniverse() {
   return (
     <section id="solutions-universe" className="solutions-universe" aria-labelledby="solutions-title" data-active={active.id}>
       <div className="universe-heading">
-        <p><span>02</span> فضاء الحلول</p>
-        <h2 id="solutions-title">ستة مسارات.<br />نظام واحد يتشكّل حول احتياجك.</h2>
-        <div className="universe-intro">اختر مساراً لترى ما يصبح واضحاً داخله.<ArrowDownLeft aria-hidden="true" /></div>
+        <p><span>02</span> عالم الحلول</p>
+        <h2 id="solutions-title">كل احتياج يفتح<br />مسارًا مختلفًا.</h2>
+        <div className="universe-intro">اختر مجالًا لتكشف مساره داخل المنظومة.<ArrowDownLeft aria-hidden="true" /></div>
       </div>
 
       <div className="universe-field">
@@ -36,6 +36,7 @@ export function SolutionsUniverse() {
         <div className="family-reveal" aria-live="polite">
           <span>المسار المختار</span><h3>{active.title}</h3><p>{active.description}</p>
           <ul>{active.outcomes.map((outcome) => <li key={outcome}>{outcome}</li>)}</ul>
+          <button className="family-cta" type="button">استكشف الحل <MoveLeft aria-hidden="true" /></button>
         </div>
       </div>
       <div className="universe-convergence" aria-hidden="true"><i /><i /><i /><span>من الإمكانية إلى صورةٍ قابلة للرؤية</span></div>

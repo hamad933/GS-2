@@ -22,12 +22,12 @@ export type ReferenceProject = {
   title: string;
   statement: string;
   focus: string[];
-  visual: 'service' | 'commerce' | 'portal';
+  visual: 'service' | 'commerce' | 'portal' | 'assets';
 };
 
-// REFERENCE_ONLY: temporary illustrative entries, intentionally isolated for later replacement.
 export const referenceProjects: ReferenceProject[] = [
-  { id: 'service-journey', index: '01', family: 'مواقع الأعمال والخدمات', title: 'رحلة خدمة تبدأ من السؤال الصحيح', statement: 'تصوّر توضيحي لسطح يختصر تعريف الخدمة والاختيار والطلب في إيقاع واحد.', focus: ['وضوح الخدمة', 'توجيه القرار', 'طلب مباشر'], visual: 'service' },
-  { id: 'brand-commerce', index: '02', family: 'التجارة الرقمية وتجارب العلامات', title: 'منتج يتقدّم، والواجهة تتراجع', statement: 'تصوّر توضيحي لتجربة تحافظ على حضور العلامة وتمنح الاختيار المساحة الأكبر.', focus: ['سرد بصري', 'اكتشاف المنتج', 'اختيار هادئ'], visual: 'commerce' },
-  { id: 'operations-portal', index: '03', family: 'الأنظمة التشغيلية والبوابات', title: 'مسار عمل يمكن قراءته من نظرة', statement: 'تصوّر توضيحي لبوابة ترتّب الطلبات والحالة والخطوة التالية دون ازدحام.', focus: ['حالة واضحة', 'أولوية العمل', 'خطوة تالية'], visual: 'portal' },
+  { id: 'rp01', index: 'RP01', family: 'Bayt & Style', title: 'تجربة تجارة وهوية بصرية متصلة', statement: 'واجهة عرض مرنة تجمع حضور العلامة واستكشاف المنتجات في تجربة واحدة.', focus: ['هوية واضحة', 'استكشاف المنتج', 'رحلة متصلة'], visual: 'commerce' },
+  { id: 'rp02', index: 'RP02', family: 'Enterprise Operations', title: 'نظام تشغيل يوضّح العمل', statement: 'سطح تشغيلي يجمع المهام والحالات والخطوة التالية دون ازدحام.', focus: ['سياق العمل', 'وضوح الحالة', 'خطوة تالية'], visual: 'portal' },
+  { id: 'rp03', index: 'RP03', family: 'Booking & Services', title: 'حجز يبدأ من احتياج واضح', statement: 'رحلة خدمة تنظّم الاختيار والموعد والتأكيد في مسار مفهوم.', focus: ['اختيار الخدمة', 'تنظيم الموعد', 'تأكيد واضح'], visual: 'service' },
+  { id: 'rp04', index: 'RP04', family: 'Real Estate & Assets', title: 'الأصول في مساحة قرار واحدة', statement: 'تجربة استكشاف توازن بين الصورة والمعلومة وتقود إلى الاستفسار المناسب.', focus: ['استكشاف بصري', 'تفاصيل مرتبة', 'قرار أوضح'], visual: 'assets' },
 ];
