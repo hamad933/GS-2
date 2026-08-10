@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - codex/implement-visual-reconstruction-for-homepage
+      - controller/gs-home-w05-v2-visual-authority
   push:
     branches:
       - main
