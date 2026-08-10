@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowDownLeft, MoveLeft } from 'lucide-react';
 import { solutionFamilies } from '../../data/homeShowcase';
+import solutionsEnvironment from '../../assets/gs-w05/GS_A02_Solutions_Universe_Core.png';
 
 export function SolutionsUniverse() {
   const [activeId, setActiveId] = useState(solutionFamilies[0].id);
@@ -8,6 +9,7 @@ export function SolutionsUniverse() {
 
   return (
     <section id="solutions-universe" className="solutions-universe" aria-labelledby="solutions-title" data-active={active.id}>
+      <img className="production-environment solutions-environment" src={solutionsEnvironment} alt="" aria-hidden="true" loading="lazy" />
       <div className="universe-heading">
         <p><span>02</span> عالم الحلول</p>
         <h2 id="solutions-title">كل احتياج يفتح<br />مسارًا مختلفًا.</h2>
@@ -15,13 +17,6 @@ export function SolutionsUniverse() {
       </div>
 
       <div className="universe-field">
-        <svg className="universe-lines" viewBox="0 0 1000 610" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M84 84 C295 84 315 288 500 305" /><path d="M86 250 C285 250 326 292 500 305" />
-          <path d="M100 504 C290 504 335 336 500 305" /><path d="M916 80 C700 80 694 277 500 305" />
-          <path d="M920 270 C720 270 670 295 500 305" /><path d="M900 515 C700 515 680 337 500 305" />
-          <circle cx="500" cy="305" r="8" /><circle cx="500" cy="305" r="28" />
-        </svg>
-        <div className="universe-core" aria-hidden="true"><span>GS</span><small>نقطة الالتقاء</small></div>
         <div className="family-branches" role="group" aria-label="عائلات الحلول الست">
           {solutionFamilies.map((family, index) => {
             const selected = family.id === active.id;
@@ -35,7 +30,6 @@ export function SolutionsUniverse() {
         </div>
         <div className="family-reveal" aria-live="polite">
           <span>المسار المختار</span><h3>{active.title}</h3><p>{active.description}</p>
-          <ul>{active.outcomes.map((outcome) => <li key={outcome}>{outcome}</li>)}</ul>
           <button className="family-cta" type="button">استكشف الحل <MoveLeft aria-hidden="true" /></button>
         </div>
       </div>

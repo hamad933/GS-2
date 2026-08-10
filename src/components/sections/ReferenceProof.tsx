@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { ProjectMedia } from '../project/ProjectMedia';
 import { referenceProjects, type ReferenceProject } from '../../data/homeShowcase';
+import theatreEnvironment from '../../assets/gs-w05/GS_A03_Selected_Work_Theatre_Environment.png';
 
 function IllustrativeSurface({ project, compact = false }: { project: ReferenceProject; compact?: boolean }) {
   return (
@@ -23,6 +24,7 @@ export function ReferenceProof() {
     <section id="reference-proof" className="reference-proof" aria-labelledby="proof-title" data-project={active.id}>
       <header className="proof-heading"><p><span>03</span> أعمال مختارة</p><h2 id="proof-title">مشروع واحد.<br />في مركز المشهد.</h2><div><strong>{active.family}</strong><p>{active.statement}</p></div></header>
       <div className="proof-theatre">
+        <img className="production-environment theatre-environment" src={theatreEnvironment} alt="" aria-hidden="true" loading="lazy" />
         <ProjectMedia label={`مشروع ${active.family}`}
           desktop={{ alt: `سطح المكتب لمشروع ${active.family}`, placeholder: <IllustrativeSurface project={active} /> }}
           mobile={{ alt: `تجربة الهاتف لمشروع ${active.family}`, placeholder: <IllustrativeSurface project={active} compact /> }}

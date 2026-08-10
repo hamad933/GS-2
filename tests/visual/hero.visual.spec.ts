@@ -229,64 +229,72 @@ test('representative controls support real clicks, keyboard activation, and sync
   await expect(gateway).toHaveAttribute('href', /^mailto:hello@generalsolutions\.co\?/);
 });
 
-test('captures final W04 desktop integration evidence', async ({ page }) => {
+test('captures final R3 desktop integration evidence', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openHome(page);
-  await captureFullPage(page, 'desktop-w05-home-full.png');
+  await captureFullPage(page, 'desktop-w05-r3-home-full.png');
   await captureTransition(page, HERO, S02, 'desktop-s01-s02-transition.png');
   await captureTransition(page, S03, S04, 'desktop-s03-s04-transition.png');
   await captureTransition(page, S05, FOOTER, 'desktop-s05-footer.png');
 });
 
-test('captures final W04 tablet integration evidence', async ({ page }) => {
+test('captures final R3 tablet integration evidence', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await openHome(page);
-  await captureFullPage(page, 'tablet-w05-home-full.png');
+  await captureFullPage(page, 'tablet-w05-r3-home-full.png');
 });
 
-test('captures final W04 mobile integration evidence', async ({ page }) => {
+test('captures final R3 mobile integration evidence', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openHome(page);
-  await captureFullPage(page, 'mobile-w05-home-full.png');
+  await captureFullPage(page, 'mobile-w05-r3-home-full.png');
   await captureTransition(page, S03, S04, 'mobile-s03-s04-transition.png');
   await captureTransition(page, S05, FOOTER, 'mobile-s05-footer.png');
 });
 
-test('captures complete W05 review evidence with real pointer interactions', async ({ page }) => {
+test('captures complete W05-R3 review evidence with real pointer interactions', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openHome(page);
-  await captureHero(page, 'desktop-w05-hero-need.png');
+  await captureHero(page, 'desktop-w05-r3-hero-need.png');
+  await page.getByRole('button', { name: 'إطلاق خدمة رقمية' }).click();
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'direction');
+  await captureHero(page, 'desktop-w05-r3-hero-direction.png');
+  await page.getByRole('button', { name: 'ابدأ بحاجة أخرى' }).click();
   await reachK03(page);
-  await captureHero(page, 'desktop-w05-hero-build.png');
+  await captureHero(page, 'desktop-w05-r3-hero-build.png');
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لمراجعة التفاعل');
   await page.getByRole('button', { name: /إرسال الطلب/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
-  await captureHero(page, 'desktop-w05-hero-launch.png');
+  await captureHero(page, 'desktop-w05-r3-hero-launch.png');
 
+  await captureSection(page, S02, 'desktop-w05-r3-solutions-default.png');
+  await page.locator(S02).getByRole('button', { name: /التجارة الرقمية وتجارب العلامات/ }).click();
   await page.locator(S02).getByRole('button', { name: /الأنظمة التشغيلية والبوابات/ }).click();
   await expect(page.locator(S02)).toHaveAttribute('data-active', 'portals');
-  await captureSection(page, S02, 'desktop-w05-solutions-active.png');
+  await captureSection(page, S02, 'desktop-w05-r3-solutions-active.png');
 
   await page.locator(S03).getByRole('button', { name: /Enterprise Operations/ }).click();
   await page.locator(S03).getByRole('button', { name: /Bayt & Style/ }).click();
-  await captureSection(page, S03, 'desktop-w05-project-rp01.png');
+  await captureSection(page, S03, 'desktop-w05-r3-project-rp01.png');
   await page.locator(S03).getByRole('button', { name: /Enterprise Operations/ }).click();
   await expect(page.locator(S03)).toHaveAttribute('data-project', 'rp02');
-  await captureSection(page, S03, 'desktop-w05-project-rp02.png');
+  await captureSection(page, S03, 'desktop-w05-r3-project-rp02.png');
+  await page.locator(S03).getByRole('button', { name: /Booking & Services/ }).click();
 
   await page.locator(S04).getByRole('button', { name: /التكامل/ }).click();
   await expect(page.locator(S04)).toHaveAttribute('data-active', 'integration');
-  await captureSection(page, S04, 'desktop-w05-anatomy-active.png');
-  await captureSection(page, S05, 'desktop-w05-gateway.png');
+  await captureSection(page, S04, 'desktop-w05-r3-anatomy-active.png');
+  await captureSection(page, S05, 'desktop-w05-r3-gateway.png');
 
   await page.setViewportSize({ width: 390, height: 844 });
   await openHome(page);
   await reachK03(page);
-  await captureHero(page, 'mobile-w05-hero-build.png');
+  await captureHero(page, 'mobile-w05-r3-hero-build.png');
   await page.locator(S02).getByRole('button', { name: /العقارات والأصول/ }).click();
-  await captureSection(page, S02, 'mobile-w05-solutions-active.png');
+  await captureSection(page, S02, 'mobile-w05-r3-solutions-active.png');
   await page.locator(S03).getByRole('button', { name: /Booking & Services/ }).click();
-  await captureSection(page, S03, 'mobile-w05-project.png');
+  await captureSection(page, S03, 'mobile-w05-r3-project.png');
   await page.locator(S04).getByRole('button', { name: /البناء/ }).click();
-  await captureSection(page, S04, 'mobile-w05-anatomy.png');
+  await captureSection(page, S04, 'mobile-w05-r3-anatomy.png');
+  await captureSection(page, S05, 'mobile-w05-r3-gateway.png');
 });
