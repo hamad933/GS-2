@@ -1,14 +1,22 @@
 # GS Visual Execution Entry Point
 
-This file records stable implementation boundaries for future authorized visual work. It does not authorize design or implementation by itself.
+This file records stable implementation boundaries for authorized GS visual work. It does not authorize implementation by itself.
 
-## W05 visual authority
+## Active W05 visual authority — V2
 
-[`GS_HOMEPAGE_VISUAL_MASTER_V1.png`](./GS_HOMEPAGE_VISUAL_MASTER_V1.png) is the owner-approved visual contract governing W05 homepage art direction. Its image-generated copy and data are not factual product content; functional and product truth remain governed separately.
+The controlling W05 homepage visual-integration contract is now:
 
-## Homepage blueprint
+- `GS_W05_VISUAL_INTEGRATION_MANIFEST_V2.md`
+- `gs-home-v2/integrated-targets/` — owner-approved **Integrated Targets / Visual Composition Authority**
+- `../../src/assets/gs-home-v2/` — approved **Clean Production Assets / Runtime Visual Material**
+- `codex/gs-visual-integration/SKILL.md` — project-specific procedural guidance
+- `codex/gs-visual-integration/references/QA_RUBRIC.md` — visual self-review rubric
 
-Future bounded homepage work uses this structure:
+The prior [`GS_HOMEPAGE_VISUAL_MASTER_V1.png`](./GS_HOMEPAGE_VISUAL_MASTER_V1.png) is **SUPERSEDED FOR W05 IMPLEMENTATION AUTHORITY**. Retain it as historical/supporting reference only; do not use it to override the V2 Integrated Targets.
+
+Generated copy, logos, metrics, screenshots, claims, and contact details visible inside image-generated references are not product/content truth.
+
+## Homepage structure
 
 - `S01` — Living System Hero
 - `S02` — Solutions Universe
@@ -18,25 +26,38 @@ Future bounded homepage work uses this structure:
 
 ## Hero progression
 
-The stable conceptual states are:
+The active visible stage labels are exactly:
 
-`الاحتياج` → `الاتجاه` → `التصميم والتطوير` → `الإطلاق والتشغيل`
+`الاحتياج` → `الاتجاه` → `البناء` → `الإطلاق`
+
+The Hero is one persistent system across four states. Use one clean Hero environment; do not swap four background images.
 
 ## Stable implementation boundaries
 
-- Arabic-first.
-- Preserve a premium custom digital-system identity; do not default to a generic SaaS/dashboard landing-page treatment.
+- Arabic-first RTL.
+- Preserve a premium authored digital-system identity; do not default to generic SaaS/dashboard/card treatments.
 - Production Hero must not autoplay.
 - Do not use a conventional progress bar.
 - Do not use generic previous/next slideshow controls.
-- Progression must be causal and user-driven rather than a decorative slide sequence.
-- Do not fabricate metrics, clients, testimonials, performance evidence, operational claims, or other proof.
-- Approved reference imagery is direction/reference material only, not a pixel-perfect target and not a quality ceiling.
-- `S03` must support replaceable project-media slots so real project screenshots can replace placeholders later without re-architecting the section.
-- `RP01`–`RP04` remain independent products and must not be visually or structurally absorbed into GS as one application.
+- Progression must be causal and user-driven.
+- The clean image and the real DOM must share one authored coordinate system; do not implement `background image + detached HTML overlay`.
+- Do not fabricate metrics, clients, testimonials, performance evidence, operational claims, project screenshots, or other proof.
+- `S03` must preserve replaceable real project-media insertion surfaces so authoritative RP01–RP04 screenshots can be integrated later without section re-architecture.
+- `RP01`–`RP04` remain independent products.
+- Do not expose internal words such as placeholder, reference, evidence, or engineered preview in public-facing copy.
+- Do not add dependencies merely for animation when CSS/React state is sufficient.
+- Do not recompress/regenerate V2 production derivatives during a section implementation workstream.
 
-Existing repository reference images are `REFERENCE_ONLY`. Their presence is not production evidence and does not authorize generation, editing, replacement, optimization, or deletion outside a bounded visual workstream.
+## Desktop-first visual gate
 
-## W0 boundary
+For the V2 reconstruction, 1440px is the primary fidelity viewport.
 
-Governance work does not redesign the Hero, change its current stage behavior, remove current autoplay, rebuild homepage sections, generate imagery, modify visual identity, or implement `S01`–`S05`. Those changes require the next explicitly authorized implementation workstream.
+Implement and review each section against its Integrated Target at 1440 before responsive closure. 768px and 390px are independently authored responsive compositions, not proportional scale-downs.
+
+## Evidence
+
+Visual acceptance requires direct screenshot comparison, not a green CI result alone.
+
+A section fails visual acceptance when the imagery and DOM still read as two separate layers, even if both look individually polished.
+
+Existing repository screenshots/artifacts remain `REFERENCE_ONLY` unless explicitly promoted by the Controller.

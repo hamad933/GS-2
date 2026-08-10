@@ -1,0 +1,76 @@
+{
+  "contract_id": "GS-W05-VISUAL-INTEGRATION-V2",
+  "primary_fidelity_viewport": 1440,
+  "regression_viewports": [1024, 768, 390],
+  "authority": {
+    "integrated_targets": "visual_composition_authority",
+    "clean_assets": "runtime_visual_material",
+    "generated_text_in_targets": "not_content_authority",
+    "legacy_master_v1": "superseded_for_w05_implementation"
+  },
+  "sections": {
+    "S01": {
+      "name": "Hero",
+      "asset": "src/assets/gs-home-v2/01_GS_Hero_Clean_Production_Asset.webp",
+      "natural_size": [1024, 576],
+      "targets": [
+        "docs/visual/gs-home-v2/integrated-targets/01_GS_Hero_K01_Approved.webp",
+        "docs/visual/gs-home-v2/integrated-targets/02_GS_Hero_K02_Approved.webp",
+        "docs/visual/gs-home-v2/integrated-targets/03_GS_Hero_K03_Approved.webp",
+        "docs/visual/gs-home-v2/integrated-targets/04_GS_Hero_K04_Approved.webp"
+      ],
+      "zones_pct": {
+        "header": [4, 3, 96, 11],
+        "left_interaction_wall": [2, 14, 32, 84],
+        "threshold": [31, 7, 53, 88],
+        "right_copy": [55, 14, 96, 77],
+        "stage_rail": [5, 88, 94, 98]
+      },
+      "states": ["الاحتياج", "الاتجاه", "البناء", "الإطلاق"],
+      "single_asset_all_states": true
+    },
+    "S02": {
+      "name": "Solutions Universe",
+      "asset": "src/assets/gs-home-v2/02_GS_Solutions_Universe_Clean_Production_Asset.webp",
+      "natural_size": [1024, 572],
+      "target": "docs/visual/gs-home-v2/integrated-targets/05_GS_Solutions_Universe_Approved.webp",
+      "zones_pct": {
+        "core_stations": [3, 9, 69, 91],
+        "explanation": [70, 13, 97, 84]
+      }
+    },
+    "S03": {
+      "name": "Selected Work",
+      "asset": "src/assets/gs-home-v2/03_GS_Selected_Work_Clean_Production_Asset.webp",
+      "natural_size": [1024, 640],
+      "target": "docs/visual/gs-home-v2/integrated-targets/06_GS_Selected_Work_Approved.webp",
+      "zones_pct": {
+        "theatre": [7, 14, 66, 68],
+        "desktop_surface": [18, 24, 54, 59],
+        "secondary_plinths": [6, 70, 62, 95],
+        "copy": [68, 12, 97, 88]
+      }
+    },
+    "S04": {
+      "name": "System Anatomy",
+      "asset": "src/assets/gs-home-v2/04_GS_System_Anatomy_Clean_Production_Asset.webp",
+      "natural_size": [1024, 572],
+      "target": "docs/visual/gs-home-v2/integrated-targets/07_GS_System_Anatomy_Approved.webp",
+      "zones_pct": {
+        "copy_stage_rail": [4, 12, 41, 87],
+        "connector_bridge": [39, 12, 55, 87],
+        "object": [50, 7, 97, 94]
+      }
+    },
+    "S05": {
+      "name": "Final Gateway",
+      "asset": "src/assets/gs-home-v2/05_GS_Final_Gateway_Clean_Production_Asset.webp",
+      "natural_size": [1024, 640],
+      "target": "docs/visual/gs-home-v2/integrated-targets/08_GS_Final_Gateway_Approved.webp",
+      "zones_pct": {
+        "doorway": [4, 6, 45, 96],
+        "cta": [53, 16, 96, 82]
+      }
+    }
+  }
+}

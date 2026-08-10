@@ -35,13 +35,26 @@ Read only the minimum complete set required for the authorized work:
 
 Do not broaden the task into unrelated repository, visual, archive, or portfolio analysis.
 
+## GS homepage visual work
+
+For any authorized GS homepage visual implementation or visual review under the active W05 V2 direction, after `docs/visual/README.md` read:
+
+1. `docs/visual/GS_W05_VISUAL_INTEGRATION_MANIFEST_V2.md`
+2. `docs/visual/codex/gs-visual-integration/SKILL.md`
+3. `docs/visual/codex/gs-visual-integration/references/QA_RUBRIC.md`
+4. only the Integrated Target(s) and Clean Production Asset(s) for the authorized section
+
+The manifest is the active stable visual-integration contract. The skill is a procedural aid, not an authority override.
+
+Do not assume repository-local skills are auto-discovered by the Codex surface. The Workstream Contract must explicitly instruct the executor to read the skill path above.
+
 ## Execution rules
 
 Before editing, verify the repository, exact base commit, working branch, PR target, authorized scope, required validation, and Stop Gate.
 
 During execution:
 
-- work only on the authorized workstream branch and submit changes through a PR to `main`;
+- work only on the authorized workstream branch and submit changes through the authorized PR target;
 - keep changes bounded, reviewable, reversible where practical, and limited to authorized paths and behavior;
 - do not force-push or rewrite shared history;
 - change dependencies only when the workstream explicitly authorizes it;
