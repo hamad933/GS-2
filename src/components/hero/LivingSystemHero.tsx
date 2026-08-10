@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Check, Compass, MousePointer2, Send, Sparkles } from 'lucide-react';
 import type { StageId } from '../../types/hero';
+import heroEnvironment from '../../assets/gs-w05/GS_A01_Hero_Architectural_Environment.png';
 
 const NEEDS = [
   { id: 'service', label: 'إطلاق خدمة رقمية', short: 'خدمة رقمية' },
@@ -52,6 +53,7 @@ export function LivingSystemHero() {
 
   return (
     <section id="hero" className="living-hero" aria-labelledby="hero-title" data-stage={stage} data-build={buildStep}>
+      <img className="production-environment hero-environment" src={heroEnvironment} alt="" aria-hidden="true" fetchPriority="high" />
       <div className="living-glow" aria-hidden="true" />
       <div className="living-shell">
         <div className="hero-copy-panel">

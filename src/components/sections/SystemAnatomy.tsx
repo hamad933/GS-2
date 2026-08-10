@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import anatomyObject from '../../assets/gs-w05/GS_A04_System_Anatomy_Object.png';
 
 const layers = [
   { id: 'discovery', index: '01', title: 'الاكتشاف', role: 'نفهم الاحتياج والسياق والقيود قبل أن نرسم شكل الحل.' },
@@ -13,13 +14,13 @@ export function SystemAnatomy() {
 
   return (
     <section id="system-anatomy" className="system-anatomy" aria-labelledby="anatomy-title" data-active={active.id}>
+      <img className="production-environment anatomy-environment" src={anatomyObject} alt="" aria-hidden="true" loading="lazy" />
       <header className="anatomy-heading">
         <p><span>04</span> كيف نبني الأنظمة الرقمية</p>
         <h2 id="anatomy-title">المنتج الجيد<br />منظومة مترابطة.</h2>
         <p>نفتح النظام إلى مستوياته؛ كل مستوى يضيف وضوحًا ويحافظ على صلته بما قبله وما بعده.</p>
       </header>
       <div className="anatomy-field">
-        <div className="anatomy-spine" aria-hidden="true"><i /><i /><i /><i /><i /></div>
         <div className="anatomy-layers" aria-label="طبقات النظام">
           {layers.map((layer) => (
             <button key={layer.id} type="button" aria-pressed={active.id === layer.id}

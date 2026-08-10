@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - codex/implement-visual-reconstruction-for-homepage
   push:
     branches:
       - main
