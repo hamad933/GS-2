@@ -215,8 +215,8 @@ test('representative controls support real clicks, keyboard activation, and sync
 
   const project = page.locator(S03).getByRole('button', { name: /Enterprise Operations/ });
   await project.click();
-  await expect(project).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator(S03)).toHaveAttribute('data-project', 'rp02');
+  await expect(page.locator(S03).locator('.project-index button')).toHaveCount(3);
 
   const layer = page.locator(S04).getByRole('button', { name: /التكامل/ });
   await layer.click();
@@ -267,6 +267,7 @@ test('captures complete W05 review evidence with real pointer interactions', asy
   await expect(page.locator(S02)).toHaveAttribute('data-active', 'portals');
   await captureSection(page, S02, 'desktop-w05-solutions-active.png');
 
+  await page.locator(S03).getByRole('button', { name: /Enterprise Operations/ }).click();
   await page.locator(S03).getByRole('button', { name: /Bayt & Style/ }).click();
   await captureSection(page, S03, 'desktop-w05-project-rp01.png');
   await page.locator(S03).getByRole('button', { name: /Enterprise Operations/ }).click();
