@@ -41,6 +41,7 @@ The Hero is one persistent system across four states. Use one clean Hero environ
 - Do not use generic previous/next slideshow controls.
 - Progression must be causal and user-driven.
 - The clean image and the real DOM must share one authored coordinate system; do not implement `background image + detached HTML overlay`.
+- Do not preserve a visually weak DOM composition merely because it already exists; bounded JSX/CSS restructuring is allowed when the Workstream Contract authorizes visual reconstruction and functional/accessibility truth is preserved.
 - Do not fabricate metrics, clients, testimonials, performance evidence, operational claims, project screenshots, or other proof.
 - `S03` must preserve replaceable real project-media insertion surfaces so authoritative RP01–RP04 screenshots can be integrated later without section re-architecture.
 - `RP01`–`RP04` remain independent products.
@@ -48,16 +49,40 @@ The Hero is one persistent system across four states. Use one clean Hero environ
 - Do not add dependencies merely for animation when CSS/React state is sufficient.
 - Do not recompress/regenerate V2 production derivatives during a section implementation workstream.
 
+## Visual quality standard
+
+`Premium Digital Systems Atelier` is an art-direction requirement, not a palette label.
+
+A major section must demonstrate, through rendered screenshots:
+
+- strong fidelity to its Integrated Target;
+- image and semantic DOM that feel co-designed;
+- artistic quality and intentional composition;
+- originality rather than template/generic UI treatment;
+- believable material boundaries, depth, light, and seating;
+- premium Arabic RTL typography and rhythm;
+- meaningful state choreography where interactive;
+- restraint: no generic dashboard/card/glass/neon shortcuts.
+
+A technically clean implementation can still fail visual review when it is primitive, generic, mechanically placed, visually under-authored, or materially below the target.
+
 ## Desktop-first visual gate
 
 For the V2 reconstruction, 1440px is the primary fidelity viewport.
 
 Implement and review each section against its Integrated Target at 1440 before responsive closure. 768px and 390px are independently authored responsive compositions, not proportional scale-downs.
 
-## Evidence
+## Evidence and acceptance
 
-Visual acceptance requires direct screenshot comparison, not a green CI result alone.
+Visual review requires direct screenshot comparison, not a green CI result or CSS description alone.
 
-A section fails visual acceptance when the imagery and DOM still read as two separate layers, even if both look individually polished.
+A section fails visual review when the imagery and DOM still read as two separate layers, even if both look individually polished.
+
+For each major GS visual section:
+
+1. executor produces exact-head technical and screenshot evidence;
+2. Controller independently inspects the rendered evidence against the Integrated Target and may issue `CONTROLLER VISUAL PASS` or a revise/reject verdict;
+3. `CONTROLLER VISUAL PASS` does **not** equal `OWNER VISUAL ACCEPTANCE`;
+4. explicit owner visual acceptance is required before the major section is integrated into the accepted visual baseline unless a later governed owner decision changes this policy.
 
 Existing repository screenshots/artifacts remain `REFERENCE_ONLY` unless explicitly promoted by the Controller.

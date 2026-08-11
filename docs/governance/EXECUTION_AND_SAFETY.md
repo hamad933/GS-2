@@ -16,9 +16,18 @@ Never fabricate or imply unsupported clients, customer logos, testimonials, metr
 
 The repository already has an inherited React/Vite frontend baseline. Do not change framework, runtime, package manager, dependencies, data architecture, backend, hosting, CI, or deployment unless the current bounded workstream explicitly places that change in scope. When dependency work is authorized, preserve reproducibility and review necessity, security, licensing, maintenance, and lockfile impact.
 
+## Executor route, assets, and evidence
+
+Follow `docs/governance/EXECUTOR_ROUTING_ASSETS_AND_EVIDENCE.md` when choosing or operating a normal ChatGPT executor, Codex Desktop, Codex Cloud, or ChatGPT Work route; when ingesting binary production assets; or when producing GitHub Actions evidence.
+
+Production binary assets should enter an authorized canonical repository location once through a verified native ingestion route and then be referenced by executors. Do not repeatedly route canonical assets through chat attachment pipelines when those pipelines may transcode, rename, or reorder files.
+
+Routine owner-mediated patch, ZIP, binary, screenshot, log, or evidence transfer is not the default when direct Drive/GitHub/Actions routes exist.
+
 ## Execution discipline
 
-- use an authorized branch and PR to `main`;
+- use the exact authorized branch and PR target named by the Workstream Contract;
+- do not infer that every PR targets `main`;
 - do not force-push or rewrite shared history;
 - keep edits focused and avoid unrelated cleanup;
 - preserve UTF-8 Arabic text and explicit RTL/LTR semantics where applicable;
@@ -27,4 +36,6 @@ The repository already has an inherited React/Vite frontend baseline. Do not cha
 - do not write to Google Drive as an executor;
 - do not self-approve, merge, deploy, publish, release, or begin the next workstream without authority.
 
-If credentials, sensitive data, unsupported claims, or an authority conflict are discovered, stop and report the exact issue without spreading the sensitive material.
+For major GS visual sections, technical success and Controller visual review do not constitute owner visual acceptance. Explicit owner visual acceptance is required before integration into the accepted visual baseline unless a later governed owner decision changes that policy.
+
+If credentials, sensitive data, unsupported claims, an authority conflict, or an unavailable required execution route is discovered, stop and report the exact issue without spreading sensitive material.
