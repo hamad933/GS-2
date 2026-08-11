@@ -28,10 +28,11 @@ Read only the minimum complete set required for the authorized work:
 2. the exact authorized Workstream Contract, including scope, exclusions, evidence, merge authority, and Stop Gate
 3. `CONTRIBUTING.md`
 4. `docs/governance/EXECUTION_AND_SAFETY.md`
-5. `docs/governance/EVIDENCE_AND_HANDOFF.md`
-6. `docs/architecture/README.md` when architecture, dependencies, runtime, integrations, hosting, or deployment are in scope
-7. `docs/visual/README.md` when UI, journeys, visual behavior, content presentation, accessibility, or RTL/LTR work is in scope
-8. only the direct references explicitly required by the workstream
+5. `docs/governance/EXECUTOR_ROUTING_ASSETS_AND_EVIDENCE.md` when executor route, binary assets, manual transfer, Desktop/Cloud execution, GitHub Actions evidence, or Skills are material
+6. `docs/governance/EVIDENCE_AND_HANDOFF.md`
+7. `docs/architecture/README.md` when architecture, dependencies, runtime, integrations, hosting, or deployment are in scope
+8. `docs/visual/README.md` when UI, journeys, visual behavior, content presentation, accessibility, or RTL/LTR work is in scope
+9. only the direct references explicitly required by the workstream
 
 Do not broaden the task into unrelated repository, visual, archive, or portfolio analysis.
 
@@ -44,9 +45,9 @@ For any authorized GS homepage visual implementation or visual review under the 
 3. `docs/visual/codex/gs-visual-integration/references/QA_RUBRIC.md`
 4. only the Integrated Target(s) and Clean Production Asset(s) for the authorized section
 
-The manifest is the active stable visual-integration contract. The skill is a procedural aid, not an authority override.
+The manifest is the active stable visual-integration contract. The repository-local skill is a procedural aid, not an authority override and not proof of an installed product Skill.
 
-Do not assume repository-local skills are auto-discovered by the Codex surface. The Workstream Contract must explicitly instruct the executor to read the skill path above.
+Do not assume repository-local skills are auto-discovered by any ChatGPT or Codex surface. The Workstream Contract must explicitly instruct the executor to read the required repository path and must separately verify any installed/active product Skill it intends to rely on.
 
 ## Execution rules
 
@@ -61,8 +62,18 @@ During execution:
 - do not introduce secrets, credentials, private data, or unsupported commercial/evidence claims;
 - do not write to Google Drive as an executor;
 - preserve evidence integrity and tie claims to the exact commit, PR, check, run, or artifact being reviewed;
+- follow the no-manual-transfer and binary-asset rules in `docs/governance/EXECUTOR_ROUTING_ASSETS_AND_EVIDENCE.md`;
 - do not implement or absorb RP01–RP04 inside GS;
 - stop rather than infer authority when the requested outcome exceeds the contract.
+
+## Major visual acceptance
+
+For major GS visual work:
+
+- executor self-review is not acceptance;
+- green CI/Visual Evidence is not visual acceptance;
+- `CONTROLLER VISUAL PASS` is not `OWNER VISUAL ACCEPTANCE`;
+- explicit owner visual acceptance is required before integrating a major visual section into the accepted visual baseline unless a later governed owner decision changes this policy.
 
 ## Role separation
 
