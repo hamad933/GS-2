@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -71,9 +71,15 @@ export function LivingSystemHero() {
   const [direction, setDirection] = useState<(typeof DIRECTIONS)[number] | null>(null);
   const [buildStep, setBuildStep] = useState(0);
   const [brief, setBrief] = useState('أريد بدء رحلة واضحة');
+  const directionAdvanceRef = useRef<number | null>(null);
   const stageIndex = STAGES.findIndex((item) => item.id === stage);
 
+  useEffect(() => () => {
+    if (directionAdvanceRef.current !== null) window.clearTimeout(directionAdvanceRef.current);
+  }, []);
+
   const restart = () => {
+    if (directionAdvanceRef.current !== null) window.clearTimeout(directionAdvanceRef.current);
     setStage('need');
     setNeed(null);
     setDirection(null);
@@ -82,9 +88,14 @@ export function LivingSystemHero() {
   };
 
   const chooseDirection = (choice: (typeof DIRECTIONS)[number]) => {
+    if (directionAdvanceRef.current !== null) window.clearTimeout(directionAdvanceRef.current);
     setDirection(choice);
-    setStage('build');
-    setBuildStep(0);
+    const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
+    directionAdvanceRef.current = window.setTimeout(() => {
+      setStage('build');
+      setBuildStep(0);
+      directionAdvanceRef.current = null;
+    }, delay);
   };
 
   const submitProductAction = () => {
@@ -232,7 +243,12 @@ export function LivingSystemHero() {
                   {DIRECTIONS.map((choice, index) => {
                     const Icon = choice.icon;
                     return (
-                      <button type="button" key={choice.id} onClick={() => chooseDirection(choice)}>
+                      <button
+                        type="button"
+                        key={choice.id}
+                        className={direction?.id === choice.id ? 'selected' : ''}
+                        aria-pressed={direction?.id === choice.id}
+                        onClick={() => chooseDirection(choice)}>
                         <span className="e2-choice-index" aria-hidden="true">0{index + 1}</span>
                         <span className="e2-choice-icon" aria-hidden="true"><Icon /></span>
                         <span className="e2-choice-label">
@@ -299,7 +315,7 @@ export function LivingSystemHero() {
                     </header>
 
                     <div className="e2-launch-primary">
-                      <span className="e2-launch-seal" aria-hidden="true"><i /><i /></span>
+                      <span className="e2-launch-seal" aria-hidden="true"><Check /></span>
                       <div>
                         <strong>تم الاستلام</strong>
                         <small>الطلب متصل بالاحتياج والاتجاه اللذين اخترتهما.</small>
@@ -307,15 +323,25 @@ export function LivingSystemHero() {
                     </div>
 
                     <div className="e2-resolution-flow">
-                      <span><ShieldCheck aria-hidden="true" /><b>المراجعة</b><small>قراءة الطلب في سياقه</small></span>
-                      <span><Route aria-hidden="true" /><b>المسار</b><small>ترتيب الخطوة التالية</small></span>
-                      <span><Sparkles aria-hidden="true" /><b>الوضوح</b><small>قرار نهائي بين يديك</small></span>
+                      <span>
+                        <span className="e2-resolution-icon" aria-hidden="true"><ShieldCheck /></span>
+                        <span className="e2-resolution-copy"><b>المراجعة</b><small>قراءة الطلب في سياقه</small></span>
+                      </span>
+                      <span>
+                        <span className="e2-resolution-icon" aria-hidden="true"><Route /></span>
+                        <span className="e2-resolution-copy"><b>المسار</b><small>ترتيب الخطوة التالية</small></span>
+                      </span>
+                      <span>
+                        <span className="e2-resolution-icon" aria-hidden="true"><Sparkles /></span>
+                        <span className="e2-resolution-copy"><b>الوضوح</b><small>قرار نهائي بين يديك</small></span>
+                      </span>
                     </div>
                   </div>
                 )}
                 </div>
               </div>
 
+              <div className="e2-stage-heading">مراحل العمل</div>
               <div className="stage-constellation e2-stage-rail" aria-label={`المرحلة الحالية: ${STAGES[stageIndex].label}`}>
                 {STAGES.map((item, index) => (
                   <span
