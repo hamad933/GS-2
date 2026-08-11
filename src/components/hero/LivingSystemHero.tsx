@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ArrowLeft, Check, Compass, MousePointer2, Send, Sparkles } from 'lucide-react';
 import type { StageId } from '../../types/hero';
-import heroEnvironment from '../../assets/gs-w05/GS_A01_Hero_Architectural_Environment.png';
+import { heroCleanDataUrl } from '../../assets/gs-home-v2/heroCleanData';
+import './LivingSystemHero.e1.css';
 
 const NEEDS = [
   { id: 'service', label: 'إطلاق خدمة رقمية', short: 'خدمة رقمية' },
@@ -15,16 +16,41 @@ const DIRECTIONS = [
   { id: 'self', label: 'مساحة خدمة ذاتية', note: 'نجمع الإجراء والمتابعة في مكان واحد' },
 ] as const;
 
+const BUILD_TRACK = [
+  { label: 'رتّب الرحلة', note: 'البداية والقرار والنتيجة' },
+  { label: 'وحّد التجربة', note: 'المحتوى والفعل في سطح واحد' },
+  { label: 'قرّبها من المستخدم', note: 'واجهة أقرب إلى الاستخدام' },
+  { label: 'جرّب المسار', note: 'خطوة تبدأ التسليم' },
+] as const;
+
 const STAGES: { id: StageId; label: string }[] = [
-  { id: 'need', label: 'الاحتياج' }, { id: 'direction', label: 'الاتجاه' },
-  { id: 'build', label: 'البناء' }, { id: 'launch', label: 'الإطلاق' },
+  { id: 'need', label: 'الاحتياج' },
+  { id: 'direction', label: 'الاتجاه' },
+  { id: 'build', label: 'البناء' },
+  { id: 'launch', label: 'الإطلاق' },
 ];
 
 const COPY: Record<StageId, { kicker: string; title: string; body: string }> = {
-  need: { kicker: 'من الحاجة إلى نظام متكامل', title: 'نبني أنظمة رقمية تتشكّل حول واقع عملك', body: 'نبدأ بما تريد تغييره فعلًا، ثم نجعل كل قرار في النظام امتدادًا لهذا الاحتياج.' },
-  direction: { kicker: 'اتجاه واحد، بلا ضوضاء', title: 'اختر كيف يصل المستخدم', body: 'شكّل اتجاه الحل داخل النظام نفسه؛ اختيارك هو الذي يعيد ترتيب السطح ويبدأ البناء.' },
-  build: { kicker: 'من الهيكل إلى التفاعل', title: 'نحوّل المسار إلى تجربة واضحة', body: 'تتشكّل الرحلة حول الهدف، ثم تتوحّد في سطحٍ واحد يمكنك تجربته بنفسك.' },
-  launch: { kicker: 'نتيجة هادئة ومتصلة', title: 'الفعل نفسه يبدأ التسليم', body: 'الطلب الذي أرسلته انتقل إلى مسار واضح، مع بقاء القرار النهائي بين يديك.' },
+  need: {
+    kicker: 'من الحاجة إلى نظام متكامل',
+    title: 'نبني أنظمة رقمية تتشكّل حول واقع عملك',
+    body: 'نبدأ بما تريد تغييره فعلًا، ثم نجعل كل قرار في النظام امتدادًا لهذا الاحتياج.',
+  },
+  direction: {
+    kicker: 'اتجاه واحد، بلا ضوضاء',
+    title: 'اختر كيف يصل المستخدم',
+    body: 'شكّل اتجاه الحل داخل النظام نفسه؛ اختيارك هو الذي يعيد ترتيب السطح ويبدأ البناء.',
+  },
+  build: {
+    kicker: 'من الهيكل إلى التفاعل',
+    title: 'نحوّل المسار إلى تجربة واضحة',
+    body: 'تتشكّل الرحلة حول الهدف، ثم تتوحّد في سطحٍ واحد يمكنك تجربته بنفسك.',
+  },
+  launch: {
+    kicker: 'نتيجة هادئة ومتصلة',
+    title: 'الفعل نفسه يبدأ التسليم',
+    body: 'الطلب الذي أرسلته انتقل إلى مسار واضح، مع بقاء القرار النهائي بين يديك.',
+  },
 };
 
 export function LivingSystemHero() {
@@ -36,7 +62,10 @@ export function LivingSystemHero() {
   const stageIndex = STAGES.findIndex((item) => item.id === stage);
 
   const restart = () => {
-    setStage('need'); setNeed(null); setDirection(null); setBuildStep(0);
+    setStage('need');
+    setNeed(null);
+    setDirection(null);
+    setBuildStep(0);
     setBrief('أريد بدء رحلة واضحة');
   };
 
@@ -52,61 +81,265 @@ export function LivingSystemHero() {
   };
 
   return (
-    <section id="hero" className="living-hero" aria-labelledby="hero-title" data-stage={stage} data-build={buildStep}>
-      <img className="production-environment hero-environment" src={heroEnvironment} alt="" aria-hidden="true" fetchPriority="high" />
+    <section
+      id="hero"
+      className="living-hero living-hero-e1"
+      aria-labelledby="hero-title"
+      data-stage={stage}
+      data-build={buildStep}
+    >
+      <img
+        className="production-environment hero-environment"
+        src={heroCleanDataUrl}
+        alt=""
+        aria-hidden="true"
+        fetchPriority="high"
+      />
       <div className="living-glow" aria-hidden="true" />
+
       <div className="living-shell">
         <div className="hero-copy-panel">
-          <div className="stage-constellation" aria-label={`المرحلة الحالية: ${STAGES[stageIndex].label}`}>
-            {STAGES.map((item, index) => <span key={item.id} className={index <= stageIndex ? 'reached' : ''}><i>{index + 1}</i><b>{item.label}</b></span>)}
-          </div>
           <p className="hero-kicker">{COPY[stage].kicker}</p>
           <h1 id="hero-title">{COPY[stage].title}</h1>
           <p className="hero-body">{COPY[stage].body}</p>
-          {stage === 'need' && <p className="entry-cue"><MousePointer2 /> ابدأ من حاجتك داخل النظام</p>}
-          {stage !== 'need' && <button className="restart-action" type="button" onClick={restart}>ابدأ بحاجة أخرى</button>}
+          {stage === 'need' && (
+            <p className="entry-cue">
+              <MousePointer2 /> ابدأ من حاجتك داخل النظام
+            </p>
+          )}
+          {stage !== 'need' && (
+            <button className="restart-action" type="button" onClick={restart}>
+              ابدأ بحاجة أخرى
+            </button>
+          )}
         </div>
 
         <div className="system-field" aria-live="polite">
-          <div className="system-frame" aria-hidden="true"><span>01</span><i /><span>GENERAL SOLUTIONS / DIGITAL SYSTEM</span></div>
+          <div className="operating-wall-label" aria-hidden="true">
+            <span>GS / SYSTEM</span>
+            <strong>
+              {stage === 'need'
+                ? 'حدّد نقطة البداية'
+                : stage === 'direction'
+                  ? 'شكّل اتجاه الحل'
+                  : stage === 'build'
+                    ? 'سطح البناء'
+                    : 'جاهزية المسار'}
+            </strong>
+          </div>
+
+          <svg
+            className="hero-architecture"
+            viewBox="0 0 1440 810"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <path className="architecture-trace trace-a" d="M524 292 H566 L604 324 H652" />
+            <path className="architecture-trace trace-b" d="M524 405 H574 L618 405 H672" />
+            <path className="architecture-trace trace-c" d="M524 518 H566 L604 486 H652" />
+            <circle className="architecture-node node-a" cx="524" cy="292" r="4" />
+            <circle className="architecture-node node-b" cx="574" cy="405" r="5" />
+            <circle className="architecture-node node-c" cx="524" cy="518" r="4" />
+          </svg>
+
+          <div className="system-frame" aria-hidden="true">
+            <span>01</span>
+            <i />
+            <span>GENERAL SOLUTIONS / DIGITAL SYSTEM</span>
+          </div>
+
           <div className="system-seed" aria-hidden="true">
             <span className="seed-label">نقطة البداية</span>
             <strong>{need?.short || 'احتياج واضح'}</strong>
-            <svg viewBox="0 0 420 230"><path className="seed-path" d="M30 115 H132 C172 115 166 42 220 42 H390 M132 115 C172 115 166 115 220 115 H390 M132 115 C172 115 166 188 220 188 H390"/><circle cx="132" cy="115" r="7"/><circle cx="390" cy="42" r="4"/><circle cx="390" cy="115" r="4"/><circle cx="390" cy="188" r="4"/></svg>
+            <svg viewBox="0 0 420 230">
+              <path
+                className="seed-path"
+                d="M30 115 H132 C172 115 166 42 220 42 H390 M132 115 C172 115 166 115 220 115 H390 M132 115 C172 115 166 188 220 188 H390"
+              />
+              <circle cx="132" cy="115" r="7" />
+              <circle cx="390" cy="42" r="4" />
+              <circle cx="390" cy="115" r="4" />
+              <circle cx="390" cy="188" r="4" />
+            </svg>
           </div>
 
           <div className="need-selector" aria-label="اختر احتياجك">
-            {NEEDS.map((choice, index) => <button type="button" key={choice.id} className={need?.id === choice.id ? 'selected' : ''} onClick={() => { setNeed(choice); setStage('direction'); }}><i>0{index + 1}</i><span>{choice.label}</span><ArrowLeft /></button>)}
+            {NEEDS.map((choice, index) => (
+              <button
+                type="button"
+                key={choice.id}
+                className={need?.id === choice.id ? 'selected' : ''}
+                onClick={() => {
+                  setNeed(choice);
+                  setStage('direction');
+                }}
+              >
+                <i>0{index + 1}</i>
+                <span>{choice.label}</span>
+                <ArrowLeft />
+              </button>
+            ))}
           </div>
 
           <div className="direction-selector" aria-label="اختر اتجاه الحل">
-            <p><Compass /> الحاجة المختارة: <strong>{need?.label}</strong></p>
-            {DIRECTIONS.map((choice) => <button type="button" key={choice.id} onClick={() => chooseDirection(choice)}><span><strong>{choice.label}</strong><small>{choice.note}</small></span><ArrowLeft /></button>)}
+            <p>
+              <Compass /> الحاجة المختارة: <strong>{need?.label}</strong>
+            </p>
+            {DIRECTIONS.map((choice) => (
+              <button type="button" key={choice.id} onClick={() => chooseDirection(choice)}>
+                <span>
+                  <strong>{choice.label}</strong>
+                  <small>{choice.note}</small>
+                </span>
+                <ArrowLeft />
+              </button>
+            ))}
           </div>
 
           <div className="product-surface">
-            <header className="surface-top"><span className="surface-mark">GS</span><div><small>{need?.short || 'نظام يبدأ من احتياجك'}</small><strong>{stage === 'launch' ? 'مسار الطلب' : direction?.label || 'سطح واحد يتشكّل حول الهدف'}</strong></div><span className="surface-mode">{stage === 'launch' ? 'مسار واضح' : buildStep < 2 ? 'تشكيل التجربة' : 'تجربة المنتج'}</span></header>
-            <div className="build-phase" aria-label={`مرحلة تشكيل السطح ${buildStep + 1} من 4`}><span>0{Math.min(buildStep + 1, 4)}</span><p>{buildStep === 0 ? 'رتّب الرحلة حول الهدف' : buildStep === 1 ? 'وحّد التجربة' : buildStep === 2 ? 'قرّبها من المستخدم' : 'جرّب المسار'}</p></div>
+            <header className="surface-top">
+              <span className="surface-mark">GS</span>
+              <div>
+                <small>{need?.short || 'نظام يبدأ من احتياجك'}</small>
+                <strong>
+                  {stage === 'launch' ? 'مسار الطلب' : direction?.label || 'سطح واحد يتشكّل حول الهدف'}
+                </strong>
+              </div>
+              <span className="surface-mode">
+                {stage === 'launch' ? 'مسار واضح' : buildStep < 2 ? 'تشكيل التجربة' : 'تجربة المنتج'}
+              </span>
+            </header>
+
+            <div className="build-phase" aria-label={`مرحلة تشكيل السطح ${buildStep + 1} من 4`}>
+              <span>0{Math.min(buildStep + 1, 4)}</span>
+              <p>
+                {buildStep === 0
+                  ? 'رتّب الرحلة حول الهدف'
+                  : buildStep === 1
+                    ? 'وحّد التجربة'
+                    : buildStep === 2
+                      ? 'قرّبها من المستخدم'
+                      : 'جرّب المسار'}
+              </p>
+            </div>
+
+            <ol className="build-track" aria-label="مراحل تشكيل التجربة">
+              {BUILD_TRACK.map((item, index) => (
+                <li
+                  key={item.label}
+                  className={`${index <= buildStep ? 'is-reached' : ''} ${index === buildStep ? 'is-current' : ''}`.trim()}
+                  aria-current={index === buildStep ? 'step' : undefined}
+                >
+                  <span>0{index + 1}</span>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <small>{item.note}</small>
+                  </div>
+                  <i aria-hidden="true" />
+                </li>
+              ))}
+            </ol>
+
             <div className="surface-content">
+              {stage === 'launch' && (
+                <div className="launch-seal">
+                  <span aria-hidden="true">
+                    <Check />
+                  </span>
+                  <div>
+                    <small>نتيجة متصلة</small>
+                    <strong>المسار جاهز للمتابعة</strong>
+                  </div>
+                </div>
+              )}
+
               <div className="surface-copy">
                 <small>{need?.short}</small>
-                <strong>{stage === 'launch' ? 'طلبك أصبح خطوة واضحة' : buildStep < 2 ? direction?.label : 'ابدأ طلبك بخطوة واحدة'}</strong>
+                <strong>
+                  {stage === 'launch'
+                    ? 'طلبك أصبح خطوة واضحة'
+                    : buildStep < 2
+                      ? direction?.label
+                      : 'ابدأ طلبك بخطوة واحدة'}
+                </strong>
                 {buildStep === 0 && <p>نرتّب البداية والقرار والنتيجة في مسارٍ واحد.</p>}
                 {buildStep === 1 && <p>يتّسق المحتوى والفعل البصري حول ما يهم المستخدم.</p>}
                 {buildStep >= 2 && stage !== 'launch' && <p>صف ما تحتاجه؛ هذه الخطوة نفسها ستبدأ التسليم.</p>}
                 {stage === 'launch' && <p>انتقل الفعل من الواجهة إلى نتيجة مفهومة دون انقطاع.</p>}
               </div>
-              <div className="surface-visual" aria-hidden="true"><span className="visual-word">{stage === 'launch' ? 'تم' : 'ابدأ'}</span><svg viewBox="0 0 260 180"><path d="M24 140 C70 140 70 42 130 42 S194 140 236 140"/><circle cx="24" cy="140" r="6"/><circle cx="130" cy="42" r="9"/><circle cx="236" cy="140" r="6"/></svg><small>{stage === 'launch' ? 'اكتمل المسار' : direction?.label}</small></div>
+
+              <div className="surface-visual" aria-hidden="true">
+                <span className="visual-word">{stage === 'launch' ? 'تم' : 'ابدأ'}</span>
+                <svg viewBox="0 0 260 180">
+                  <path d="M24 140 C70 140 70 42 130 42 S194 140 236 140" />
+                  <circle cx="24" cy="140" r="6" />
+                  <circle cx="130" cy="42" r="9" />
+                  <circle cx="236" cy="140" r="6" />
+                </svg>
+                <small>{stage === 'launch' ? 'اكتمل المسار' : direction?.label}</small>
+              </div>
             </div>
+
             <div className="surface-workbench">
-              {stage === 'build' && buildStep === 0 && <button type="button" onClick={() => setBuildStep(1)}>رتّب الرحلة حول الهدف <ArrowLeft /></button>}
-              {stage === 'build' && buildStep === 1 && <button type="button" onClick={() => setBuildStep(2)}>وحّد التجربة <ArrowLeft /></button>}
-              {stage === 'build' && buildStep === 2 && <button type="button" onClick={() => setBuildStep(3)}>جرّب المسار <Sparkles /></button>}
-              {stage === 'build' && buildStep === 3 && <form onSubmit={(event) => { event.preventDefault(); submitProductAction(); }}><label htmlFor="hero-brief">طلبك المختصر</label><input id="hero-brief" value={brief} onChange={(event) => setBrief(event.target.value)} /><button type="submit" disabled={!brief.trim()}>إرسال الطلب <Send /></button></form>}
-              {stage === 'launch' && <div className="resolution-flow"><span><Check /> تم الاستلام</span><i /><span>المراجعة</span><i /><span>خطوة تالية واضحة</span></div>}
+              {stage === 'build' && buildStep === 0 && (
+                <button type="button" onClick={() => setBuildStep(1)}>
+                  رتّب الرحلة حول الهدف <ArrowLeft />
+                </button>
+              )}
+              {stage === 'build' && buildStep === 1 && (
+                <button type="button" onClick={() => setBuildStep(2)}>
+                  وحّد التجربة <ArrowLeft />
+                </button>
+              )}
+              {stage === 'build' && buildStep === 2 && (
+                <button type="button" onClick={() => setBuildStep(3)}>
+                  جرّب المسار <Sparkles />
+                </button>
+              )}
+              {stage === 'build' && buildStep === 3 && (
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    submitProductAction();
+                  }}
+                >
+                  <label htmlFor="hero-brief">طلبك المختصر</label>
+                  <input id="hero-brief" value={brief} onChange={(event) => setBrief(event.target.value)} />
+                  <button type="submit" disabled={!brief.trim()}>
+                    إرسال الطلب <Send />
+                  </button>
+                </form>
+              )}
+              {stage === 'launch' && (
+                <div className="resolution-flow">
+                  <span>
+                    <Check /> تم الاستلام
+                  </span>
+                  <i />
+                  <span>المراجعة</span>
+                  <i />
+                  <span>خطوة تالية واضحة</span>
+                </div>
+              )}
             </div>
           </div>
-          <p className="system-caption"><span /> نظام واحد يتغيّر مع قرارك</p>
+
+          <p className="system-caption">
+            <span /> نظام واحد يتغيّر مع قرارك
+          </p>
+        </div>
+
+        <div className="stage-constellation" aria-label={`المرحلة الحالية: ${STAGES[stageIndex].label}`}>
+          {STAGES.map((item, index) => (
+            <span
+              key={item.id}
+              className={index <= stageIndex ? 'reached' : ''}
+              aria-current={item.id === stage ? 'step' : undefined}
+            >
+              <i aria-hidden="true" />
+              <b>{item.label}</b>
+            </span>
+          ))}
         </div>
       </div>
     </section>
