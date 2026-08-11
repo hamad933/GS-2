@@ -104,23 +104,32 @@ export function LivingSystemHero() {
         src={heroCleanDataUrl}
         alt=""
         aria-hidden="true"
-        fetchPriority="high"
       />
 
       <div className="e2-scene-vignette" aria-hidden="true" />
+      <div className="e2-scene-grain" aria-hidden="true" />
       <div className="e2-threshold-light" aria-hidden="true" />
       <div className="e2-floor-current" aria-hidden="true" />
       <div className="e2-threshold-architecture" aria-hidden="true">
+        <span className="e2-threshold-plane e2-threshold-plane-back" />
         <span className="e2-threshold-plane e2-threshold-plane-outer" />
         <span className="e2-threshold-plane e2-threshold-plane-middle" />
         <span className="e2-threshold-plane e2-threshold-plane-inner" />
+        <span className="e2-threshold-cavity">
+          <i className="e2-threshold-edge e2-threshold-edge-a" />
+          <i className="e2-threshold-edge e2-threshold-edge-b" />
+          <i className="e2-threshold-edge e2-threshold-edge-c" />
+        </span>
         <span className="e2-threshold-reveal" />
+        <span className="e2-threshold-jamb" />
+        <span className="e2-threshold-sill"><i /><i /><i /></span>
         <i className="e2-threshold-cap" />
       </div>
       <svg className="e2-floor-rails" viewBox="0 0 1440 810" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M760 607 C790 660 960 671 1082 732 C1160 771 1170 802 1134 831" />
-        <path d="M781 614 C828 664 947 693 925 774 C918 797 905 815 889 831" />
-        <path d="M748 602 C760 650 832 681 846 727 C860 771 836 804 816 831" />
+        <path className="e2-floor-rail e2-floor-rail-a" d="M742 596 C790 637 954 645 1084 703 C1194 752 1199 798 1157 835" />
+        <path className="e2-floor-rail e2-floor-rail-b" d="M756 603 C811 650 970 674 952 759 C945 791 921 817 898 837" />
+        <path className="e2-floor-rail e2-floor-rail-c" d="M728 591 C742 635 824 662 850 712 C873 756 853 803 824 838" />
+        <path className="e2-floor-rail e2-floor-rail-d" d="M705 584 C713 620 752 647 783 673" />
       </svg>
 
       <div className="e2-composition">
@@ -153,11 +162,22 @@ export function LivingSystemHero() {
         <div className="system-field e2-system-field" aria-live="polite">
           <aside className="e2-operating-wall" aria-label="نظام تشكيل الحل">
             <div className="e2-wall-depth" aria-hidden="true" />
+            <div className="e2-wall-shell" aria-hidden="true">
+              <span className="e2-shell-edge e2-shell-edge-top" />
+              <span className="e2-shell-edge e2-shell-edge-side" />
+              <span className="e2-shell-edge e2-shell-edge-bottom" />
+              <i className="e2-shell-joint e2-shell-joint-a" />
+              <i className="e2-shell-joint e2-shell-joint-b" />
+              <i className="e2-shell-joint e2-shell-joint-c" />
+            </div>
             <div className="e2-wall-frame">
               <div className="e2-wall-structure" aria-hidden="true">
                 <span className="e2-wall-recess" />
+                <span className="e2-wall-mounting-plane" />
                 <span className="e2-wall-rib e2-wall-rib-top" />
                 <span className="e2-wall-rib e2-wall-rib-bottom" />
+                <span className="e2-wall-rib e2-wall-rib-side" />
+                <span className="e2-wall-bus"><i /><i /><i /><i /></span>
                 <i className="e2-wall-mount e2-wall-mount-a" />
                 <i className="e2-wall-mount e2-wall-mount-b" />
                 <i className="e2-wall-mount e2-wall-mount-c" />
@@ -181,47 +201,52 @@ export function LivingSystemHero() {
                 <span className="e2-wall-signal" aria-hidden="true" />
               </header>
 
-              <div className="need-selector e2-need-selector" aria-label="اختر احتياجك">
-                <p className="e2-wall-intro"><span aria-hidden="true" /> نظام واحد يتغيّر مع قرارك</p>
-                {NEEDS.map((choice, index) => {
-                  const Icon = choice.icon;
-                  return (
-                    <button
-                      type="button"
-                      key={choice.id}
-                      className={need?.id === choice.id ? 'selected' : ''}
-                      onClick={() => {
-                        setNeed(choice);
-                        setStage('direction');
-                      }}>
-                      <span className="e2-choice-icon" aria-hidden="true"><Icon /></span>
-                      <span>{choice.label}</span>
-                      <i aria-hidden="true">0{index + 1}</i>
-                      <ArrowLeft aria-hidden="true" />
-                    </button>
-                  );
-                })}
-              </div>
+              <div className="e2-control-chamber">
+                <div className="e2-control-mount" aria-hidden="true"><i /><i /><i /></div>
 
-              <div className="direction-selector e2-direction-selector" aria-label="اختر اتجاه الحل">
-                <p><Compass aria-hidden="true" /> الحاجة المختارة: <strong>{need?.label}</strong></p>
-                {DIRECTIONS.map((choice, index) => {
-                  const Icon = choice.icon;
-                  return (
-                    <button type="button" key={choice.id} onClick={() => chooseDirection(choice)}>
-                      <span className="e2-choice-icon" aria-hidden="true"><Icon /></span>
-                      <span>
-                        <strong>{choice.label}</strong>
-                        <small>{choice.note}</small>
-                      </span>
-                      <i aria-hidden="true">0{index + 1}</i>
-                      <ArrowLeft aria-hidden="true" />
-                    </button>
-                  );
-                })}
-              </div>
+                <div className="need-selector e2-need-selector" aria-label="اختر احتياجك">
+                  <p className="e2-wall-intro"><span aria-hidden="true" /> نظام واحد يتغيّر مع قرارك</p>
+                  {NEEDS.map((choice, index) => {
+                    const Icon = choice.icon;
+                    return (
+                      <button
+                        type="button"
+                        key={choice.id}
+                        className={need?.id === choice.id ? 'selected' : ''}
+                        onClick={() => {
+                          setNeed(choice);
+                          setStage('direction');
+                        }}>
+                        <span className="e2-choice-index" aria-hidden="true">0{index + 1}</span>
+                        <span className="e2-choice-icon" aria-hidden="true"><Icon /></span>
+                        <span className="e2-choice-label">{choice.label}</span>
+                        <span className="e2-choice-coupler" aria-hidden="true"><i /><i /></span>
+                        <ArrowLeft aria-hidden="true" />
+                      </button>
+                    );
+                  })}
+                </div>
 
-              <div className="product-surface e2-product-surface">
+                <div className="direction-selector e2-direction-selector" aria-label="اختر اتجاه الحل">
+                  <p><Compass aria-hidden="true" /> الحاجة المختارة: <strong>{need?.label}</strong></p>
+                  {DIRECTIONS.map((choice, index) => {
+                    const Icon = choice.icon;
+                    return (
+                      <button type="button" key={choice.id} onClick={() => chooseDirection(choice)}>
+                        <span className="e2-choice-index" aria-hidden="true">0{index + 1}</span>
+                        <span className="e2-choice-icon" aria-hidden="true"><Icon /></span>
+                        <span className="e2-choice-label">
+                          <strong>{choice.label}</strong>
+                          <small>{choice.note}</small>
+                        </span>
+                        <span className="e2-choice-coupler" aria-hidden="true"><i /><i /></span>
+                        <ArrowLeft aria-hidden="true" />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="product-surface e2-product-surface">
                 {stage === 'build' && (
                   <div className="e2-build-chamber">
                     <header className="e2-build-header">
@@ -274,7 +299,7 @@ export function LivingSystemHero() {
                     </header>
 
                     <div className="e2-launch-primary">
-                      <span className="e2-launch-seal" aria-hidden="true"><Check /></span>
+                      <span className="e2-launch-seal" aria-hidden="true"><i /><i /></span>
                       <div>
                         <strong>تم الاستلام</strong>
                         <small>الطلب متصل بالاحتياج والاتجاه اللذين اخترتهما.</small>
@@ -288,6 +313,7 @@ export function LivingSystemHero() {
                     </div>
                   </div>
                 )}
+                </div>
               </div>
 
               <div className="stage-constellation e2-stage-rail" aria-label={`المرحلة الحالية: ${STAGES[stageIndex].label}`}>
@@ -304,17 +330,21 @@ export function LivingSystemHero() {
             </div>
           </aside>
 
-          <svg className="e2-gateway-link" viewBox="0 0 320 420" aria-hidden="true">
-            <path d="M0 78 H94 L128 112 H310" />
-            <path d="M0 166 H106 L139 188 H310" />
-            <path d="M0 254 H96 L130 266 H310" />
-            <path d="M0 342 H82 L124 328 H310" />
-            <path className="e2-link-bus" d="M0 40 H60 L79 58 V363 L61 382 H0" />
-            <circle cx="128" cy="112" r="4" />
-            <circle cx="139" cy="188" r="4" />
-            <circle cx="130" cy="266" r="4" />
-            <circle cx="124" cy="328" r="4" />
-          </svg>
+          <div className="e2-coupling-bridge" aria-hidden="true">
+            <span className="e2-coupling-bed" />
+            <svg className="e2-gateway-link" viewBox="0 0 330 430" preserveAspectRatio="none">
+              <path className="e2-conduit e2-conduit-a" d="M0 82 H82 L118 112 H318" />
+              <path className="e2-conduit e2-conduit-b" d="M0 174 H96 L132 196 H318" />
+              <path className="e2-conduit e2-conduit-c" d="M0 266 H86 L124 278 H318" />
+              <path className="e2-conduit e2-conduit-d" d="M0 354 H74 L116 336 H318" />
+              <path className="e2-link-bus" d="M0 43 H53 L72 62 V371 L54 390 H0" />
+              <circle cx="118" cy="112" r="4" />
+              <circle cx="132" cy="196" r="4" />
+              <circle cx="124" cy="278" r="4" />
+              <circle cx="116" cy="336" r="4" />
+            </svg>
+            <span className="e2-coupling-terminal"><i /><i /><i /><i /></span>
+          </div>
 
           <div className="e2-gateway-spine" aria-hidden="true">
             <i /><span /><i />
