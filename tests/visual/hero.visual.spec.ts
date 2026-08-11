@@ -87,6 +87,47 @@ test.beforeAll(async () => {
   await mkdir(EVIDENCE_DIR, { recursive: true });
 });
 
+test('captures W05 V2-A Hero states through the real pointer journey', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page);
+  await captureHero(page, 'desktop-w05-v2-a-hero-k01.png');
+
+  await page.getByRole('button', { name: 'إطلاق خدمة رقمية' }).click();
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'direction');
+  await captureHero(page, 'desktop-w05-v2-a-hero-k02.png');
+
+  await page.getByRole('button', { name: 'خطوة رئيسية واحدة' }).click();
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'build');
+  await page.getByRole('button', { name: 'رتّب الرحلة حول الهدف' }).click();
+  await page.getByRole('button', { name: 'وحّد التجربة' }).click();
+  await page.getByRole('button', { name: 'جرّب المسار' }).click();
+  await expect(page.getByLabel('طلبك المختصر')).toBeVisible();
+  await captureHero(page, 'desktop-w05-v2-a-hero-k03.png');
+
+  await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لمراجعة جاهزية المسار');
+  await page.getByRole('button', { name: /إرسال الطلب/ }).click();
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
+  await captureHero(page, 'desktop-w05-v2-a-hero-k04.png');
+});
+
+test('Hero journey supports keyboard activation with visible focus', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page);
+  const need = page.getByRole('button', { name: 'إطلاق خدمة رقمية' });
+  await need.focus();
+  await expect(need).toBeFocused();
+  await expect(need).toHaveCSS('box-shadow', /rgb/);
+  await page.keyboard.press('Enter');
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'direction');
+
+  const direction = page.getByRole('button', { name: 'خطوة رئيسية واحدة' });
+  await direction.focus();
+  await expect(direction).toBeFocused();
+  await expect(direction).toHaveCSS('box-shadow', /rgb/);
+  await page.keyboard.press('Space');
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'build');
+});
+
 test('captures desktop K01, K03, and K04 evidence', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openHome(page);
