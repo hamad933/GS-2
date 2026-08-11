@@ -110,6 +110,18 @@ export function LivingSystemHero() {
       <div className="e2-scene-vignette" aria-hidden="true" />
       <div className="e2-threshold-light" aria-hidden="true" />
       <div className="e2-floor-current" aria-hidden="true" />
+      <div className="e2-threshold-architecture" aria-hidden="true">
+        <span className="e2-threshold-plane e2-threshold-plane-outer" />
+        <span className="e2-threshold-plane e2-threshold-plane-middle" />
+        <span className="e2-threshold-plane e2-threshold-plane-inner" />
+        <span className="e2-threshold-reveal" />
+        <i className="e2-threshold-cap" />
+      </div>
+      <svg className="e2-floor-rails" viewBox="0 0 1440 810" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M760 607 C790 660 960 671 1082 732 C1160 771 1170 802 1134 831" />
+        <path d="M781 614 C828 664 947 693 925 774 C918 797 905 815 889 831" />
+        <path d="M748 602 C760 650 832 681 846 727 C860 771 836 804 816 831" />
+      </svg>
 
       <div className="e2-composition">
         <div className="hero-copy-panel e2-narrative">
@@ -142,6 +154,15 @@ export function LivingSystemHero() {
           <aside className="e2-operating-wall" aria-label="نظام تشكيل الحل">
             <div className="e2-wall-depth" aria-hidden="true" />
             <div className="e2-wall-frame">
+              <div className="e2-wall-structure" aria-hidden="true">
+                <span className="e2-wall-recess" />
+                <span className="e2-wall-rib e2-wall-rib-top" />
+                <span className="e2-wall-rib e2-wall-rib-bottom" />
+                <i className="e2-wall-mount e2-wall-mount-a" />
+                <i className="e2-wall-mount e2-wall-mount-b" />
+                <i className="e2-wall-mount e2-wall-mount-c" />
+                <i className="e2-wall-mount e2-wall-mount-d" />
+              </div>
               <div className="e2-brand-lockup" aria-hidden="true">
                 <span className="e2-brand-glyph"><i /><i /></span>
                 <b>General Solutions</b>
@@ -288,6 +309,7 @@ export function LivingSystemHero() {
             <path d="M0 166 H106 L139 188 H310" />
             <path d="M0 254 H96 L130 266 H310" />
             <path d="M0 342 H82 L124 328 H310" />
+            <path className="e2-link-bus" d="M0 40 H60 L79 58 V363 L61 382 H0" />
             <circle cx="128" cy="112" r="4" />
             <circle cx="139" cy="188" r="4" />
             <circle cx="130" cy="266" r="4" />
