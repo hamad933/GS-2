@@ -65,6 +65,10 @@ jobs:
         shell: bash
         run: |
           for file in \
+            desktop-w05-v2-a-hero-k01.png \
+            desktop-w05-v2-a-hero-k02.png \
+            desktop-w05-v2-a-hero-k03.png \
+            desktop-w05-v2-a-hero-k04.png \
             desktop-w05-r3-home-full.png \
             desktop-w05-r3-hero-need.png \
             desktop-w05-r3-hero-direction.png \
@@ -89,7 +93,7 @@ jobs:
       - name: Upload visual evidence
         uses: actions/upload-artifact@v4
         with:
-          name: gs-home-w05-r3-reference-only-${{ github.event.pull_request.head.sha || github.sha }}
+          name: gs-home-w05-v2-a-reference-only-${{ github.event.pull_request.head.sha || github.sha }}
           path: visual-evidence
           if-no-files-found: error
           retention-days: 7
