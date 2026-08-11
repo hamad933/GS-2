@@ -3,11 +3,6 @@ name: Visual Evidence
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - main
-      - codex/implement-living-system-hero-s01
-      - codex/implement-visual-reconstruction-for-homepage
-      - controller/gs-home-w05-v2-visual-authority
     types: [opened, synchronize, reopened]
     paths:
       - 'src/**'
@@ -61,7 +56,7 @@ jobs:
       - name: Capture visual evidence
         run: npx playwright test tests/visual/hero.visual.spec.ts --project=chromium --workers=1
 
-      - name: Verify screenshot files
+      - name: Verify required screenshot files
         shell: bash
         run: |
           for file in \
@@ -86,10 +81,20 @@ jobs:
             test -s "visual-evidence/$file"
           done
 
+          if grep -q 'desktop-w05-v2-a-hero-k01.png' tests/visual/hero.visual.spec.ts; then
+            for file in \
+              desktop-w05-v2-a-hero-k01.png \
+              desktop-w05-v2-a-hero-k02.png \
+              desktop-w05-v2-a-hero-k03.png \
+              desktop-w05-v2-a-hero-k04.png; do
+              test -s "visual-evidence/$file"
+            done
+          fi
+
       - name: Upload visual evidence
         uses: actions/upload-artifact@v4
         with:
-          name: gs-home-w05-r3-reference-only-${{ github.event.pull_request.head.sha || github.sha }}
+          name: gs-visual-evidence-reference-only-${{ github.event.pull_request.head.sha || github.sha }}
           path: visual-evidence
           if-no-files-found: error
           retention-days: 7
