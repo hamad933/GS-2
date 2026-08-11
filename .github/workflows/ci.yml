@@ -2,10 +2,6 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - main
-      - codex/implement-visual-reconstruction-for-homepage
-      - controller/gs-home-w05-v2-visual-authority
   push:
     branches:
       - main
@@ -16,6 +12,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Verify diff integrity
+        run: git diff --check "${{ github.event.pull_request.base.sha || github.event.before }}" "${{ github.event.pull_request.head.sha || github.sha }}"
 
       - name: Set up Node 20
         uses: actions/setup-node@v4
