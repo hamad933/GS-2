@@ -75,7 +75,7 @@ export function ReferenceProof() {
         }}
       />
 
-      <div ref={selectorGroupRef} className="reference-proof-v2__selectors" role="group" aria-label="اختر مشروعًا آخر">
+      <div ref={selectorGroupRef} className="reference-proof-v2__selectors project-index" role="group" aria-label="اختر مشروعًا آخر">
         {alternatives.map((project) => (
           <button
             key={project.id}
