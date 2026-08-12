@@ -360,6 +360,7 @@
   width: 27.5%;
   min-height: 73%;
   padding-right: 1.5%;
+  pointer-events: none;
   text-align: right;
 }
 
