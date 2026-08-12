@@ -10,6 +10,7 @@ function NeutralProjectSurface({ project, variant }: { project: ReferenceProject
   return (
     <div className={`neutral-project-surface neutral-project-surface--${variant}`} aria-hidden="true">
       <span className="neutral-project-surface__signal" />
+      <span className="neutral-project-surface__context" dir="ltr">GS / SELECTED WORK</span>
       <b dir="ltr">{project.index}</b>
       <strong dir="ltr">{project.family}</strong>
       {variant === 'desktop' && <small>{project.title}</small>}
@@ -98,7 +99,8 @@ export function ReferenceProof() {
           >
             <span className="reference-proof-v2__selector-index" dir="ltr">{project.index}</span>
             <span className="reference-proof-v2__selector-family" dir="ltr">{project.family}</span>
-            <span className="reference-proof-v2__selector-title">{project.title}</span>
+            <strong className="reference-proof-v2__selector-title">{project.title}</strong>
+            <span className="reference-proof-v2__selector-cue">{project.focus[0]}</span>
             <i aria-hidden="true" />
           </button>
         ))}
@@ -107,7 +109,10 @@ export function ReferenceProof() {
       <header className="reference-proof-v2__narrative" aria-live="polite">
         <div className="reference-proof-v2__eyebrow">
           <span dir="ltr">03</span>
-          <p>أعمال مختارة</p>
+          <div className="reference-proof-v2__eyebrow-copy">
+            <b dir="ltr">GENERAL SOLUTIONS</b>
+            <p>أعمال مختارة</p>
+          </div>
           <i aria-hidden="true" />
         </div>
 
