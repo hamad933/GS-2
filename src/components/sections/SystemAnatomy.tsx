@@ -60,7 +60,7 @@ function StageIcon({ id }: { id: LayerId }) {
   const common = {
     fill: 'none',
     stroke: 'currentColor',
-    strokeWidth: 1.6,
+    strokeWidth: 1.75,
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
   };
@@ -133,6 +133,7 @@ export function SystemAnatomy() {
         <div className="anatomy-grain" aria-hidden="true" />
 
         <div className="anatomy-top-band" aria-label="هوية القسم">
+          <span className="anatomy-brand">GENERAL SOLUTIONS</span>
           <span>منهج البناء</span>
           <span>منظومة مترابطة</span>
           <strong><b>04</b> تشريح النظام</strong>
@@ -147,11 +148,11 @@ export function SystemAnatomy() {
         </header>
 
         <svg className="anatomy-connectors" viewBox="0 0 1600 1000" preserveAspectRatio="none" aria-hidden="true">
-          {layers.map((layer) => (
+          {layers.map((layer, index) => (
             <g key={layer.id} className={active.id === layer.id ? 'is-active' : undefined}>
               <path className="connector-route" d={layer.route} />
-              <circle className="connector-origin" cx="558" cy={439 + layers.indexOf(layer) * 72} r="4" />
-              <circle className="connector-anchor" cx={[772, 784, 796, 809, 818][layers.indexOf(layer)]} cy={[208, 328, 463, 581, 694][layers.indexOf(layer)]} r="5" />
+              <circle className="connector-origin" cx="558" cy={439 + index * 72} r="4" />
+              <circle className="connector-anchor" cx={[772, 784, 796, 809, 818][index]} cy={[208, 328, 463, 581, 694][index]} r="5" />
             </g>
           ))}
         </svg>
@@ -196,6 +197,16 @@ export function SystemAnatomy() {
           ))}
         </div>
 
+        <div className="anatomy-layer-lighting" aria-hidden="true">
+          {layers.map((layer) => (
+            <i
+              key={layer.id}
+              className={active.id === layer.id ? 'is-active' : undefined}
+              style={{ '--anchor-y': `${layer.anchorY}%` } as React.CSSProperties}
+            />
+          ))}
+        </div>
+
         <div className="anatomy-right-guide" aria-hidden="true" />
         <div className="anatomy-layer-labels" aria-hidden="true">
           {layers.map((layer) => (
@@ -204,7 +215,7 @@ export function SystemAnatomy() {
               className={active.id === layer.id ? 'is-active' : undefined}
               style={{ '--anchor-y': `${layer.anchorY}%` } as React.CSSProperties}
             >
-              <i />{layer.title}
+              <b>{layer.index}</b><i />{layer.title}
             </span>
           ))}
         </div>
