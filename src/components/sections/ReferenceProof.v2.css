@@ -365,17 +365,20 @@
   filter: brightness(1.16);
 }
 
-.reference-proof-v2__selector-index {
+.reference-proof-v2 .reference-proof-v2__selectors .reference-proof-v2__selector-index {
   color: var(--proof-champagne);
+  font-family: inherit;
   font-size: clamp(0.52rem, 0.68vw, 0.69rem);
   font-weight: 500;
+  line-height: 1.2;
   letter-spacing: 0.13em;
 }
 
-.reference-proof-v2__selector-family {
+.reference-proof-v2 .reference-proof-v2__selectors .reference-proof-v2__selector-family {
   margin-top: 5.5%;
   overflow: hidden;
   color: rgba(248, 244, 235, 0.88);
+  font-family: inherit;
   font-size: clamp(0.64rem, 0.84vw, 0.86rem);
   font-weight: 500;
   line-height: 1.2;
@@ -383,13 +386,14 @@
   white-space: nowrap;
 }
 
-.reference-proof-v2__selector-title {
+.reference-proof-v2 .reference-proof-v2__selectors .reference-proof-v2__selector-title {
   align-self: start;
   display: -webkit-box;
   max-width: 90%;
   margin-top: 4.5%;
   overflow: hidden;
   color: rgba(239, 233, 221, 0.72);
+  font-family: inherit;
   font-size: clamp(0.58rem, 0.75vw, 0.77rem);
   font-weight: 500;
   line-height: 1.4;
@@ -398,10 +402,11 @@
   -webkit-line-clamp: 2;
 }
 
-.reference-proof-v2__selector-cue {
+.reference-proof-v2 .reference-proof-v2__selectors .reference-proof-v2__selector-cue {
   align-self: end;
   max-width: 78%;
   color: rgba(218, 207, 189, 0.46);
+  font-family: inherit;
   font-size: clamp(0.48rem, 0.6vw, 0.62rem);
   line-height: 1.35;
 }
