@@ -24,6 +24,12 @@ export function ProjectGateway() {
         decoding="async"
       />
 
+      <div className="gateway-identity" aria-hidden="true">
+        <bdi>GENERAL SOLUTIONS</bdi>
+        <span />
+        <bdi>S05</bdi>
+      </div>
+
       <div className="gateway-top-rule" aria-hidden="true">
         <span />
       </div>
