@@ -132,7 +132,7 @@ const BUILD_PHASES = [
   { label: 'رتّب الرحلة حول الهدف', note: 'نصل البداية بالقرار والنتيجة.', icon: 'tools' },
   { label: 'وحّد التجربة', note: 'تتّسق الرسالة والفعل في سطح واحد.', icon: 'code' },
   { label: 'قرّبها من المستخدم', note: 'يتحوّل الهيكل إلى تجربة قابلة للمحاولة.', icon: 'shield' },
-  { label: 'جرّب المسار', note: 'طلبك الحقيقي هو خطوة التسليم.', icon: 'gear' },
+  { label: 'جرّب المسار', note: 'أضف طلبك المختصر لإكمال الملخّص.', icon: 'gear' },
 ] as const;
 
 const CTA_COPY: Record<StageId, { secondary: string; secondaryHref: string }> = {
@@ -159,9 +159,9 @@ const COPY: Record<StageId, { kicker: string; title: string; body: string }> = {
     body: 'تتشكّل الرحلة حول الهدف، ثم تتوحّد في سطحٍ واحد يمكنك تجربته بنفسك.',
   },
   launch: {
-    kicker: 'نتيجة هادئة ومتصلة',
-    title: 'الفعل نفسه يبدأ التسليم',
-    body: 'الطلب الذي أرسلته انتقل إلى مسار واضح، مع بقاء القرار النهائي بين يديك.',
+    kicker: 'بداية واضحة للخطوة التالية',
+    title: 'ملخّصك جاهز لبدء المشروع',
+    body: 'راجع ما اخترته، ثم انتقل إلى رسالة المشروع المنظّمة وأكملها بنفسك.',
   },
 };
 
@@ -269,7 +269,7 @@ export function LivingSystemHero() {
         </div>
 
         <div className="system-field e2-system-field" aria-live="polite">
-          <aside className="e2-operating-wall" aria-label="نظام تشكيل الحل">
+          <aside className="e2-operating-wall" aria-label="اختيار احتياج المشروع">
             <div className="e2-wall-depth" aria-hidden="true" />
             <div className="e2-wall-shell" aria-hidden="true">
               <span className="e2-shell-edge e2-shell-edge-top" />
@@ -299,12 +299,12 @@ export function LivingSystemHero() {
 
               <header className="e2-wall-header">
                 <div>
-                  <small>مسار العمل / 0{stageIndex + 1}</small>
+                  <small>المرحلة / 0{stageIndex + 1}</small>
                   <strong>
-                    {stage === 'need' && 'حدّد نقطة البداية'}
-                    {stage === 'direction' && 'شكّل اتجاه الحل'}
-                    {stage === 'build' && 'سطح البناء'}
-                    {stage === 'launch' && 'جاهزية المسار'}
+                    {stage === 'need' && 'اختر نقطة البداية'}
+                    {stage === 'direction' && 'اختر اتجاه التجربة'}
+                    {stage === 'build' && 'خطوات البناء'}
+                    {stage === 'launch' && 'الملخّص جاهز'}
                   </strong>
                 </div>
                 <span className="e2-wall-signal" aria-hidden="true" />
@@ -314,7 +314,7 @@ export function LivingSystemHero() {
                 <div className="e2-control-mount" aria-hidden="true"><i /><i /><i /></div>
 
                 <div className="need-selector e2-need-selector" aria-label="اختر احتياجك">
-                  <p className="e2-wall-intro"><span aria-hidden="true" /> نظام واحد يتغيّر مع قرارك</p>
+                  <p className="e2-wall-intro"><span aria-hidden="true" /> اختر ما تريد تغييره</p>
                   {NEEDS.map((choice, index) => {
                     return (
                       <button
@@ -365,7 +365,7 @@ export function LivingSystemHero() {
                         <small>{need?.short}</small>
                         <strong>{direction?.label}</strong>
                       </div>
-                      <span><Sparkles aria-hidden="true" /> مرحلة البناء</span>
+                      <span><Sparkles aria-hidden="true" /> خطوات البناء</span>
                     </header>
 
                     <ol className="e2-build-phases" aria-label={`مرحلة تشكيل السطح ${buildStep + 1} من 4`}>
@@ -393,7 +393,12 @@ export function LivingSystemHero() {
                         <form onSubmit={(event) => { event.preventDefault(); submitProductAction(); }}>
                           <label htmlFor="hero-brief">طلبك المختصر</label>
                           <input id="hero-brief" value={brief} onChange={(event) => setBrief(event.target.value)} />
-                          <button type="submit" disabled={!brief.trim()}>إرسال الطلب <Send aria-hidden="true" /></button>
+                          <button
+                            type="submit"
+                            aria-label="إرسال الطلب إلى الملخّص"
+                            disabled={!brief.trim()}>
+                            جهّز الملخّص <Send aria-hidden="true" />
+                          </button>
                         </form>
                       )}
                     </div>
@@ -403,23 +408,23 @@ export function LivingSystemHero() {
                 {stage === 'launch' && (
                   <div className="e2-launch-chamber">
                     <header>
-                      <small>نتيجة المسار / الإطلاق</small>
-                      <strong>طلبك أصبح خطوة واضحة</strong>
-                      <p>انتقل الفعل إلى مسار متصل دون أن تنقطع الرحلة.</p>
+                      <small>ملخّص الاختيارات</small>
+                      <strong>أصبحت نقطة البداية واضحة</strong>
+                      <p>يمكنك الآن فتح رسالة المشروع وإكمال التفاصيل بنفسك.</p>
                     </header>
 
                     <div className="e2-launch-primary">
                       <span className="e2-launch-seal" aria-hidden="true"><HeroGlyph name="check" /></span>
                       <div>
-                        <strong>تم الاستلام</strong>
-                        <small>الطلب متصل بالاحتياج والاتجاه اللذين اخترتهما.</small>
+                        <strong>الملخّص جاهز</strong>
+                        <small>لم يُرسل شيء بعد؛ ستبقى المراجعة والإرسال بين يديك.</small>
                       </div>
                     </div>
 
                     <div className="e2-resolution-flow">
-                      <span><HeroGlyph name="shield" /><b>المراجعة</b><small>قراءة الطلب في سياقه</small></span>
-                      <span><HeroGlyph name="share" /><b>المسار</b><small>ترتيب الخطوة التالية</small></span>
-                      <span><HeroGlyph name="rocket" /><b>الوضوح</b><small>قرار نهائي بين يديك</small></span>
+                      <span><HeroGlyph name="shield" /><b>راجع الاختيارات</b><small>تأكّد من الحاجة والاتجاه</small></span>
+                      <span><HeroGlyph name="share" /><b>أكمل الرسالة</b><small>أضف سياق المشروع</small></span>
+                      <span><HeroGlyph name="rocket" /><b>أرسل عندما تجهز</b><small>القرار النهائي بين يديك</small></span>
                     </div>
                   </div>
                 )}

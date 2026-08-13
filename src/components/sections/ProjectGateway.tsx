@@ -27,7 +27,7 @@ export function ProjectGateway() {
       <div className="gateway-identity" aria-hidden="true">
         <bdi>GENERAL SOLUTIONS</bdi>
         <span />
-        <bdi>S05</bdi>
+        <bdi>جاهزون للبدء</bdi>
       </div>
 
       <div className="gateway-top-rule" aria-hidden="true">
@@ -38,7 +38,6 @@ export function ProjectGateway() {
         <p className="gateway-eyebrow">
           <span className="gateway-signal" aria-hidden="true" />
           <span>نقطة البدء</span>
-          <bdi>05</bdi>
         </p>
 
         <h2 id="gateway-title">

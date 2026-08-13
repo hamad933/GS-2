@@ -1,6 +1,7 @@
 import { useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { ProjectMedia } from '../project/ProjectMedia';
 import { referenceProjects, type ReferenceProject } from '../../data/homeShowcase';
+import { referenceProjectMedia } from '../../data/referenceProjectMedia';
 import theatreEnvironment from '../../assets/gs-home-v2/03_GS_Selected_Work_Clean_Production_Asset.webp';
 import './ReferenceProof.v2.css';
 
@@ -10,7 +11,7 @@ function NeutralProjectSurface({ project, variant }: { project: ReferenceProject
   return (
     <div className={`neutral-project-surface neutral-project-surface--${variant}`} aria-hidden="true">
       <span className="neutral-project-surface__signal" />
-      <span className="neutral-project-surface__context" dir="ltr">GS / SELECTED WORK</span>
+      <span className="neutral-project-surface__context">عرض المشروع</span>
       <b dir="ltr">{project.index}</b>
       <strong dir="ltr">{project.family}</strong>
       {variant === 'desktop' && <small>{project.title}</small>}
@@ -25,6 +26,7 @@ export function ReferenceProof() {
   const [focusedSelectorId, setFocusedSelectorId] = useState<string | null>(null);
   const selectorGroupRef = useRef<HTMLDivElement>(null);
   const active = referenceProjects.find((project) => project.id === activeId) ?? referenceProjects[0];
+  const activeMedia = referenceProjectMedia[active.id] ?? {};
   const alternatives = referenceProjects.filter((project) => project.id !== active.id);
 
   const selectProject = (projectId: string, keyboardSelection: boolean) => {
@@ -63,14 +65,17 @@ export function ReferenceProof() {
       <ProjectMedia
         label={`مساحات العرض للمشروع المختار: ${active.family}`}
         desktop={{
+          src: activeMedia.desktop,
           alt: `السطح الرئيسي للمشروع ${active.family}`,
           placeholder: <NeutralProjectSurface project={active} variant="desktop" />,
         }}
         mobile={{
+          src: activeMedia.mobile,
           alt: `السطح المساند للمشروع ${active.family}`,
           placeholder: <NeutralProjectSurface project={active} variant="mobile" />,
         }}
         detail={{
+          src: activeMedia.detail,
           alt: `سطح التفاصيل للمشروع ${active.family}`,
           placeholder: <NeutralProjectSurface project={active} variant="detail" />,
         }}
@@ -111,19 +116,19 @@ export function ReferenceProof() {
           <span dir="ltr">03</span>
           <div className="reference-proof-v2__eyebrow-copy">
             <b dir="ltr">GENERAL SOLUTIONS</b>
-            <p>أعمال مختارة</p>
+            <p>مشاريع مرجعية</p>
           </div>
           <i aria-hidden="true" />
         </div>
 
         <h2 id="proof-title">مشروع واحد.<br />في مركز المشهد.</h2>
         <p className="reference-proof-v2__intro">
-          أربع تجارب مستقلة، لكلّ منها سياقها، تجمعها عناية واحدة بالوضوح والترابط.
+          أربع تجارب مستقلة، لكلّ منها سياقها، وتجمعها عناية واحدة بالوضوح وسهولة الاستخدام.
         </p>
 
         <div className="reference-proof-v2__project-heading">
           <span dir="ltr">{active.index}</span>
-          <p>المشروع المختار</p>
+          <p>المشروع المعروض</p>
         </div>
 
         <div className="reference-proof-v2__project-copy">
