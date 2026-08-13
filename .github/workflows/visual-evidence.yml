@@ -8,6 +8,7 @@ on:
       - codex/implement-living-system-hero-s01
       - codex/implement-visual-reconstruction-for-homepage
       - controller/gs-home-w05-v2-visual-authority
+      - experiment/gs-w05-v2-g-chatgpt-visual-authority-closure-r2
     types: [opened, synchronize, reopened]
     paths:
       - 'src/**'
@@ -61,6 +62,61 @@ jobs:
       - name: Capture visual evidence
         run: npx playwright test tests/visual/hero.visual.spec.ts --project=chromium --workers=1
 
+      - name: Capture controller-only 1024 and 430 evidence
+        shell: bash
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/gs-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill $PREVIEW_PID || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          node --input-type=module <<'NODE'
+          import { chromium } from '@playwright/test';
+          import { mkdir } from 'node:fs/promises';
+          import { resolve } from 'node:path';
+
+          const out = resolve('visual-evidence');
+          await mkdir(out, { recursive: true });
+          const browser = await chromium.launch({ headless: true });
+
+          async function settle(page) {
+            await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            await page.evaluate(() => document.fonts.ready);
+            await page.waitForTimeout(700);
+          }
+
+          async function section(page, selector, filename) {
+            const locator = page.locator(selector);
+            await locator.scrollIntoViewIfNeeded();
+            await page.waitForTimeout(350);
+            await locator.screenshot({ path: resolve(out, filename), animations: 'disabled' });
+          }
+
+          for (const spec of [
+            { width: 1024, height: 900, prefix: 'controller-1024' },
+            { width: 430, height: 900, prefix: 'controller-430' },
+          ]) {
+            const page = await browser.newPage({ viewport: { width: spec.width, height: spec.height } });
+            await settle(page);
+            await page.screenshot({ path: resolve(out, `${spec.prefix}-home-full.png`), fullPage: true, animations: 'disabled' });
+            await section(page, '#hero', `${spec.prefix}-hero-k01.png`);
+            await page.locator('#solutions-universe').getByRole('button', { name: /الأنظمة التشغيلية والبوابات/ }).click();
+            await section(page, '#solutions-universe', `${spec.prefix}-s02-active.png`);
+            await page.locator('#reference-proof').getByRole('button', { name: /Enterprise Operations/ }).click();
+            await section(page, '#reference-proof', `${spec.prefix}-s03-rp02.png`);
+            await page.locator('#system-anatomy').getByRole('button', { name: /التكامل/ }).click();
+            await section(page, '#system-anatomy', `${spec.prefix}-s04-active.png`);
+            await section(page, '#project-gateway', `${spec.prefix}-s05.png`);
+            const dims = await page.evaluate(() => ({ client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
+            if (dims.scroll > dims.client + 1) throw new Error(`${spec.prefix}: horizontal overflow ${dims.scroll - dims.client}px`);
+            await page.close();
+          }
+
+          await browser.close();
+          NODE
+
       - name: Verify screenshot files
         shell: bash
         run: |
@@ -86,14 +142,26 @@ jobs:
             mobile-w05-r3-solutions-active.png \
             mobile-w05-r3-project.png \
             mobile-w05-r3-anatomy.png \
-            mobile-w05-r3-gateway.png; do
+            mobile-w05-r3-gateway.png \
+            controller-1024-home-full.png \
+            controller-1024-hero-k01.png \
+            controller-1024-s02-active.png \
+            controller-1024-s03-rp02.png \
+            controller-1024-s04-active.png \
+            controller-1024-s05.png \
+            controller-430-home-full.png \
+            controller-430-hero-k01.png \
+            controller-430-s02-active.png \
+            controller-430-s03-rp02.png \
+            controller-430-s04-active.png \
+            controller-430-s05.png; do
             test -s "visual-evidence/$file"
           done
 
       - name: Upload visual evidence
         uses: actions/upload-artifact@v4
         with:
-          name: gs-home-w05-v2-a-reference-only-${{ github.event.pull_request.head.sha || github.sha }}
+          name: gs-home-w05-v2-g-r2-controller-reference-only-${{ github.event.pull_request.head.sha || github.sha }}
           path: visual-evidence
           if-no-files-found: error
           retention-days: 7
