@@ -66,9 +66,9 @@ export function SolutionsUniverse() {
       />
 
       <div className="s02-segment-band" aria-hidden="true">
-        <span className="is-current"><b>0{activeIndex + 1}</b> العائلة المختارة</span>
-        <span>مسار متصل</span>
-        <span>مخرجات واضحة</span>
+        <span className="is-current"><b>0{activeIndex + 1}</b> المجال المختار</span>
+        <span>ستة مجالات</span>
+        <span>تفاصيل تتغيّر مع اختيارك</span>
       </div>
 
       <div className="s02-architecture" aria-label="اختر إحدى عائلات الحلول الست">
@@ -84,7 +84,7 @@ export function SolutionsUniverse() {
 
         <div className="s02-core-label" aria-hidden="true">
           <span>GS</span>
-          <small>نواة الحلول</small>
+          <small>حلول مترابطة</small>
         </div>
 
         <div className="s02-stations" role="group" aria-label="عائلات الحلول الست">
@@ -118,18 +118,18 @@ export function SolutionsUniverse() {
 
       <div className="s02-narrative">
         <div className="s02-eyebrow"><i /> <span>02</span> عالم الحلول</div>
-        <h2 id="solutions-title">حلول مترابطة<br />تنطلق من نواة واحدة.</h2>
-        <p className="s02-intro">ست عائلات تنظّم الاحتياج في مسارات واضحة، وتصل الحضور الرقمي بالخدمة والتشغيل والمعرفة.</p>
+        <h2 id="solutions-title">حلول مترابطة<br />تبدأ من احتياجك.</h2>
+        <p className="s02-intro">ستة مجالات تنظّم الاحتياج في مسارات واضحة، وتصل الحضور الرقمي بالخدمة والتشغيل والمعرفة.</p>
 
         <div id="s02-family-detail" className="s02-family-detail" aria-live="polite" aria-atomic="true">
-          <div className="s02-selected-label"><span>العائلة المختارة</span><b>0{activeIndex + 1} / 06</b></div>
+          <div className="s02-selected-label"><span>المجال المختار</span><b>0{activeIndex + 1} / 06</b></div>
           <h3>{active.title}</h3>
           <p>{active.description}</p>
           <ul>
             {active.outcomes.map((outcome, index) => (
               <li key={outcome}>
                 <span className="s02-outcome-icon" aria-hidden="true"><i /><b>0{index + 1}</b></span>
-                <span><small>محور المسار</small><strong>{outcome}</strong></span>
+                <span><small>يشمل</small><strong>{outcome}</strong></span>
               </li>
             ))}
           </ul>
@@ -137,14 +137,14 @@ export function SolutionsUniverse() {
 
         <div className="s02-actions">
           <a href="#reference-proof">استعرض المشاريع المرجعية <DirectionArrow /></a>
-          <button type="button" onClick={activateNext}>العائلة التالية <DirectionArrow /></button>
+          <button type="button" onClick={activateNext}>المجال التالي <DirectionArrow /></button>
         </div>
-        <p className="s02-context-cue"><span /> اختر محطة أخرى لتعيد المنظومة ترتيب مسارها.</p>
+        <p className="s02-context-cue"><span /> اختر محطة أخرى لعرض تفاصيلها.</p>
       </div>
 
       <div className="s02-continuity" aria-live="polite">
         <div className="s02-continuity-title">
-          <span>ست عائلات مترابطة</span>
+          <span>ستة مجالات مترابطة</span>
           <strong>{active.title}</strong>
         </div>
         <div className="s02-continuity-outcomes">

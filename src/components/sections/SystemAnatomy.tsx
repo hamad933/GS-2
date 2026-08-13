@@ -134,8 +134,8 @@ export function SystemAnatomy() {
 
         <div className="anatomy-top-band" aria-label="هوية القسم">
           <span className="anatomy-brand">GENERAL SOLUTIONS</span>
-          <span>منهج البناء</span>
-          <span>منظومة مترابطة</span>
+          <span>منهج العمل</span>
+          <span>خمس مراحل</span>
           <strong><b>04</b> تشريح النظام</strong>
         </div>
 
@@ -143,7 +143,7 @@ export function SystemAnatomy() {
           <p className="anatomy-eyebrow"><i aria-hidden="true" /> تشريح النظام</p>
           <h2 id="anatomy-title"><span>كيف نبني الأنظمة</span><span>الرقمية طبقة فوق طبقة</span></h2>
           <p className="anatomy-intro">
-            نفتح النظام إلى مستوياته؛ كل مستوى يضيف وضوحًا ويحافظ على صلته بما قبله وما بعده.
+            نبني كل مرحلة على ما قبلها؛ من فهم الاحتياج إلى إطلاق أساس منظّم وقابل للتطوير.
           </p>
         </header>
 
@@ -221,7 +221,7 @@ export function SystemAnatomy() {
         </div>
 
         <p className="anatomy-live-role" aria-live="polite">
-          <span>دور الطبقة / {active.index}</span>
+          <span>في هذه المرحلة / {active.index}</span>
           <strong>{active.title}</strong>
           <small>{active.role}</small>
         </p>
