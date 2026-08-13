@@ -1613,6 +1613,10 @@
     height: 60.5%;
   }
 
+  .e2-hero[data-stage='need'] .e2-operating-wall {
+    height: 55%;
+  }
+
   .e2-hero[data-stage='build'] .e2-operating-wall,
   .e2-hero[data-stage='build'][data-build='3'] .e2-operating-wall,
   .e2-hero[data-stage='launch'] .e2-operating-wall {
@@ -1726,6 +1730,10 @@
     left: 8px;
     width: 75%;
     height: 63%;
+  }
+
+  .e2-hero[data-stage='need'] .e2-operating-wall {
+    height: 54%;
   }
 
   .e2-hero[data-stage='build'] .e2-operating-wall,
