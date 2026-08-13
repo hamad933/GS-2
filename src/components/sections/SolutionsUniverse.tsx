@@ -73,12 +73,12 @@ export function SolutionsUniverse() {
 
       <div className="s02-architecture" aria-label="اختر إحدى عائلات الحلول الست">
         <svg className="s02-connectors" viewBox="0 0 700 760" preserveAspectRatio="none" aria-hidden="true">
-          <path className={`s02-connector ${activeIndex === 0 ? 'is-active' : ''}`} d="M350 390 C300 330 260 276 210 238" />
-          <path className={`s02-connector ${activeIndex === 1 ? 'is-active' : ''}`} d="M350 390 C270 390 150 390 67 382" />
+          <path className={`s02-connector ${activeIndex === 0 ? 'is-active' : ''}`} d="M350 390 C300 330 266 276 227 238" />
+          <path className={`s02-connector ${activeIndex === 1 ? 'is-active' : ''}`} d="M350 390 C270 390 145 390 58 382" />
           <path className={`s02-connector ${activeIndex === 2 ? 'is-active' : ''}`} d="M350 390 C292 472 230 534 150 574" />
-          <path className={`s02-connector ${activeIndex === 3 ? 'is-active' : ''}`} d="M350 390 C402 493 440 548 500 598" />
-          <path className={`s02-connector ${activeIndex === 4 ? 'is-active' : ''}`} d="M350 390 C438 398 522 403 606 400" />
-          <path className={`s02-connector ${activeIndex === 5 ? 'is-active' : ''}`} d="M350 390 C408 320 430 272 475 234" />
+          <path className={`s02-connector ${activeIndex === 3 ? 'is-active' : ''}`} d="M350 390 C402 493 430 548 476 598" />
+          <path className={`s02-connector ${activeIndex === 4 ? 'is-active' : ''}`} d="M350 390 C438 398 534 403 625 400" />
+          <path className={`s02-connector ${activeIndex === 5 ? 'is-active' : ''}`} d="M350 390 C408 320 426 272 460 234" />
           <circle className="s02-core-signal" cx="350" cy="390" r="8" />
         </svg>
 

@@ -2,7 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
-const EVIDENCE_DIR = resolve('visual-evidence');
+const EVIDENCE_DIR = resolve(process.env.VISUAL_EVIDENCE_DIR ?? 'visual-evidence');
 const HERO = '#hero';
 const S02 = '#solutions-universe';
 const S03 = '#reference-proof';
@@ -218,7 +218,7 @@ test('honors prefers-reduced-motion in Chromium', async ({ page }) => {
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'direction');
 });
 
-for (const width of [390, 768, 1024, 1440]) {
+for (const width of [390, 430, 768, 1024, 1440]) {
   test(`has no document horizontal overflow at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await openHome(page);
@@ -235,8 +235,8 @@ test('all homepage hash links resolve and no active link uses a bare hash', asyn
   const links = await page.locator('a[href^="#"]').evaluateAll((anchors) => anchors.map((anchor) => anchor.getAttribute('href')));
   expect(links).not.toContain('#');
   for (const href of links) {
-    expect(href).toBeTruthy();
-    expect(await page.locator(href!).count()).toBe(1);
+    if (!href) throw new Error('Homepage hash link is missing its href');
+    expect(await page.locator(href).count()).toBe(1);
   }
 });
 
@@ -270,6 +270,71 @@ test('representative controls support real clicks, keyboard activation, and sync
   await expect(gateway).toHaveAttribute('href', /^mailto:hello@generalsolutions\.co\?/);
 });
 
+test('all S02 stations and S03 projects support pointer and keyboard selection', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page);
+
+  for (const family of [
+    'business',
+    'commerce',
+    'booking',
+    'assets',
+    'portals',
+    'knowledge',
+  ]) {
+    const station = page.locator(S02).locator(`.s02-station-${[
+      'business',
+      'commerce',
+      'booking',
+      'assets',
+      'portals',
+      'knowledge',
+    ].indexOf(family) + 1}`);
+    await expect(station).toHaveCount(1);
+    await station.click();
+    await expect(page.locator(S02)).toHaveAttribute('data-active', family);
+    await station.focus();
+    await expect(station).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator(S02)).toHaveAttribute('data-active', family);
+  }
+
+  for (const projectId of ['rp02', 'rp03', 'rp04', 'rp01']) {
+    const pointerSelector = page.locator(S03).locator(`[data-project-selector="${projectId}"]`);
+    await expect(pointerSelector).toHaveCount(1);
+    await pointerSelector.click();
+    await expect(page.locator(S03)).toHaveAttribute('data-project', projectId);
+  }
+
+  for (const [index, projectId] of ['rp02', 'rp03', 'rp04', 'rp01'].entries()) {
+    const keyboardSelector = page.locator(S03).locator(`[data-project-selector="${projectId}"]`);
+    await expect(keyboardSelector).toHaveCount(1);
+    await keyboardSelector.focus();
+    await expect(keyboardSelector).toBeFocused();
+    await page.keyboard.press(index % 2 === 0 ? 'Enter' : 'Space');
+    await expect(page.locator(S03)).toHaveAttribute('data-project', projectId);
+  }
+});
+
+for (const width of [1440, 1024, 768, 430, 390]) {
+  test(`has no console or page errors through representative interactions at ${width}px`, async ({ page }) => {
+    const consoleErrors: string[] = [];
+    const pageErrors: string[] = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+
+    await page.setViewportSize({ width, height: 900 });
+    await openHome(page);
+    await page.locator(S02).locator('.s02-station-5').click();
+    await page.locator(S03).locator('[data-project-selector="rp02"]').click();
+
+    expect(consoleErrors).toEqual([]);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 test('captures final R3 desktop integration evidence', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openHome(page);
@@ -294,6 +359,7 @@ test('captures final R3 mobile integration evidence', async ({ page }) => {
 });
 
 test('captures complete W05-R3 review evidence with real pointer interactions', async ({ page }) => {
+  test.slow();
   await page.setViewportSize({ width: 1440, height: 900 });
   await openHome(page);
   await captureHero(page, 'desktop-w05-r3-hero-need.png');
@@ -339,3 +405,45 @@ test('captures complete W05-R3 review evidence with real pointer interactions', 
   await captureSection(page, S04, 'mobile-w05-r3-anatomy.png');
   await captureSection(page, S05, 'mobile-w05-r3-gateway.png');
 });
+
+for (const width of [1440, 1024, 768, 430, 390]) {
+  test(`captures mandatory W05-R4 homepage evidence at ${width}px`, async ({ page }) => {
+    test.slow();
+    const height = width >= 1024 ? 900 : width === 768 ? 1024 : 900;
+    await page.setViewportSize({ width, height });
+    await openHome(page);
+
+    await captureFullPage(page, `r4-${width}-home-full.png`);
+    await captureHero(page, `r4-${width}-hero.png`);
+    await captureSection(page, S02, `r4-${width}-s02-default.png`);
+
+    const activeFamily = page.locator(S02).locator('.s02-station-5');
+    await expect(activeFamily).toHaveCount(1);
+    await activeFamily.click();
+    await expect(page.locator(S02)).toHaveAttribute('data-active', 'portals');
+    await captureSection(page, S02, `r4-${width}-s02-active.png`);
+
+    for (const projectId of ['rp01', 'rp02', 'rp03', 'rp04']) {
+      if (await page.locator(S03).getAttribute('data-project') !== projectId) {
+        const selector = page.locator(S03).locator(`[data-project-selector="${projectId}"]`);
+        await expect(selector).toHaveCount(1);
+        await selector.click();
+      }
+
+      await expect(page.locator(S03)).toHaveAttribute('data-project', projectId);
+      await captureSection(page, S03, `r4-${width}-s03-${projectId}.png`);
+
+      if (width === 1440) {
+        for (const aperture of ['desktop', 'mobile', 'detail']) {
+          await page.locator(S03).locator(`.media-${aperture}`).screenshot({
+            path: resolve(EVIDENCE_DIR, `r4-1440-s03-${projectId}-${aperture}-close.png`),
+            animations: 'disabled',
+          });
+        }
+      }
+    }
+
+    await captureSection(page, S04, `r4-${width}-s04.png`);
+    await captureSection(page, S05, `r4-${width}-s05.png`);
+  });
+}

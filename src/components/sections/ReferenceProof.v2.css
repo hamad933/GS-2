@@ -157,8 +157,8 @@
 .reference-proof-v2 .neutral-project-surface::before {
   content: '';
   position: absolute;
-  inset: 8%;
-  border: 1px solid #aa875c2e;
+  inset: 0;
+  box-shadow: inset 0 0 0 1px #aa875c24;
   background:
     linear-gradient(90deg, transparent 48%, #aa875c24 49.7%, transparent 50.3%),
     linear-gradient(180deg, transparent 63%, #aa875c28 63.3%, transparent 63.8%);
@@ -179,8 +179,8 @@
 .neutral-project-surface__signal {
   position: absolute;
   z-index: 2;
-  top: 10%;
-  right: 8%;
+  top: 6%;
+  right: 5%;
   width: 7px;
   height: 7px;
   background: #557ff0;
@@ -191,8 +191,8 @@
 .neutral-project-surface__context {
   position: absolute;
   z-index: 2;
-  top: 10%;
-  left: 8%;
+  top: 8%;
+  left: 6%;
   color: #857c72;
   font-size: 7px;
 }
@@ -205,16 +205,16 @@
 }
 
 .neutral-project-surface > b {
-  top: 16%;
-  left: 8%;
+  top: 14%;
+  left: 6%;
   color: #b6956a;
   font-size: 9px;
   letter-spacing: .08em;
 }
 
 .neutral-project-surface > strong {
-  right: 8%;
-  bottom: 20%;
+  right: 6%;
+  bottom: 17%;
   max-width: 70%;
   color: #e0d6ca;
   font-size: 14px;
@@ -222,8 +222,8 @@
 }
 
 .neutral-project-surface > small {
-  right: 8%;
-  bottom: 10%;
+  right: 6%;
+  bottom: 8%;
   color: #9b9288;
   font-size: 7px;
   direction: rtl;
@@ -232,9 +232,9 @@
 .neutral-project-surface > i {
   position: absolute;
   z-index: 2;
-  right: 8%;
-  bottom: 7%;
-  left: 8%;
+  right: 6%;
+  bottom: 5%;
+  left: 6%;
   height: 1px;
   background: linear-gradient(90deg, #d1a56d, transparent);
 }
@@ -267,10 +267,11 @@
 .reference-proof-v2__selectors {
   position: absolute;
   z-index: 9;
-  bottom: 8.2%;
+  top: 71.5%;
+  bottom: auto;
   left: 6.5%;
   width: 54.5%;
-  height: 16.8%;
+  height: 18.5%;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6%;
@@ -301,18 +302,18 @@
   justify-content: center;
   align-items: flex-start;
   gap: 3px;
-  padding: 13px 16px 16px;
-  border: 1px solid #8f755450;
-  border-top-color: #d8ad758f;
-  border-bottom-color: #d8ad7538;
+  padding: 13px 16px 17px;
+  border: 1px solid #8f755432;
+  border-top-color: #d8ad757c;
+  border-bottom-color: #d8ad7528;
   background:
-    linear-gradient(180deg, #2f2a2475, #1d1c1a52 58%, #1014178c),
-    radial-gradient(circle at 18% 0, #d1a56d24, transparent 34%);
+    linear-gradient(180deg, #29231d5e, #1718173d 58%, #0b111570),
+    radial-gradient(circle at 18% 0, #d1a56d1c, transparent 36%);
   color: #ded3c7;
   text-align: left;
   cursor: pointer;
   clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0 calc(100% - 7px), 0 9px);
-  box-shadow: 0 10px 0 -7px #191510b8, 0 15px 24px #0006, inset 0 1px #fff1, inset 0 -3px #05090c91;
+  box-shadow: 0 10px 0 -7px #1915109c, 0 12px 20px #0005, inset 0 1px #fff1, inset 0 -2px #05090c78;
   transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
 }
 
@@ -343,7 +344,7 @@
 
 .reference-proof-v2__selector-index {
   color: #d1a56d;
-  font-size: 8px;
+  font-size: 8.5px;
   font-weight: 600;
   letter-spacing: .08em;
 }
@@ -351,7 +352,7 @@
 .reference-proof-v2__selector-family {
   margin-top: 3px;
   color: #f0e8df;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
 }
@@ -359,7 +360,7 @@
 .reference-proof-v2__selector-title {
   margin-top: 1px;
   color: #c0b6aa;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 500;
   line-height: 1.55;
   direction: rtl;
@@ -368,7 +369,7 @@
 
 .reference-proof-v2__selector-cue {
   color: #847b72;
-  font-size: 6.5px;
+  font-size: 7.5px;
   direction: rtl;
 }
 
@@ -441,7 +442,7 @@
 .reference-proof-v2__intro {
   margin: 10px 0 0;
   color: #aaa197;
-  font-size: 9.5px;
+  font-size: 10.5px;
   line-height: 1.9;
 }
 
@@ -481,7 +482,7 @@
 .reference-proof-v2__project-copy h3 {
   margin: 7px 0 0;
   color: #f0e4d6;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.65;
 }
@@ -489,7 +490,7 @@
 .reference-proof-v2__project-copy > p:last-child {
   margin: 7px 0 0;
   color: #aaa197;
-  font-size: 8.5px;
+  font-size: 9.5px;
   line-height: 1.8;
 }
 
@@ -512,13 +513,31 @@
   border-top: 1px solid #a8875d43;
   border-bottom: 1px solid #6f5a4134;
   color: #c9bfb4;
-  font-size: 7px;
+  font-size: 7.5px;
   text-align: center;
 }
 
 .reference-proof-v2__focus li span {
   color: #b88d58;
   font-size: 5px;
+}
+
+@media (min-width: 1101px) {
+  .reference-proof-v2 {
+    height: clamp(760px, 62.5vw, 900px);
+    min-height: clamp(760px, 62.5vw, 900px);
+  }
+
+  .reference-proof-v2__environment {
+    object-fit: contain;
+  }
+
+  .reference-proof-v2 .project-media {
+    top: 50%;
+    width: 100%;
+    height: auto;
+    transform: translate(-50%, -50%);
+  }
 }
 
 @media (max-width: 1100px) and (min-width: 801px) {
@@ -555,10 +574,12 @@
   }
 }
 
-@media (max-width: 800px) {
+@media (max-width: 1100px) {
   .reference-proof-v2 {
     height: 1060px;
     min-height: 1060px;
+    --theatre-top: 265px;
+    --theatre-width: min(145vw, 1280px);
   }
 
   .reference-proof-v2::before {
@@ -568,11 +589,11 @@
   }
 
   .reference-proof-v2__environment {
-    top: 25%;
+    top: var(--theatre-top);
     right: auto;
     bottom: auto;
     left: 50%;
-    width: 145%;
+    width: var(--theatre-width);
     height: auto;
     object-fit: contain;
     object-position: center;
@@ -607,9 +628,9 @@
   }
 
   .reference-proof-v2 .project-media {
-    top: 25%;
+    top: var(--theatre-top);
     left: 50%;
-    width: 145%;
+    width: var(--theatre-width);
     height: auto;
     aspect-ratio: 8 / 5;
     transform: translateX(-33.2%);
@@ -621,7 +642,7 @@
 
   .reference-proof-v2__selectors {
     right: 5%;
-    top: 72%;
+    top: calc(var(--theatre-top) + min(63.4375vw, 560px));
     bottom: auto;
     left: 5%;
     width: auto;
@@ -634,14 +655,16 @@
   .reference-proof-v2 {
     height: calc(330px + 131.25vw);
     min-height: calc(330px + 131.25vw);
+    --theatre-top: 280px;
+    --theatre-width: 210vw;
   }
 
   .reference-proof-v2__environment {
-    top: 280px;
+    top: var(--theatre-top);
     right: auto;
     bottom: auto;
     left: 50%;
-    width: 210%;
+    width: var(--theatre-width);
     height: auto;
     object-position: center;
     filter: saturate(.8) contrast(1.08) brightness(.82);
@@ -699,9 +722,9 @@
   }
 
   .reference-proof-v2 .project-media {
-    top: 280px;
+    top: var(--theatre-top);
     left: 50%;
-    width: 210%;
+    width: var(--theatre-width);
     height: auto;
     transform: translateX(-33.2%);
   }
