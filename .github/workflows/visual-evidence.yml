@@ -66,7 +66,7 @@ jobs:
           path = Path('tests/visual/hero.visual.spec.ts')
           text = path.read_text(encoding='utf-8')
           old = "await expect(page.getByText('تم الاستلام')).toBeVisible();"
-          new = "await expect(page.getByText('الملخّص جاهز')).toBeVisible();"
+          new = "await expect(page.getByText('لم يُرسل شيء بعد؛ ستبقى المراجعة والإرسال بين يديك.')).toBeVisible();"
           if old not in text:
               raise SystemExit('Expected stale assertion not found')
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
