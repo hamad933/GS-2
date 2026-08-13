@@ -522,12 +522,17 @@
 }
 
 @media (max-width: 1100px) and (min-width: 801px) {
+  .reference-proof-v2__environment {
+    object-position: calc(50% + 68px) center;
+  }
+
   .reference-proof-v2__seam {
     right: 33%;
   }
 
   .reference-proof-v2 .project-media {
     height: 100%;
+    transform: translateX(calc(-50% + 68px));
   }
 
   .reference-proof-v2__narrative {
