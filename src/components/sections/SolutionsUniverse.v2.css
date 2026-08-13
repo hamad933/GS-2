@@ -552,6 +552,28 @@
   border-color: #557ff0;
 }
 
+@media (min-width: 1101px) {
+  .solutions-universe.s02-universe {
+    height: clamp(760px, 62.5vw, 900px);
+    min-height: clamp(760px, 62.5vw, 900px);
+  }
+
+  .s02-environment {
+    object-fit: contain;
+  }
+
+  .s02-segment-band {
+    left: 28.5%;
+    width: 33%;
+  }
+
+  .s02-station-1 { left: 26.5%; }
+  .s02-station-2 { left: 3.7%; }
+  .s02-station-4 { right: 25.4%; }
+  .s02-station-5 { right: 5.2%; }
+  .s02-station-6 { right: 28.1%; }
+}
+
 @media (max-width: 1100px) and (min-width: 801px) {
   .solutions-universe.s02-universe::after {
     right: 33%;
@@ -585,10 +607,10 @@
   }
 }
 
-@media (max-width: 800px) {
+@media (max-width: 1100px) {
   .solutions-universe.s02-universe {
-    height: 1080px;
-    min-height: 1080px;
+    height: clamp(1080px, 115vw, 1180px);
+    min-height: clamp(1080px, 115vw, 1180px);
   }
 
   .solutions-universe.s02-universe::before {
@@ -602,11 +624,11 @@
   }
 
   .s02-environment {
-    top: 28%;
+    top: 420px;
     right: auto;
     bottom: auto;
     left: 50%;
-    width: 145%;
+    width: min(145vw, 1280px);
     height: auto;
     object-fit: contain;
     object-position: center;
@@ -646,20 +668,40 @@
   }
 
   .s02-segment-band {
-    top: 27.5%;
+    top: 410px;
     left: 18%;
     width: 64%;
   }
 
   .s02-architecture {
-    top: 31.5%;
+    top: 450px;
     left: 3%;
     width: 94%;
     height: 49%;
   }
 
   .s02-station {
-    width: 34%;
+    width: 30%;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .s02-station-1 { top: 13%; left: 15%; }
+  .s02-station-2 { top: 37%; left: -5%; }
+  .s02-station-3 { top: 66%; left: 8%; }
+  .s02-station-4 { top: 66%; right: 8%; }
+  .s02-station-5 { top: 37%; right: -5%; }
+  .s02-station-6 { top: 13%; right: 15%; }
+
+  .s02-station-copy {
+    order: 2;
+    align-items: center;
+    text-align: center;
+  }
+
+  .s02-station-node {
+    order: 1;
   }
 
   .s02-station-copy strong {
@@ -706,12 +748,12 @@
 
 @media (max-width: 520px) {
   .solutions-universe.s02-universe {
-    height: 1000px;
-    min-height: 1000px;
+    height: 1040px;
+    min-height: 1040px;
   }
 
   .s02-environment {
-    top: 280px;
+    top: 330px;
     right: auto;
     bottom: auto;
     left: 50%;
@@ -765,7 +807,7 @@
   }
 
   .s02-segment-band {
-    top: 278px;
+    top: 310px;
     left: 12px;
     width: calc(100% - 24px);
     min-height: 40px;
@@ -776,7 +818,7 @@
   }
 
   .s02-architecture {
-    top: 310px;
+    top: 350px;
     left: 6px;
     width: calc(100% - 12px);
     height: 500px;
@@ -796,21 +838,33 @@
   }
 
   .s02-station {
-    width: 42%;
-    min-height: 78px;
-    gap: 5px;
+    width: 30%;
+    min-height: 82px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
     padding: 3px;
   }
 
-  .s02-station-1 { top: 20%; left: 20%; }
-  .s02-station-2 { top: 40%; left: 0; }
-  .s02-station-3 { top: 68%; left: 8%; }
-  .s02-station-4 { top: 69%; right: 12%; }
-  .s02-station-5 { top: 40%; right: 0; }
-  .s02-station-6 { top: 20%; right: 18%; }
+  .s02-station-1 { top: 8%; left: 12%; }
+  .s02-station-2 { top: 29%; left: -8%; }
+  .s02-station-3 { top: 58%; left: 0; }
+  .s02-station-4 { top: 58%; right: 0; }
+  .s02-station-5 { top: 29%; right: -8%; }
+  .s02-station-6 { top: 8%; right: 12%; }
+
+  .s02-station-copy {
+    order: 2;
+    align-items: center;
+    text-align: center;
+  }
+
+  .s02-station-node {
+    order: 1;
+  }
 
   .s02-station-copy strong {
-    font-size: 8px;
+    font-size: 8.5px;
     line-height: 1.45;
   }
 
