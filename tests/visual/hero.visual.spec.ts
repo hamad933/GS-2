@@ -139,7 +139,7 @@ test('captures desktop K01, K03, and K04 evidence', async ({ page }) => {
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لاختبار التسليم');
   await page.getByRole('button', { name: /إرسال الطلب/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
-  await expect(page.getByText('تم الاستلام')).toBeVisible();
+  await expect(page.getByText('لم يُرسل شيء بعد؛ ستبقى المراجعة والإرسال بين يديك.')).toBeVisible();
   await captureHero(page, 'desktop-k04-launch.png');
 });
 
