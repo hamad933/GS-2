@@ -649,11 +649,11 @@
   }
 
   .anatomy-object {
-    top: 28%;
-    left: -38%;
-    inline-size: 160%;
-    opacity: 0.75;
-    filter: brightness(1.04) contrast(1.02) saturate(1.02);
+    top: 26%;
+    left: -24%;
+    inline-size: 145%;
+    opacity: 0.82;
+    filter: brightness(1.08) contrast(1.025) saturate(1.03);
   }
 
   .anatomy-connectors,
@@ -665,16 +665,16 @@
   }
 
   .anatomy-stages {
-    top: 43%;
-    left: 6%;
-    inline-size: 88%;
+    top: 42.5%;
+    left: 4.5%;
+    inline-size: 82%;
     gap: 0.35rem;
   }
 
   .anatomy-stages button {
     block-size: 66px;
     grid-template-columns: 2.8rem 3rem 1fr 0.86rem;
-    background: rgba(8, 13, 17, 0.87);
+    background: linear-gradient(90deg, rgba(8, 13, 17, 0.92), rgba(10, 16, 20, 0.72) 74%, rgba(10, 16, 20, 0.36));
   }
 
   .stage-copy small {
@@ -709,7 +709,7 @@
 
 @media (max-width: 520px) {
   .anatomy-canvas {
-    min-block-size: 1120px;
+    min-block-size: 1050px;
   }
 
   .anatomy-top-band {
@@ -739,13 +739,15 @@
   }
 
   .anatomy-object {
-    top: 27%;
-    left: -88%;
-    inline-size: 238%;
+    top: 26%;
+    left: -61%;
+    inline-size: 188%;
   }
 
   .anatomy-stages {
-    top: 42%;
+    top: 40.8%;
+    left: 4%;
+    inline-size: 84%;
   }
 
   .anatomy-stages button {
