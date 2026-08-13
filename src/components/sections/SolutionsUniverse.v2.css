@@ -586,13 +586,13 @@
 
 @media (max-width: 800px) {
   .solutions-universe.s02-universe {
-    height: 1240px;
-    min-height: 1240px;
+    height: 1210px;
+    min-height: 1210px;
   }
 
   .solutions-universe.s02-universe::before {
     background:
-      linear-gradient(180deg, #050b10f4 0 31%, transparent 43% 75%, #050b10f2 91%),
+      linear-gradient(180deg, #050b10f2 0 15%, #050b1096 25%, transparent 41% 75%, #050b10f2 91%),
       linear-gradient(90deg, #050b1091, transparent 35% 70%, #050b108f);
   }
 
@@ -601,16 +601,16 @@
   }
 
   .s02-environment {
-    top: 30%;
+    top: 10%;
     left: -12%;
     width: 124%;
-    height: 64%;
+    height: 82%;
     object-position: 28% center;
     filter: saturate(.78) contrast(1.05) brightness(.66);
   }
 
   .s02-narrative {
-    top: 4.5%;
+    top: 3.8%;
     right: 6%;
     left: 6%;
     width: auto;
@@ -618,7 +618,7 @@
 
   .s02-narrative h2 {
     margin-top: 12px;
-    font-size: clamp(2.2rem, 6.6vw, 3rem);
+    font-size: clamp(2rem, 6.1vw, 2.75rem);
   }
 
   .s02-intro {
@@ -641,16 +641,16 @@
   }
 
   .s02-segment-band {
-    top: 34%;
+    top: 28.5%;
     left: 18%;
     width: 64%;
   }
 
   .s02-architecture {
-    top: 38%;
+    top: 32%;
     left: 3%;
     width: 94%;
-    height: 47%;
+    height: 50%;
   }
 
   .s02-station {
@@ -696,26 +696,26 @@
 
 @media (max-width: 520px) {
   .solutions-universe.s02-universe {
-    height: 1170px;
-    min-height: 1170px;
+    height: 1140px;
+    min-height: 1140px;
   }
 
   .s02-environment {
-    top: 31%;
+    top: 8%;
     left: -43%;
     width: 186%;
-    height: 60%;
+    height: 82%;
     object-position: 29% center;
   }
 
   .s02-narrative {
-    top: 4%;
+    top: 3.2%;
     right: 15px;
     left: 15px;
   }
 
   .s02-narrative h2 {
-    font-size: 1.85rem;
+    font-size: 1.72rem;
     line-height: 1.5;
   }
 
@@ -751,7 +751,7 @@
   }
 
   .s02-segment-band {
-    top: 31.5%;
+    top: 27.5%;
     left: 12px;
     width: calc(100% - 24px);
     min-height: 40px;
@@ -762,10 +762,10 @@
   }
 
   .s02-architecture {
-    top: 36%;
+    top: 31.5%;
     left: 6px;
     width: calc(100% - 12px);
-    height: 45%;
+    height: 48%;
   }
 
   .s02-connectors {
