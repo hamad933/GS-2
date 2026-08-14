@@ -19,6 +19,14 @@ export type CapabilityClassification =
   | 'CONDITIONAL'
   | 'CUSTOM';
 
+export type CapabilitySelectionProvenance = 'SYSTEM_SEEDED' | 'USER_SELECTED';
+
+export type CapabilitySelection = {
+  name: string;
+  classification: CapabilityClassification;
+  provenance: CapabilitySelectionProvenance;
+};
+
 export type EvidenceState =
   | 'VERIFIED_IMPLEMENTATION'
   | 'REVIEWED_VISUAL_EVIDENCE'
@@ -98,8 +106,12 @@ export type ConfigurationDirection = {
 
 export type BudgetPreferenceId = 'control' | 'flexible' | 'complex' | 'unknown';
 
+export type RecommendationResolution = 'decisive' | 'tied' | 'insufficient';
+
 export type Recommendation = {
-  recommendedId: SolutionFamilyId;
+  resolution: RecommendationResolution;
+  recommendedId?: SolutionFamilyId;
+  candidateIds: SolutionFamilyId[];
   alternativeId?: SolutionFamilyId;
   reasons: string[];
   missing: string[];
@@ -111,6 +123,11 @@ export type DecisionSnapshot = {
   recommendedFamily: SolutionFamilyId;
   alternativeFamily?: SolutionFamilyId;
   selectedCapabilities: string[];
+  /**
+   * Explicit provenance for selected capabilities. Optional for compatibility
+   * with older in-memory integrations; current Solutions snapshots always set it.
+   */
+  capabilitySelections?: CapabilitySelection[];
   configuration: ConfigurationDirectionId;
   budgetPreference: BudgetPreferenceId;
   budgetRange: string;
