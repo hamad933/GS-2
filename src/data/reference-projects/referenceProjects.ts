@@ -103,7 +103,7 @@ export const referenceProjects: ReferenceProject[] = [
   {
     id: 'rp02',
     code: 'RP02',
-    name: 'Enterprise Operations',
+    name: 'Enterprise Operations & Control',
     domain: { ar: 'العمليات والتحكم المؤسسي', en: 'Enterprise Operations & Control' },
     context: {
       ar: 'مرجع مستقل لمساحات العمل التي تحتاج حالة مشتركة وقرارات مضبوطة.',

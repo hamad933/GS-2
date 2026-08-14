@@ -61,21 +61,31 @@ const modeContent: Array<{ id: EntryMode; number: string; title: string; detail:
 ];
 
 const classificationLabels: Record<CapabilityClassification, string> = {
-  CORE: 'أساسي / مطلوب',
+  CORE: 'أساسي في الاتجاه الحالي',
   RECOMMENDED: 'موصى به',
   OPTIONAL: 'اختياري',
   CONDITIONAL: 'مشروط',
-  CUSTOM: 'مخصص / يحتاج اكتشاف',
+  CUSTOM: 'مخصص / يحتاج اكتشافًا',
 };
 
 const evidenceLabels: Record<EvidenceState, string> = {
   VERIFIED_IMPLEMENTATION: 'تنفيذ متحقق',
   REVIEWED_VISUAL_EVIDENCE: 'دليل بصري مراجع',
   BOUNDED_DEMO: 'عرض تجريبي محدود',
-  REFERENCE_ONLY: 'سياق مرجعي فقط',
+  REFERENCE_ONLY: 'مرجع سياقي فقط',
   PLANNED: 'مخطط',
-  NOT_AVAILABLE: 'غير متاح',
+  NOT_AVAILABLE: 'الدليل غير متاح',
   REJECTED: 'مرفوض',
+};
+
+type SummaryKind = 'fact' | 'recommendation' | 'configuration' | 'unknown' | 'evidence';
+
+const summaryKindLabels: Record<SummaryKind, string> = {
+  fact: 'معلومة قدّمتها',
+  recommendation: 'توصية النظام / الاتجاه الحالي',
+  configuration: 'التكوين الحالي',
+  unknown: 'يحتاج اكتشافًا',
+  evidence: 'حالة تحقق من النظام',
 };
 
 const budgetLabels = Object.fromEntries(
@@ -226,18 +236,28 @@ function CapabilityRow({
 function SummaryRow({
   kind,
   label,
+  provenance,
   children,
 }: {
-  kind: 'fact' | 'preference' | 'unknown';
+  kind: SummaryKind;
   label: string;
+  provenance?: string;
   children: React.ReactNode;
 }) {
-  const kindLabel = kind === 'fact' ? 'حقيقة مدخلة' : kind === 'preference' ? 'تفضيل' : 'غير محسوم';
   return (
     <div className="gsdw-summary-row" data-kind={kind}>
-      <div><span>{label}</span><em>{kindLabel}</em></div>
+      <div><span>{label}</span><em>{provenance ?? summaryKindLabels[kind]}</em></div>
       <div>{children}</div>
     </div>
+  );
+}
+
+function EvidenceBadge({ state }: { state: EvidenceState }) {
+  return (
+    <span className="gsdw-evidence" data-state={state}>
+      <strong>{evidenceLabels[state]}</strong>
+      <small dir="ltr">{state}</small>
+    </span>
   );
 }
 
@@ -279,10 +299,10 @@ export function SolutionsDecisionWorkspace({
       if (!confirmedDependencies.includes(dependency)) items.push(`اعتماد غير محسوم: ${dependency}`);
     });
     if (budgetPreference === 'unknown') items.push('تفضيل الميزانية غير محدد');
-    if (configuration === 'custom') items.push('تفاصيل التخصيص تحتاج Discovery');
+    if (configuration === 'custom') items.push('تفاصيل التخصيص تحتاج جلسة اكتشاف');
     selectedFamily.capabilities.forEach((capability) => {
       if (selectedCapabilities.includes(capability.name) && capability.classification === 'CUSTOM') {
-        items.push(`نطاق «${capability.name}» يحتاج Discovery`);
+        items.push(`نطاق «${capability.name}» يحتاج جلسة اكتشاف`);
       }
     });
     return Array.from(new Set(items));
@@ -365,11 +385,10 @@ export function SolutionsDecisionWorkspace({
   };
 
   const budgetStatus = (() => {
-    if (budgetPreference === 'unknown') return 'معلومات غير كافية — تفضيل الميزانية غير محدد.';
-    if (configuration === 'custom') return 'يحتاج Discovery — لا يمكن تقييم اتجاه مخصص قبل فهم الاعتمادات.';
-    if (budgetPreference === 'control' && configuration !== 'focused') return 'اتجاه أعلى تعقيدًا من تفضيل ضبط النطاق الحالي.';
-    if (configuration === 'connected') return 'اتجاه محتمل، ويحتاج Discovery لحسم الاعتمادات.';
-    return 'متوافق مبدئيًا مع اتجاه التكوين الحالي، وليس سعرًا نهائيًا.';
+    if (budgetPreference === 'unknown') return 'لم تقدّم تفضيلًا للميزانية بعد؛ يبقى القيد غير محسوم.';
+    if (configuration === 'custom') return 'سُجّل تفضيلك فقط؛ يحتاج الاتجاه المخصص إلى اكتشاف الاعتمادات قبل أي تقييم مالي.';
+    if (budgetPreference === 'control' && configuration !== 'focused') return 'تفضيل ضبط التعقيد مسجّل، بينما التكوين الحالي أوسع من المسار المركز.';
+    return 'تفضيل الميزانية مسجّل كقيد من إدخالك؛ ولا يمثّل سعرًا أو تقييم ملاءمة مالية.';
   })();
 
   const goToConfiguration = () => {
@@ -391,6 +410,16 @@ export function SolutionsDecisionWorkspace({
   const selectedFactRows = finderQuestions
     .map((question) => ({ label: question.eyebrow, value: getFactLabel(question.key, facts[question.key]) }))
     .filter((item) => item.value);
+
+  const recommendationProvenance = mode === 'discover'
+    ? 'توصية النظام الحتمية'
+    : mode === 'compare'
+      ? 'اتجاه اعتمدته بعد المقارنة'
+      : 'اتجاه بدأت منه أنت';
+
+  const alternativeProvenance = mode === 'discover'
+    ? 'بديل اقترحه النظام'
+    : 'بديل في المقارنة الحالية';
 
   return (
     <section
@@ -635,9 +664,7 @@ export function SolutionsDecisionWorkspace({
               <details>
                 <summary><span>السياق المرجعي وحالة الدليل</span><small>{evidenceLabels[selectedFamily.reference.evidenceState]}</small></summary>
                 <div className="gsdw-reference-context">
-                  <span className="gsdw-evidence" data-state={selectedFamily.reference.evidenceState} dir="ltr">
-                    {selectedFamily.reference.evidenceState}
-                  </span>
+                  <EvidenceBadge state={selectedFamily.reference.evidenceState} />
                   {selectedFamily.reference.code ? <b dir="ltr">{selectedFamily.reference.code}</b> : null}
                   <div><h3>{selectedFamily.reference.title}</h3><p>{selectedFamily.reference.note}</p></div>
                 </div>
@@ -682,7 +709,7 @@ export function SolutionsDecisionWorkspace({
               <div className="gsdw-capability-stage">
                 <div className="gsdw-stage-note">
                   <span className="gsdw-mini-label">تغطية مرتبطة بـ {selectedFamily.title}</span>
-                  <p>الأساسي مثبت. يمكنك إضافة أو إزالة الموصى به والاختياري والمشروط. لا توجد قائمة شاملة أو معرّفات قدرات مفترضة.</p>
+                  <p>يبدأ نموذج GS بالقدرات الأساسية والموصى بها لهذا الاتجاه. الأساسية ثابتة، وبقية الحالات قابلة للتعديل؛ الإدراج المبدئي لا يعني أنك اخترت كل قدرة على حدة. لا توجد قائمة شاملة أو معرّفات قدرات مفترضة.</p>
                 </div>
                 <div className="gsdw-capabilities">
                   {selectedFamily.capabilities.map((capability) => (
@@ -695,7 +722,7 @@ export function SolutionsDecisionWorkspace({
                   ))}
                 </div>
                 <div className="gsdw-inline-action">
-                  <span>{selectedCapabilities.length} مجموعات قدرات في القرار الحالي.</span>
+                  <span>{selectedCapabilities.length} مجموعات قدرات مدرجة في التكوين الحالي.</span>
                   <button type="button" className="gsdw-button gsdw-button--primary" onClick={() => setConfigurationPhase('options')}>
                     مقارنة اتجاه التكوين <span aria-hidden="true">←</span>
                   </button>
@@ -711,7 +738,7 @@ export function SolutionsDecisionWorkspace({
                 </div>
                 <div className="gsdw-option-matrix" role="radiogroup" aria-label="اختر اتجاه التكوين">
                   <div className="gsdw-matrix-labels" aria-hidden="true">
-                    <span>العمق التشغيلي</span><span>تغطية القدرات</span><span>التخصيص</span><span>التكامل</span><span>التقارير والتحكم</span><span>الحاجة إلى Discovery</span>
+                    <span>العمق التشغيلي</span><span>تغطية القدرات</span><span>التخصيص</span><span>التكامل</span><span>التقارير والتحكم</span><span>الحاجة إلى جلسة الاكتشاف</span>
                   </div>
                   {configurationDirections.map((direction) => (
                     <button
@@ -771,7 +798,7 @@ export function SolutionsDecisionWorkspace({
                       placeholder="اكتب النطاق أو القيد بصيغتك"
                     />
                   </label>
-                  <div className="gsdw-budget-status"><i /><span><small>حالة التوافق الحالية</small><strong>{budgetStatus}</strong></span></div>
+                  <div className="gsdw-budget-status"><i /><span><small>قراءة القيد المدخل</small><strong>{budgetStatus}</strong></span></div>
                 </div>
 
                 <div className="gsdw-dependency-field">
@@ -815,11 +842,12 @@ export function SolutionsDecisionWorkspace({
             <div className="gsdw-summary-heading">
               <span className="gsdw-eyebrow"><i /> DECISION SUMMARY <b>جاهز للمراجعة</b></span>
               <h2 id="gsdw-summary-title">قرار منظم،<br />لا يقين مصطنع.</h2>
-              <p>هذا الملخص يجمع الحقائق التي أدخلتها والتفضيلات التي اخترتها وما يحتاج اكتشافًا لاحقًا.</p>
+              <p>يفصل هذا الملخص بين ما قدّمته، وتوصية النظام أو اتجاهك الحالي، والتكوين المدرج الآن، وما يحتاج اكتشافًا لاحقًا.</p>
               <div className="gsdw-summary-legend" aria-label="مفتاح أنواع المعلومات">
-                <span data-kind="fact"><i /> حقيقة مدخلة</span>
-                <span data-kind="preference"><i /> تفضيل حالي</span>
-                <span data-kind="unknown"><i /> غير محسوم</span>
+                <span data-kind="fact"><i /> معلومات قدّمتها</span>
+                <span data-kind="recommendation"><i /> توصية النظام / الاتجاه الحالي</span>
+                <span data-kind="configuration"><i /> التكوين الحالي</span>
+                <span data-kind="unknown"><i /> يحتاج اكتشافًا</span>
               </div>
             </div>
 
@@ -830,7 +858,7 @@ export function SolutionsDecisionWorkspace({
               </div>
 
               {selectedFactRows.length > 0 ? (
-                <SummaryRow kind="fact" label="المشكلة والنتيجة">
+                <SummaryRow kind="fact" label="المشكلة والنتيجة" provenance="إجابات قدّمتها أنت">
                   <ul>{selectedFactRows.map((item) => <li key={item.label}><span>{item.label}</span>{item.value}</li>)}</ul>
                   {facts.constraints ? <p><span>قيد ذكرته:</span> {facts.constraints}</p> : null}
                 </SummaryRow>
@@ -838,39 +866,58 @@ export function SolutionsDecisionWorkspace({
                 <SummaryRow kind="unknown" label="المشكلة والنتيجة">لم تُجمع عبر Finder؛ بدأ القرار من عائلة حل.</SummaryRow>
               )}
 
-              <SummaryRow kind="preference" label="الاتجاه الموصى به">
+              <SummaryRow kind="recommendation" label={mode === 'discover' ? 'الاتجاه الموصى به' : 'الاتجاه الحالي'} provenance={recommendationProvenance}>
                 <strong>{selectedFamily.title}</strong><p>{selectedFamily.problem}</p>
               </SummaryRow>
 
               {alternativeFamily ? (
-                <SummaryRow kind="preference" label="الاتجاه البديل">
+                <SummaryRow kind="recommendation" label="الاتجاه البديل" provenance={alternativeProvenance}>
                   <strong>{alternativeFamily.title}</strong><p>{alternativeFamily.problem}</p>
                 </SummaryRow>
               ) : null}
 
-              <SummaryRow kind="preference" label="القدرات المختارة">
+              <SummaryRow kind="configuration" label="القدرات المدرجة حاليًا">
+                <p className="gsdw-capability-provenance">يبدأ النموذج بالقدرات الأساسية والموصى بها؛ لذلك لا يعني ظهور كل قدرة هنا أنك اخترتها فرديًا.</p>
                 <div className="gsdw-summary-capabilities">
-                  {selectedCapabilities.map((capability) => <span key={capability}>{capability}</span>)}
+                  {selectedCapabilities.map((capabilityName) => {
+                    const capability = selectedFamily.capabilities.find((item) => item.name === capabilityName);
+                    return (
+                      <span key={capabilityName} data-classification={capability?.classification}>
+                        <strong>{capabilityName}</strong>
+                        {capability ? <small>{classificationLabels[capability.classification]}</small> : null}
+                      </span>
+                    );
+                  })}
                 </div>
               </SummaryRow>
 
-              <SummaryRow kind="preference" label="اتجاه التكوين">
+              <SummaryRow kind="configuration" label="اتجاه التكوين المدرج">
                 <strong>{configurationDirections.find((item) => item.id === configuration)?.title}</strong>
                 <p>{budgetStatus}</p>
               </SummaryRow>
 
-              <SummaryRow kind="preference" label="تفضيل الميزانية">
+              <SummaryRow
+                kind={budgetPreference === 'unknown' && !budgetRange.trim() ? 'unknown' : 'fact'}
+                label="قيد أو تفضيل الميزانية"
+                provenance={budgetPreference === 'unknown' && !budgetRange.trim() ? undefined : 'معلومة قدّمتها أنت'}
+              >
                 <strong>{budgetLabels[budgetPreference]}</strong>
                 <p>{budgetRange ? `النطاق أو الملاحظة التي قدمتها: ${budgetRange}` : 'لم يُدخل نطاق مالي.'}</p>
               </SummaryRow>
 
-              <SummaryRow kind={unknowns.length > 0 ? 'unknown' : 'fact'} label="الاعتمادات والمعلومات الناقصة">
-                {unknowns.length > 0 ? <ul>{unknowns.map((item) => <li key={item}>{item}</li>)}</ul> : <p>لا توجد عناصر غير محسومة في المدخلات الحالية.</p>}
+              {confirmedDependencies.length > 0 ? (
+                <SummaryRow kind="fact" label="الاعتمادات المؤكدة" provenance="توفرها حسب إدخالك">
+                  <ul>{confirmedDependencies.map((dependency) => <li key={dependency}>{dependency}</li>)}</ul>
+                </SummaryRow>
+              ) : null}
+
+              <SummaryRow kind="unknown" label="الاعتمادات والمعلومات الناقصة">
+                {unknowns.length > 0 ? <ul>{unknowns.map((item) => <li key={item}>{item}</li>)}</ul> : <p>لا توجد عناصر غير محسومة ضمن مدخلات هذا النموذج الحالي.</p>}
               </SummaryRow>
 
-              <SummaryRow kind="fact" label="السياق المرجعي وحالة الدليل">
+              <SummaryRow kind="evidence" label="السياق المرجعي وحالة الدليل">
                 <div className="gsdw-summary-reference">
-                  <span className="gsdw-evidence" data-state={selectedFamily.reference.evidenceState} dir="ltr">{selectedFamily.reference.evidenceState}</span>
+                  <EvidenceBadge state={selectedFamily.reference.evidenceState} />
                   {selectedFamily.reference.code ? <b dir="ltr">{selectedFamily.reference.code}</b> : null}
                   <strong>{selectedFamily.reference.title}</strong>
                   <p>{selectedFamily.reference.note}</p>
@@ -885,10 +932,10 @@ export function SolutionsDecisionWorkspace({
               <button type="button" onClick={() => { setConfigurationPhase('constraints'); setStep('configure'); }}><span>03</span> عدّل الميزانية والاعتمادات</button>
               <div className="gsdw-next-action">
                 <small>الخطوة المقترحة</small>
-                <strong>بدء Discovery بهذه الخلاصة</strong>
-                <p>لا يتم إرسال شيء تلقائيًا. نقطة الربط متاحة للتكامل مع مسار Start / Discovery.</p>
+                <strong>بدء جلسة <bdi dir="ltr">Discovery</bdi> بهذه الخلاصة</strong>
+                <p>لا يتم إرسال شيء تلقائيًا. نقطة الربط متاحة للتكامل مع مسار <bdi dir="ltr">Start / Discovery</bdi>.</p>
                 <button type="button" className="gsdw-button gsdw-button--primary" onClick={prepareDiscovery}>
-                  تجهيز الانتقال إلى Discovery <span aria-hidden="true">←</span>
+                  تجهيز الانتقال إلى <bdi dir="ltr">Discovery</bdi> <span aria-hidden="true">←</span>
                 </button>
                 {transitionPrepared ? <div className="gsdw-prepared" role="status"><i /> تم تجهيز الملخص للانتقال. لم يُرسل شيء بعد.</div> : null}
               </div>

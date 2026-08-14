@@ -7,6 +7,8 @@ import {
 import {
   localized,
   referenceProjects,
+  type EvidenceState,
+  type LocalizedText,
   type ReferenceLocale,
   type ReferenceProject,
   type ReferenceProjectId,
@@ -41,7 +43,7 @@ const pageCopy = {
     evidenceState: 'حالة التحقق',
     routeSlot: 'مسار المصدر المستقل',
     routeMissing: 'لم يُضبط رابط موثوق للمصدر المستقل في هذا المستودع.',
-    routeCode: 'ROUTE_NOT_CONFIGURED',
+    routeState: 'الرابط المرجعي غير مهيأ بعد',
     compareEyebrow: 'مقارنة مضبوطة',
     compareTitle: 'أربع نقاط بداية، وليست أربعة قوالب جاهزة.',
     compareIntro: 'المقارنة هنا تختصر المجال وفئة القدرة وحالة المصدر. اختيار نقطة بداية لا يضيف وظائف أو أدلة غير متحققة.',
@@ -73,7 +75,7 @@ const pageCopy = {
     evidenceState: 'Verification state',
     routeSlot: 'Independent source route',
     routeMissing: 'No verified independent-source URL is configured in this repository.',
-    routeCode: 'ROUTE_NOT_CONFIGURED',
+    routeState: 'Reference route not configured yet',
     compareEyebrow: 'Controlled comparison',
     compareTitle: 'Four starting points—not four ready-made templates.',
     compareIntro: 'This comparison is limited to domain, capability class, and source state. Choosing a starting point adds no unverified feature or proof.',
@@ -85,6 +87,34 @@ const pageCopy = {
     independent: 'Independent project',
   },
 } as const;
+
+const evidenceStateLabels: Record<EvidenceState, LocalizedText> = {
+  REFERENCE_ONLY: {
+    ar: 'مرجع سياقي فقط',
+    en: 'Contextual reference only',
+  },
+  UNAVAILABLE: {
+    ar: 'الدليل غير متاح',
+    en: 'Evidence unavailable',
+  },
+};
+
+const routeMachineState = 'ROUTE_NOT_CONFIGURED' as const;
+
+function StateLabel({
+  label,
+  machineState,
+}: {
+  label: string;
+  machineState: EvidenceState | typeof routeMachineState;
+}) {
+  return (
+    <span className="rp-state-label" data-state={machineState}>
+      <strong>{label}</strong>
+      <small dir="ltr">{machineState}</small>
+    </span>
+  );
+}
 
 function CapabilityMap({ project, locale }: { project: ReferenceProject; locale: ReferenceLocale }) {
   return (
@@ -103,7 +133,7 @@ function CapabilityMap({ project, locale }: { project: ReferenceProject; locale:
         <span>{project.code}</span>
         <i />
         <strong dir="ltr">{project.name}</strong>
-        <small>{localized(project.domain, locale)}</small>
+        {localized(project.domain, locale) !== project.name ? <small>{localized(project.domain, locale)}</small> : null}
       </div>
 
       <ol className="rp-capability-map__nodes">
@@ -205,7 +235,7 @@ export function ReferenceProjectsBody({
                   <span className="rp-project-selector__code" dir="ltr">{project.code}</span>
                   <span className="rp-project-selector__copy">
                     <strong dir="ltr">{project.name}</strong>
-                    <small>{localized(project.domain, locale)}</small>
+                    {localized(project.domain, locale) !== project.name ? <small>{localized(project.domain, locale)}</small> : null}
                   </span>
                   <i aria-hidden="true" />
                 </button>
@@ -224,7 +254,7 @@ export function ReferenceProjectsBody({
               <span>{copy.activeReference} / {active.code}</span>
               <p>{copy.independent}</p>
               <h2 dir="ltr">{active.name}</h2>
-              <strong>{localized(active.domain, locale)}</strong>
+              {localized(active.domain, locale) !== active.name ? <strong>{localized(active.domain, locale)}</strong> : null}
               <p>{localized(active.context, locale)}</p>
             </div>
 
@@ -286,7 +316,10 @@ export function ReferenceProjectsBody({
                   <h4>{localized(evidence.label, locale)}</h4>
                   <p>{localized(evidence.note, locale)}</p>
                 </div>
-                <strong data-state={evidence.state} dir="ltr">{evidence.state}</strong>
+                <StateLabel
+                  label={localized(evidenceStateLabels[evidence.state], locale)}
+                  machineState={evidence.state}
+                />
               </article>
             ))}
           </div>
@@ -295,7 +328,7 @@ export function ReferenceProjectsBody({
             <span>02</span>
             <h3>{copy.routeSlot}</h3>
             <p>{copy.routeMissing}</p>
-            <strong dir="ltr">{copy.routeCode}</strong>
+            <StateLabel label={copy.routeState} machineState={routeMachineState} />
           </article>
         </div>
       </section>
@@ -320,8 +353,11 @@ export function ReferenceProjectsBody({
               <div><span dir="ltr">{project.code}</span><strong dir="ltr">{project.name}</strong></div>
               <p>{localized(project.domain, locale)}</p>
               <p>{localized(project.capabilityClass, locale)}</p>
-              <strong dir="ltr">REFERENCE_ONLY</strong>
-              <strong dir="ltr">ROUTE_NOT_CONFIGURED</strong>
+              <StateLabel
+                label={localized(evidenceStateLabels.REFERENCE_ONLY, locale)}
+                machineState="REFERENCE_ONLY"
+              />
+              <StateLabel label={copy.routeState} machineState={routeMachineState} />
             </li>
           ))}
         </ol>
