@@ -111,6 +111,26 @@
   box-shadow: 0 0 7px rgba(79, 120, 255, 0.28);
 }
 
+.anatomy-route-link {
+  inline-size: 100%;
+  block-size: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.anatomy-route-link:hover {
+  color: #e9c78f;
+}
+
+.anatomy-route-link:focus-visible {
+  outline: 2px solid #f3d7a5;
+  outline-offset: -3px;
+}
+
 .anatomy-top-band strong {
   color: #e9c78f;
   border: 1px solid rgba(223, 182, 115, 0.62);
@@ -717,7 +737,7 @@
     font-size: 0.66rem;
   }
 
-  .anatomy-top-band > span:nth-of-type(2) {
+  .anatomy-top-band > span:nth-of-type(3) {
     display: none;
   }
 

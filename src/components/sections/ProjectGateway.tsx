@@ -1,9 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import gatewayEnvironment from '../../assets/gs-home-v2/05_GS_Final_Gateway_Clean_Production_Asset.webp';
 import './ProjectGateway.v2.css';
-
-const projectMailto =
-  'mailto:hello@generalsolutions.co?subject=%D8%A8%D8%AF%D8%A1%20%D9%85%D8%B4%D8%B1%D9%88%D8%B9%20%D8%AC%D8%AF%D9%8A%D8%AF&body=%D8%A7%D9%84%D8%A7%D8%AD%D8%AA%D9%8A%D8%A7%D8%AC%3A%0A%0A%D8%A7%D9%84%D8%B3%D9%8A%D8%A7%D9%82%3A%0A%0A%D8%A7%D9%84%D9%86%D8%AA%D9%8A%D8%AC%D8%A9%20%D8%A7%D9%84%D9%85%D8%B7%D9%84%D9%88%D8%A8%D8%A9%3A';
 
 const projectInputs = ['الاحتياج', 'السياق', 'النتيجة المطلوبة'];
 
@@ -47,19 +45,19 @@ export function ProjectGateway() {
         </h2>
 
         <p className="gateway-intro">
-          شاركنا احتياجك، وسنبدأ من الواقع الذي تريد تغييره. الزر يفتح رسالة بريد
-          منظمة لتكملها وترسلها بنفسك.
+          ابدأ من احتياجك والسياق والنتيجة المطلوبة، ثم رتّبها في مساحة اختيار
+          واضحة تراجعها وتثبّتها بنفسك.
         </p>
 
         <div className="gateway-actions">
-          <a className="gateway-cta gateway-cta--primary" href={projectMailto}>
-            <span>ابدأ مشروعك</span>
+          <Link className="gateway-cta gateway-cta--primary" to="/start">
+            <span>ابدأ اختيارك</span>
             <ArrowLeft aria-hidden="true" />
-          </a>
-          <a className="gateway-cta gateway-cta--secondary" href="#reference-proof">
-            <span>شاهد الأعمال</span>
+          </Link>
+          <Link className="gateway-cta gateway-cta--secondary" to="/reference-projects">
+            <span>شاهد المشاريع المرجعية</span>
             <ArrowLeft aria-hidden="true" />
-          </a>
+          </Link>
         </div>
 
         <small className="gateway-privacy">

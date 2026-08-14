@@ -1,4 +1,5 @@
-import { useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { ProjectMedia } from '../project/ProjectMedia';
 import { referenceProjects, type ReferenceProject } from '../../data/homeShowcase';
 import { referenceProjectMedia } from '../../data/referenceProjectMedia';
@@ -25,9 +26,19 @@ export function ReferenceProof() {
   const [activeId, setActiveId] = useState(referenceProjects[0].id);
   const [focusedSelectorId, setFocusedSelectorId] = useState<string | null>(null);
   const selectorGroupRef = useRef<HTMLDivElement>(null);
+  const pendingKeyboardFocusId = useRef<string | null>(null);
   const active = referenceProjects.find((project) => project.id === activeId) ?? referenceProjects[0];
   const activeMedia = referenceProjectMedia[active.id] ?? {};
   const alternatives = referenceProjects.filter((project) => project.id !== active.id);
+
+  useLayoutEffect(() => {
+    const nextFocusId = pendingKeyboardFocusId.current;
+    if (!nextFocusId) return;
+    pendingKeyboardFocusId.current = null;
+    selectorGroupRef.current?.querySelector<HTMLButtonElement>(
+      `[data-project-selector="${nextFocusId}"]`,
+    )?.focus();
+  }, [activeId]);
 
   const selectProject = (projectId: string, keyboardSelection: boolean) => {
     const nextFocusId = keyboardSelection
@@ -37,11 +48,7 @@ export function ReferenceProof() {
     setActiveId(projectId);
     setFocusedSelectorId(nextFocusId);
 
-    if (nextFocusId) {
-      requestAnimationFrame(() => {
-        selectorGroupRef.current?.querySelector<HTMLButtonElement>(`[data-project-selector="${nextFocusId}"]`)?.focus();
-      });
-    }
+    pendingKeyboardFocusId.current = nextFocusId;
   };
 
   return (
@@ -129,6 +136,9 @@ export function ReferenceProof() {
         <div className="reference-proof-v2__project-heading">
           <span dir="ltr">{active.index}</span>
           <p>المشروع المعروض</p>
+          <Link className="reference-proof-v2__route" to="/reference-projects">
+            شاهد المشاريع المرجعية <span aria-hidden="true">←</span>
+          </Link>
         </div>
 
         <div className="reference-proof-v2__project-copy">

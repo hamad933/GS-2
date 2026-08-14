@@ -1,34 +1,77 @@
-const NAV_LINK_ITEMS = [
-  { label: 'حلولنا', href: '#solutions-universe' },
-  { label: 'منهجنا', href: '#system-anatomy' },
-  { label: 'أعمالنا', href: '#reference-proof' },
-];
+import { useEffect, useId, useRef, useState } from 'react';
+import { Menu, X } from 'lucide-react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { PRIMARY_NAV_ITEMS } from '../../routes/publicRoutes';
+import './HeroNav.css';
 
 export function HeroNav() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuId = useId();
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isMenuOpen) return undefined;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMenuOpen]);
+
   return (
     <nav className="hero-nav" aria-label="التنقل الرئيسي">
-      <a className="hero-nav__brand" href="#hero" aria-label="الحلول العامة — العودة إلى بداية الصفحة">
+      <Link className="hero-nav__brand" to="/" aria-label="الحلول العامة — الانتقال إلى الرئيسية">
         <LogoMark />
         <span>
           <b dir="ltr">General Solutions</b>
           <small>حلول رقمية تُبنى بإتقان</small>
         </span>
-      </a>
+      </Link>
 
       <div className="hero-nav__links">
-        {NAV_LINK_ITEMS.map((item) => (
-          <a key={item.label} href={item.href}>
+        {PRIMARY_NAV_ITEMS.map((item) => (
+          <NavLink key={item.path} to={item.path} end={item.path === '/'}>
             {item.label}
-          </a>
+          </NavLink>
         ))}
-        <a href="#hero" aria-current="page">الرئيسية</a>
       </div>
 
-      <a
-        href="#project-gateway"
+      <NavLink
+        to="/start"
         className="hero-nav__contact">
-        ابدأ مشروعك
-      </a>
+        ابدأ اختيارك
+      </NavLink>
+
+      <button
+        ref={menuButtonRef}
+        type="button"
+        className="hero-nav__menu-toggle"
+        aria-label={isMenuOpen ? 'إغلاق قائمة التنقل' : 'فتح قائمة التنقل'}
+        aria-controls={menuId}
+        aria-expanded={isMenuOpen}
+        onClick={() => setIsMenuOpen((isOpen) => !isOpen)}>
+        {isMenuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+      </button>
+
+      {isMenuOpen && (
+        <div className="hero-nav__mobile-panel" id={menuId}>
+          {PRIMARY_NAV_ITEMS.map((item) => (
+            <NavLink key={item.path} to={item.path} end={item.path === '/'}>
+              {item.label}
+            </NavLink>
+          ))}
+        </div>
+      )}
     </nav>
   );
 }
@@ -41,5 +84,4 @@ function LogoMark() {
       <path d="M4 43h30M30 6l5 5v27l-5 5" />
     </svg>
   );
-
 }
