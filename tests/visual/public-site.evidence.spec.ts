@@ -65,6 +65,29 @@ async function configureDecision(page: Page) {
   await page.getByText('عملية تشغيل قابلة للوصف', { exact: true }).click();
 }
 
+async function reachCompareAtLimit(page: Page) {
+  await open(page, '/solutions', '#gsdw-entry-title');
+  await page.getByRole('button', { name: /أريد مقارنة الخيارات/ }).click();
+
+  const familyButtons = page.locator('.gsdw-family-field button');
+  expect(await familyButtons.count()).toBeGreaterThanOrEqual(3);
+  await familyButtons.nth(0).click();
+  await familyButtons.nth(1).click();
+  await expect(page.locator('.gsdw-family-field button[aria-pressed="true"]')).toHaveCount(2);
+
+  const unavailableFamily = page
+    .locator('.gsdw-family-field button[aria-disabled="true"]:not(.is-selected)')
+    .first();
+  await expect(unavailableFamily).toBeVisible();
+  await expect(unavailableFamily).toHaveAttribute('aria-pressed', 'false');
+  await expect(unavailableFamily.locator('small')).toBeVisible();
+  await unavailableFamily.evaluate((element) => {
+    element.scrollIntoView({ block: 'center', inline: 'nearest' });
+  });
+  await expect(unavailableFamily).toBeInViewport();
+  await expect(unavailableFamily.locator('small')).toBeInViewport();
+}
+
 for (const width of [1440, 1024, 768, 430, 390]) {
   test(`captures integrated route matrix at ${width}px`, async ({ page }) => {
     test.slow();
@@ -76,6 +99,14 @@ for (const width of [1440, 1024, 768, 430, 390]) {
       await open(page, route.path, route.ready);
       await capture(page, `w05-${width}-${route.slug}.png`);
     }
+  });
+}
+
+for (const [width, height] of [[1440, 900], [390, 844]] as const) {
+  test(`captures R5 solutions compare at-limit evidence at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await reachCompareAtLimit(page);
+    await capture(page, `w08-r5-${width}-solutions-compare-at-limit.png`, false);
   });
 }
 
