@@ -1,6 +1,6 @@
-import { MailIcon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { FOOTER_NAV_ITEMS } from '../../routes/publicRoutes';
+import './Footer.remediation.css';
 
 export function Footer() {
   return (
@@ -26,12 +26,10 @@ export function Footer() {
           ))}
         </nav>
 
-        <a
-          href="mailto:hello@generalsolutions.co"
-          className="gs-footer__email">
-          <MailIcon aria-hidden="true" />
-          <span dir="ltr">hello@generalsolutions.co</span>
-        </a>
+        <NavLink to="/start" className="gs-footer__email">
+          <span aria-hidden="true">←</span>
+          <span>ابدأ اختيارك</span>
+        </NavLink>
 
         <div className="gs-footer__base">
           <span>© 2026 General Solutions</span>

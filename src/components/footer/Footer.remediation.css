@@ -1,0 +1,11 @@
+.gs-footer .gs-footer__brand small,
+.gs-footer .gs-footer__intro,
+.gs-footer .gs-footer__links a,
+.gs-footer .gs-footer__email,
+.gs-footer .gs-footer__base {
+  font-size: 10px;
+}
+
+.gs-footer .gs-footer__email {
+  direction: rtl;
+}
