@@ -266,8 +266,12 @@ test('representative controls support real clicks, keyboard activation, and sync
   await page.keyboard.press('Enter');
   await expect(page.locator(S04)).toHaveAttribute('data-active', 'integration');
 
-  const gateway = page.locator(S05).getByRole('link', { name: 'ابدأ مشروعك' });
-  await expect(gateway).toHaveAttribute('href', /^mailto:hello@generalsolutions\.co\?/);
+  const gateway = page.locator(S05).getByRole('link', { name: 'ابدأ اختيارك' });
+  await expect(gateway).toHaveAttribute('href', '/start');
+  await gateway.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/start$/);
+  await expect(page.locator('#start-discovery-title')).toBeFocused();
 });
 
 test('all S02 stations and S03 projects support pointer and keyboard selection', async ({ page }) => {
