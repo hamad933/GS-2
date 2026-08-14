@@ -628,6 +628,77 @@ test('Solutions live weak semantic metadata selectors keep the governed floor', 
   }
 });
 
+test('Compare at-limit family cue keeps semantic contrast without whole-button opacity', async ({ page }) => {
+  for (const [width, height] of [[1440, 900], [390, 844]] as const) {
+    await page.setViewportSize({ width, height });
+    await openRoute(page, '/solutions', '#gsdw-entry-title');
+    await page.getByRole('button', { name: /أريد مقارنة الخيارات/ }).click();
+
+    const familyButtons = page.locator('.gsdw-family-field button');
+    expect(await familyButtons.count()).toBeGreaterThanOrEqual(3);
+
+    const unavailableCandidate = familyButtons.nth(2);
+    const beforeLimitStyle = await unavailableCandidate.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        backgroundColor: style.backgroundColor,
+        backgroundImage: style.backgroundImage,
+        borderColor: style.borderColor,
+        opacity: Number.parseFloat(style.opacity),
+      };
+    });
+    expect(beforeLimitStyle.opacity).toBe(1);
+
+    await familyButtons.nth(0).click();
+    await familyButtons.nth(1).click();
+    await expect(page.locator('.gsdw-family-field button[aria-pressed="true"]')).toHaveCount(2);
+
+    const unavailableFamily = page
+      .locator('.gsdw-family-field button[aria-disabled="true"]:not(.is-selected)')
+      .first();
+    await expect(unavailableFamily).toBeVisible();
+    await expect(unavailableFamily).toHaveAttribute('aria-pressed', 'false');
+
+    const semanticCue = unavailableFamily.locator('small');
+    await expectSemanticMetadataStyle(semanticCue);
+
+    const afterLimitStyle = await unavailableFamily.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        backgroundColor: style.backgroundColor,
+        backgroundImage: style.backgroundImage,
+        borderColor: style.borderColor,
+        opacity: Number.parseFloat(style.opacity),
+      };
+    });
+    expect(afterLimitStyle.opacity).toBe(1);
+    expect(
+      afterLimitStyle.backgroundColor !== beforeLimitStyle.backgroundColor
+        || afterLimitStyle.backgroundImage !== beforeLimitStyle.backgroundImage
+        || afterLimitStyle.borderColor !== beforeLimitStyle.borderColor,
+    ).toBe(true);
+
+    const opacityChain = await semanticCue.evaluate((element) => {
+      const button = element.closest('button');
+      const values: number[] = [];
+      let current: Element | null = element;
+      while (current) {
+        values.push(Number.parseFloat(getComputedStyle(current).opacity));
+        if (current === button) break;
+        current = current.parentElement;
+      }
+      return values;
+    });
+    expect(opacityChain.length).toBeGreaterThanOrEqual(2);
+    expect(opacityChain.every((opacity) => opacity >= 1)).toBe(true);
+
+    await unavailableFamily.click();
+    await expect(unavailableFamily).toHaveAttribute('aria-pressed', 'false');
+    await expect(unavailableFamily).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.locator('.gsdw-family-field button[aria-pressed="true"]')).toHaveCount(2);
+  }
+});
+
 test('Start stays fully direct-entry functional when route state is absent or unusable', async ({ page }) => {
   await openRoute(page, '/start', '#start-discovery-title');
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'false');
