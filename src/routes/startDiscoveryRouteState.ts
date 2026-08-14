@@ -159,10 +159,14 @@ export function readStartDiscoveryRouteState(
     if (value.some((entry) => entry.trim())) hasUsableContext = true;
   }
 
-  const selections = readCapabilitySelections(candidate.capabilitySelections);
-  if (selections) {
-    prefill.capabilitySelections = selections;
-    if (selections.length) hasUsableContext = true;
+  const hasExplicitCapabilitySelections = Object.prototype.hasOwnProperty.call(
+    candidate,
+    'capabilitySelections',
+  );
+  if (hasExplicitCapabilitySelections) {
+    const selections = readCapabilitySelections(candidate.capabilitySelections);
+    prefill.capabilitySelections = selections ?? [];
+    if (selections?.length) hasUsableContext = true;
   }
 
   const capturedFacts = readCapturedFacts(candidate.capturedFacts);
