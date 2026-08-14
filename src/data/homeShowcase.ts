@@ -26,8 +26,8 @@ export type ReferenceProject = {
 };
 
 export const referenceProjects: ReferenceProject[] = [
-  { id: 'rp01', index: 'RP01', family: 'Bayt & Style', title: 'تجربة تجارة وهوية بصرية متصلة', statement: 'واجهة عرض مرنة تجمع حضور العلامة واستكشاف المنتجات في تجربة واحدة.', focus: ['هوية واضحة', 'استكشاف المنتج', 'رحلة متصلة'], visual: 'commerce' },
-  { id: 'rp02', index: 'RP02', family: 'Enterprise Operations & Control', title: 'نظام تشغيل يوضّح العمل', statement: 'سطح تشغيلي يجمع المهام والحالات والخطوة التالية دون ازدحام.', focus: ['سياق العمل', 'وضوح الحالة', 'خطوة تالية'], visual: 'portal' },
-  { id: 'rp03', index: 'RP03', family: 'Booking & Service Operations', title: 'حجز يبدأ من احتياج واضح', statement: 'رحلة خدمة تنظّم الاختيار والموعد والتأكيد في مسار مفهوم.', focus: ['اختيار الخدمة', 'تنظيم الموعد', 'تأكيد واضح'], visual: 'service' },
-  { id: 'rp04', index: 'RP04', family: 'Real Estate & Asset Lifecycle', title: 'الأصول في مساحة قرار واحدة', statement: 'تجربة استكشاف توازن بين الصورة والمعلومة وتقود إلى الاستفسار المناسب.', focus: ['استكشاف بصري', 'تفاصيل مرتبة', 'قرار أوضح'], visual: 'assets' },
+  { id: 'rp01', index: 'RP-01', family: 'Bayt & Style', title: 'تجربة تجارة وهوية بصرية متصلة', statement: 'واجهة عرض مرنة تجمع حضور العلامة واستكشاف المنتجات في تجربة واحدة.', focus: ['هوية واضحة', 'استكشاف المنتج', 'رحلة متصلة'], visual: 'commerce' },
+  { id: 'rp02', index: 'RP-02', family: 'Enterprise Operations & Control', title: 'نظام تشغيل يوضّح العمل', statement: 'سطح تشغيلي يجمع المهام والحالات والخطوة التالية دون ازدحام.', focus: ['سياق العمل', 'وضوح الحالة', 'خطوة تالية'], visual: 'portal' },
+  { id: 'rp03', index: 'RP-03', family: 'Booking & Service Operations', title: 'حجز يبدأ من احتياج واضح', statement: 'رحلة خدمة تنظّم الاختيار والموعد والتأكيد في مسار مفهوم.', focus: ['اختيار الخدمة', 'تنظيم الموعد', 'تأكيد واضح'], visual: 'service' },
+  { id: 'rp04', index: 'RP-04', family: 'Real Estate & Asset Lifecycle', title: 'الأصول في مساحة قرار واحدة', statement: 'تجربة استكشاف توازن بين الصورة والمعلومة وتقود إلى الاستفسار المناسب.', focus: ['استكشاف بصري', 'تفاصيل مرتبة', 'قرار أوضح'], visual: 'assets' },
 ];
