@@ -81,9 +81,12 @@ async function expectNoHorizontalOverflow(page: Page) {
 async function expectSemanticMetadataStyle(locator: Locator, pseudoElement?: '::before') {
   await expect(locator).toBeVisible();
   const metrics = await locator.evaluate((element, pseudo) => {
-    const parseRgb = (value: string) => {
-      const parts = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
-      return parts.map((part) => part / 255);
+    const parseColor = (value: string) => {
+      const parts = value.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
+      return {
+        rgb: parts.slice(0, 3).map((part) => part / 255),
+        alpha: parts[3] ?? 1,
+      };
     };
     const luminance = (rgb: number[]) => {
       const linear = rgb.map((channel) =>
@@ -94,18 +97,21 @@ async function expectSemanticMetadataStyle(locator: Locator, pseudoElement?: '::
       return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
     };
     const style = getComputedStyle(element, pseudo ?? null);
+    const backgroundLayers: Array<{ rgb: number[]; alpha: number }> = [];
     let backgroundElement: Element | null = element;
-    let backgroundColor = 'rgb(7, 16, 21)';
     while (backgroundElement) {
-      const candidate = getComputedStyle(backgroundElement).backgroundColor;
-      if (candidate && candidate !== 'rgba(0, 0, 0, 0)' && candidate !== 'transparent') {
-        backgroundColor = candidate;
-        break;
-      }
+      const layer = parseColor(getComputedStyle(backgroundElement).backgroundColor);
+      if (layer.alpha > 0) backgroundLayers.push(layer);
       backgroundElement = backgroundElement.parentElement;
     }
-    const foreground = luminance(parseRgb(style.color));
-    const background = luminance(parseRgb(backgroundColor));
+    let effectiveBackground = [7 / 255, 16 / 255, 21 / 255];
+    for (const layer of backgroundLayers.reverse()) {
+      effectiveBackground = layer.rgb.map(
+        (channel, index) => channel * layer.alpha + effectiveBackground[index] * (1 - layer.alpha),
+      );
+    }
+    const foreground = luminance(parseColor(style.color).rgb);
+    const background = luminance(effectiveBackground);
     return {
       content: style.content,
       fontSize: Number.parseFloat(style.fontSize),
