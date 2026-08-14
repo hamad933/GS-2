@@ -1,0 +1,127 @@
+/* GS-PAGES-W08-A: bounded decision-integrity/readability corrections only. */
+
+.gsdw-recommendation--open {
+  grid-template-areas:
+    "lead grid"
+    "decision decision";
+}
+
+.gsdw-recommendation--open .gsdw-recommendation-lead {
+  grid-area: lead;
+}
+
+.gsdw-recommendation--open .gsdw-recommendation-grid {
+  grid-area: grid;
+}
+
+.gsdw-recommendation--open .gsdw-decision-bar {
+  grid-area: decision;
+}
+
+.gsdw-open-direction-title h2 {
+  margin: 0;
+}
+
+.gsdw-open-direction-title p {
+  margin: 12px 0 0;
+}
+
+.gsdw-open-directions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.gsdw-open-directions .gsdw-open-unknowns {
+  grid-column: 1 / -1;
+}
+
+/*
+ * Functional metadata carries decision, provenance, evidence, or classification
+ * meaning. Keep that layer above the former 5–6px floor at every breakpoint.
+ */
+.gsdw-progress small,
+.gsdw-principle span,
+.gsdw-answer-ledger > span,
+.gsdw-answer-ledger button b,
+.gsdw-answer-ledger button small,
+.gsdw-mini-label,
+.gsdw-options button small,
+.gsdw-constraints-input > span small,
+.gsdw-family-field button small,
+.gsdw-quick-context li,
+.gsdw-comparison-head span,
+.gsdw-comparison-row > span,
+.gsdw-comparison-actions > span,
+.gsdw-recommendation-title small,
+.gsdw-panel-code,
+.gsdw-unknown-panel li,
+.gsdw-alternative-panel button,
+.gsdw-family-context summary small,
+.gsdw-details-grid ul em,
+.gsdw-reference-context p,
+.gsdw-evidence > strong,
+.gsdw-decision-bar > div > span,
+.gsdw-capability small,
+.gsdw-capability em,
+.gsdw-matrix-labels span,
+.gsdw-matrix-head small,
+.gsdw-matrix-head p,
+.gsdw-option-matrix > button > span:not(.gsdw-matrix-head),
+.gsdw-budget-status small,
+.gsdw-budget-status strong,
+.gsdw-dependencies label small,
+.gsdw-summary-legend,
+.gsdw-sheet-head span,
+.gsdw-sheet-head small,
+.gsdw-summary-row > div:first-child em,
+.gsdw-summary-row li > span,
+.gsdw-summary-capabilities small,
+.gsdw-next-action small,
+.gsdw-next-action p,
+.gsdw-prepared {
+  font-size: 8px;
+}
+
+.gsdw-matrix-labels::before {
+  font-size: 8px;
+}
+
+.gsdw-panel-code,
+.gsdw-summary-row > div:first-child em,
+.gsdw-summary-row li > span,
+.gsdw-summary-capabilities small,
+.gsdw-capability em,
+.gsdw-details-grid ul em,
+.gsdw-budget-status small,
+.gsdw-family-context summary small,
+.gsdw-reference-context p {
+  color: #938b83;
+}
+
+.gsdw-evidence > strong {
+  color: #a98a62;
+}
+
+.gsdw-panel-code,
+.gsdw-sheet-head span {
+  color: #91a7e8;
+}
+
+@media (max-width: 860px) {
+  .gsdw-recommendation--open {
+    grid-template-areas:
+      "lead"
+      "grid"
+      "decision";
+  }
+
+  .gsdw-open-directions {
+    grid-template-columns: 1fr;
+  }
+
+  .gsdw-open-directions .gsdw-open-unknowns {
+    grid-column: auto;
+  }
+}
