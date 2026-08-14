@@ -6,6 +6,7 @@ import {
   Send,
   Sparkles,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { StageId } from '../../types/hero';
 import { heroCleanDataUrl } from '../../assets/gs-home-v2/heroCleanData';
 import './LivingSystemHero.e2.css';
@@ -135,11 +136,11 @@ const BUILD_PHASES = [
   { label: 'جرّب المسار', note: 'أضف طلبك المختصر لإكمال الملخّص.', icon: 'gear' },
 ] as const;
 
-const CTA_COPY: Record<StageId, { secondary: string; secondaryHref: string }> = {
-  need: { secondary: 'اكتشف منهجنا', secondaryHref: '#system-anatomy' },
-  direction: { secondary: 'استكشف المسارات', secondaryHref: '#solutions-universe' },
-  build: { secondary: 'استكشف نماذج العمل', secondaryHref: '#reference-proof' },
-  launch: { secondary: 'استكشف منهج الإطلاق', secondaryHref: '#system-anatomy' },
+const CTA_COPY: Record<StageId, { secondary: string; secondaryTo: string }> = {
+  need: { secondary: 'استكشف كيف نعمل', secondaryTo: '/how-we-work' },
+  direction: { secondary: 'استكشف الحلول', secondaryTo: '/solutions' },
+  build: { secondary: 'شاهد المشاريع المرجعية', secondaryTo: '/reference-projects' },
+  launch: { secondary: 'راجع كيف نعمل', secondaryTo: '/how-we-work' },
 };
 
 const COPY: Record<StageId, { kicker: string; title: string; body: string }> = {
@@ -161,7 +162,7 @@ const COPY: Record<StageId, { kicker: string; title: string; body: string }> = {
   launch: {
     kicker: 'بداية واضحة للخطوة التالية',
     title: 'ملخّصك جاهز لبدء المشروع',
-    body: 'راجع ما اخترته، ثم انتقل إلى رسالة المشروع المنظّمة وأكملها بنفسك.',
+    body: 'راجع ما اخترته، ثم انتقل إلى نقطة البدء المنظّمة وأكمل تفاصيل مشروعك بنفسك.',
   },
 };
 
@@ -243,12 +244,12 @@ export function LivingSystemHero() {
           <p className="hero-body e2-body">{COPY[stage].body}</p>
 
           <div className="e2-hero-actions">
-            <a className="e2-cta e2-cta-primary" href="#project-gateway">
-              ابدأ مشروعك <ArrowLeft aria-hidden="true" />
-            </a>
-            <a className="e2-cta e2-cta-secondary" href={CTA_COPY[stage].secondaryHref}>
+            <Link className="e2-cta e2-cta-primary" to="/start">
+              ابدأ اختيارك <ArrowLeft aria-hidden="true" />
+            </Link>
+            <Link className="e2-cta e2-cta-secondary" to={CTA_COPY[stage].secondaryTo}>
               {CTA_COPY[stage].secondary} <ArrowLeft aria-hidden="true" />
-            </a>
+            </Link>
           </div>
 
           {stage === 'need' ? (
@@ -410,7 +411,7 @@ export function LivingSystemHero() {
                     <header>
                       <small>ملخّص الاختيارات</small>
                       <strong>أصبحت نقطة البداية واضحة</strong>
-                      <p>يمكنك الآن فتح رسالة المشروع وإكمال التفاصيل بنفسك.</p>
+                      <p>يمكنك الآن الانتقال إلى صفحة بدء الاختيار وإكمال التفاصيل بنفسك.</p>
                     </header>
 
                     <div className="e2-launch-primary">
@@ -423,8 +424,8 @@ export function LivingSystemHero() {
 
                     <div className="e2-resolution-flow">
                       <span><HeroGlyph name="shield" /><b>راجع الاختيارات</b><small>تأكّد من الحاجة والاتجاه</small></span>
-                      <span><HeroGlyph name="share" /><b>أكمل الرسالة</b><small>أضف سياق المشروع</small></span>
-                      <span><HeroGlyph name="rocket" /><b>أرسل عندما تجهز</b><small>القرار النهائي بين يديك</small></span>
+                      <span><HeroGlyph name="share" /><b>ابدأ الاختيار</b><small>أضف سياق المشروع</small></span>
+                      <span><HeroGlyph name="rocket" /><b>ثبّت ملخّصك</b><small>لن يُرسل شيء تلقائيًا</small></span>
                     </div>
                   </div>
                 )}

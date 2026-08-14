@@ -468,6 +468,26 @@
   font-size: 7px;
 }
 
+.reference-proof-v2__route {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-inline-start: auto;
+  color: #d5b27f;
+  font-size: 7px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.reference-proof-v2__route:hover {
+  color: #f0d4a8;
+}
+
+.reference-proof-v2__route:focus-visible {
+  outline: 2px solid #f0c98f;
+  outline-offset: 3px;
+}
+
 .reference-proof-v2__project-copy {
   margin-top: 13px;
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { solutionFamilies } from '../../data/homeShowcase';
 import solutionsEnvironment from '../../assets/gs-home-v2/02_GS_Solutions_Universe_Clean_Production_Asset.webp';
 import './SolutionsUniverse.v2.css';
@@ -136,7 +137,7 @@ export function SolutionsUniverse() {
         </div>
 
         <div className="s02-actions">
-          <a href="#reference-proof">استعرض المشاريع المرجعية <DirectionArrow /></a>
+          <Link to="/solutions">استكشف جميع الحلول <DirectionArrow /></Link>
           <button type="button" onClick={activateNext}>المجال التالي <DirectionArrow /></button>
         </div>
         <p className="s02-context-cue"><span /> اختر محطة أخرى لعرض تفاصيلها.</p>
