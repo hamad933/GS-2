@@ -1,7 +1,12 @@
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { recommendFromFacts } from '../../../src/data/solutions/finder';
+import { createStartDiscoveryDraft } from '../../../src/features/start-discovery/discoveryModel';
+import { mapSolutionsDecisionToDiscovery } from '../../../src/integration/solutionsToDiscovery';
+import { readStartDiscoveryRouteState } from '../../../src/routes/startDiscoveryRouteState';
+import { START_DISCOVERY_PREFILL_VERSION } from '../../../src/types/start-discovery';
+import type { DecisionSnapshot } from '../../../src/types/solutions';
 
 const WORKSPACE = '#solutions-decision-workspace';
 const EVIDENCE_DIR = resolve('tests/visual/solutions/evidence');
@@ -43,6 +48,20 @@ async function reachSummary(page: Page) {
   await page.getByText('عملية تشغيل قابلة للوصف', { exact: true }).click();
   await page.getByRole('button', { name: /إنتاج ملخص القرار/ }).click();
   await expect(page.locator(WORKSPACE)).toHaveAttribute('data-step', 'summary');
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  const dimensions = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+}
+
+async function expectMinimumFontSize(locator: Locator, minimum: number) {
+  await expect(locator).toBeVisible();
+  const fontSize = await locator.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+  expect(fontSize).toBeGreaterThanOrEqual(minimum);
 }
 
 test.beforeAll(async () => {
@@ -106,6 +125,48 @@ test('Finder keeps decisive cases deterministic', () => {
   expect(second).toEqual(first);
 });
 
+test('v1 handoff preserves stable family identity, decision origin, and resolution additively', () => {
+  const snapshot: DecisionSnapshot = {
+    entryMode: 'discover',
+    facts: { constraints: '' },
+    recommendedFamily: 'business',
+    decisionOrigin: 'USER_OPEN_DIRECTION',
+    recommendationResolution: 'tied',
+    selectedCapabilities: [],
+    capabilitySelections: [],
+    configuration: 'focused',
+    budgetPreference: 'unknown',
+    budgetRange: '',
+    confirmedDependencies: [],
+    unknowns: ['تعادل يحتاج معلومة مميِّزة'],
+    evidenceState: 'REFERENCE_ONLY',
+  };
+
+  const prefill = mapSolutionsDecisionToDiscovery(snapshot);
+  expect(prefill.version).toBe(START_DISCOVERY_PREFILL_VERSION);
+  expect(prefill.solutionFamilyId).toBe('business');
+  expect(prefill.decisionOrigin).toBe('USER_OPEN_DIRECTION');
+  expect(prefill.recommendationResolution).toBe('tied');
+
+  const sanitized = readStartDiscoveryRouteState({ discoveryPrefill: prefill });
+  expect(sanitized?.solutionFamilyId).toBe('business');
+  expect(sanitized?.decisionOrigin).toBe('USER_OPEN_DIRECTION');
+  expect(sanitized?.recommendationResolution).toBe('tied');
+
+  const draft = createStartDiscoveryDraft(sanitized, 'configured');
+  expect(draft.solutionFamilyId).toBe('business');
+  expect(draft.decisionOrigin).toBe('USER_OPEN_DIRECTION');
+  expect(draft.recommendationResolution).toBe('tied');
+
+  const legacyDraft = createStartDiscoveryDraft({
+    version: START_DISCOVERY_PREFILL_VERSION,
+    recommendedFamily: 'عائلة قديمة صالحة في v1',
+  });
+  expect(legacyDraft.recommendedFamily).toBe('عائلة قديمة صالحة في v1');
+  expect(legacyDraft.solutionFamilyId).toBe('');
+  expect(legacyDraft.decisionOrigin).toBeUndefined();
+});
+
 test('keeps all three entry modes inside one continuous workspace', async ({ page }) => {
   await openWorkspace(page);
 
@@ -117,8 +178,10 @@ test('keeps all three entry modes inside one continuous workspace', async ({ pag
     await page.getByRole('button', { name: new RegExp(label) }).click();
     await expect(page.locator(WORKSPACE)).toHaveAttribute('data-mode', mode);
     await expect(page.locator(WORKSPACE)).toHaveAttribute('data-step', 'qualify');
+    await expect(page.locator('[data-step-focus="qualify"]')).toBeFocused();
     await page.getByRole('button', { name: 'تغيير نقطة البداية' }).click();
     await expect(page.locator(WORKSPACE)).toHaveAttribute('data-step', 'entry');
+    await expect(page.locator('#gsdw-entry-title')).toBeFocused();
   }
 });
 
@@ -143,16 +206,39 @@ test('exposes all six established families and their contextual state', async ({
   }
 });
 
-test('Finder progresses one useful question at a time and explains its bounded recommendation', async ({ page }) => {
+test('Finder produces system recommendation semantics and deterministic focus handoff', async ({ page }) => {
   await reachPortalRecommendation(page);
+  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-decision-origin', 'SYSTEM_FINDER');
   await expect(page.locator(WORKSPACE)).toHaveAttribute('data-recommendation-resolution', 'decisive');
+  await expect(page.locator('#gsdw-recommendation-title')).toBeFocused();
   await expect(page.getByText('اتجاه أولي قابل للمراجعة')).toBeVisible();
+  await expect(page.getByText('RECOMMENDED DIRECTION')).toBeVisible();
   await expect(page.getByText('عمق التشغيل: أنظمة أو تكاملات مهمة')).toBeVisible();
   await expect(page.getByText('المعلومات الناقصة لا تخفض «نسبة تطابق»')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'الحجوزات والخدمات' })).toBeVisible();
 });
 
-test('mostly-unknown Finder answers surface open directions and no configure action', async ({ page }) => {
+test('direct selection stays user-selected and hands focus through configure and summary', async ({ page }) => {
+  await openWorkspace(page);
+  await page.getByRole('button', { name: /أعرف تقريبًا ما أحتاجه/ }).click();
+  await page.getByRole('button', { name: /مواقع الأعمال والخدمات/ }).click();
+  await page.getByRole('button', { name: /مراجعة هذا الاتجاه/ }).click();
+
+  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-decision-origin', 'USER_DIRECT');
+  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-recommendation-resolution', 'unset');
+  await expect(page.locator('#gsdw-recommendation-title')).toBeFocused();
+  await expect(page.getByText('اختيارك المباشر')).toBeVisible();
+  await expect(page.getByText('RECOMMENDED DIRECTION')).toHaveCount(0);
+
+  await page.getByRole('button', { name: /تكوين الاتجاه/ }).click();
+  await expect(page.locator('#gsdw-configure-title')).toBeFocused();
+  await page.getByRole('button', { name: /إضافة القيود والميزانية/ }).click();
+  await page.getByRole('button', { name: /إنتاج ملخص القرار/ }).click();
+  await expect(page.locator('#gsdw-summary-title')).toBeFocused();
+  await expect(page.getByText('الاتجاه الذي اخترته', { exact: true })).toBeVisible();
+});
+
+test('mostly-unknown Finder can become an explicit user-selected open direction without fabricating recommendation certainty', async ({ page }) => {
   await openWorkspace(page);
   await page.getByRole('button', { name: /ساعدني أكتشف ما أحتاجه/ }).click();
   await chooseFinderOption(page, 'لست متأكدًا بعد');
@@ -162,13 +248,20 @@ test('mostly-unknown Finder answers surface open directions and no configure act
 
   await expect(page.locator(WORKSPACE)).toHaveAttribute('data-recommendation-resolution', 'insufficient');
   await expect(page.locator(WORKSPACE)).toHaveAttribute('data-family', 'unset');
-  await expect(page.getByRole('heading', { name: 'لا يوجد اتجاه منفرد يمكن تبريره بعد.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'لا يوجد اتجاه منفرد يمكن تبريره بعد.' })).toBeFocused();
   await expect(page.locator('[data-open-family="business"]')).toBeVisible();
   await expect(page.locator('[data-open-family="portals"]')).toBeVisible();
   await expect(page.getByRole('button', { name: /تكوين الاتجاه/ })).toHaveCount(0);
+
+  await page.getByRole('button', { name: /اختيار مواقع الأعمال والخدمات/ }).click();
+  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-decision-origin', 'USER_OPEN_DIRECTION');
+  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-recommendation-resolution', 'insufficient');
+  await expect(page.locator('#gsdw-recommendation-title')).toBeFocused();
+  await expect(page.getByText('اختيارك مع بقاء معلومات ناقصة')).toBeVisible();
+  await expect(page.getByText('RECOMMENDED DIRECTION')).toHaveCount(0);
 });
 
-test('supports bounded comparison and preserves an alternative direction', async ({ page }) => {
+test('supports bounded comparison and labels the resulting direction as a user choice', async ({ page }) => {
   await openWorkspace(page);
   await page.getByRole('button', { name: /أريد مقارنة الخيارات/ }).click();
   await page.getByRole('button', { name: /التجارة الرقمية وتجارب العلامات/ }).click();
@@ -176,8 +269,53 @@ test('supports bounded comparison and preserves an alternative direction', async
   await expect(page.getByLabel('مقارنة اتجاهي الحل')).toBeVisible();
   await page.getByRole('button', { name: /اعتماد التجارة الرقمية وتجارب العلامات/ }).click();
   await expect(page.locator(WORKSPACE)).toHaveAttribute('data-family', 'commerce');
+  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-decision-origin', 'USER_COMPARE');
+  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-recommendation-resolution', 'unset');
+  await expect(page.locator('#gsdw-recommendation-title')).toBeFocused();
+  await expect(page.getByText('اختيارك بعد المقارنة')).toBeVisible();
+  await expect(page.getByText('RECOMMENDED DIRECTION')).toHaveCount(0);
   await expect(page.getByText('اتجاه بديل يستحق النظر')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'الأنظمة التشغيلية والبوابات' })).toBeVisible();
+});
+
+test('mobile Compare and configuration decision text stays readable without overflow', async ({ page }) => {
+  for (const [width, height] of [[390, 844], [768, 1024]] as const) {
+    await page.setViewportSize({ width, height });
+    await openWorkspace(page);
+    await page.getByRole('button', { name: /أريد مقارنة الخيارات/ }).click();
+    await page.getByRole('button', { name: /التجارة الرقمية وتجارب العلامات/ }).click();
+    await page.getByRole('button', { name: /الأنظمة التشغيلية والبوابات/ }).click();
+
+    for (const selector of [
+      '.gsdw-comparison-head > span',
+      '.gsdw-comparison-head > strong',
+      '.gsdw-comparison-row > span',
+      '.gsdw-comparison-row > p',
+    ]) {
+      await expectMinimumFontSize(page.locator(selector).first(), 10);
+    }
+    await expectMinimumFontSize(page.locator('.gsdw-comparison-actions button').first(), 11);
+    await expectNoHorizontalOverflow(page);
+
+    await page.getByRole('button', { name: /اعتماد التجارة الرقمية وتجارب العلامات/ }).click();
+    await page.getByRole('button', { name: /تكوين الاتجاه/ }).click();
+    for (const label of page.locator('.gsdw-config-phases button > span').all()) {
+      await expectMinimumFontSize(label, 11);
+    }
+    await expectNoHorizontalOverflow(page);
+  }
+});
+
+test('mobile progress retains semantic stage names and current-step context', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openWorkspace(page);
+  const progressItems = page.locator('.gsdw-progress li');
+  await expect(progressItems).toHaveCount(5);
+  await expect(progressItems.nth(0)).toHaveAttribute('aria-label', /نقطة البداية.*المرحلة الحالية/);
+  await expect(progressItems.nth(1)).toHaveAttribute('aria-label', /فهم الاحتياج/);
+  await page.getByRole('button', { name: /أريد مقارنة الخيارات/ }).click();
+  await expect(progressItems.nth(1)).toHaveAttribute('aria-label', /فهم الاحتياج.*المرحلة الحالية/);
+  await expectNoHorizontalOverflow(page);
 });
 
 test('configures contextual capabilities, option depth, budget, dependencies, and summary', async ({ page }) => {
@@ -311,11 +449,7 @@ for (const width of [1440, 1024, 768, 430, 390]) {
   test(`captures entry evidence and has no horizontal overflow at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width <= 430 ? 844 : 900 });
     await openWorkspace(page);
-    const dimensions = await page.evaluate(() => ({
-      clientWidth: document.documentElement.clientWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-    }));
-    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+    await expectNoHorizontalOverflow(page);
     await page.screenshot({
       path: resolve(EVIDENCE_DIR, `entry-${width}.png`),
       fullPage: true,
@@ -328,11 +462,7 @@ test('captures desktop and mobile decision-summary evidence without overflow', a
   for (const [width, height] of [[1440, 900], [390, 844]] as const) {
     await page.setViewportSize({ width, height });
     await reachSummary(page);
-    const dimensions = await page.evaluate(() => ({
-      clientWidth: document.documentElement.clientWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-    }));
-    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+    await expectNoHorizontalOverflow(page);
     await page.screenshot({
       path: resolve(EVIDENCE_DIR, `summary-${width}.png`),
       fullPage: true,
