@@ -5,6 +5,7 @@ import { referenceProjects, type ReferenceProject } from '../../data/homeShowcas
 import { referenceProjectMedia } from '../../data/referenceProjectMedia';
 import theatreEnvironment from '../../assets/gs-home-v2/03_GS_Selected_Work_Clean_Production_Asset.webp';
 import './ReferenceProof.v2.css';
+import './ReferenceProof.remediation.css';
 
 type SurfaceVariant = 'desktop' | 'mobile' | 'detail';
 
@@ -12,7 +13,7 @@ function NeutralProjectSurface({ project, variant }: { project: ReferenceProject
   return (
     <div className={`neutral-project-surface neutral-project-surface--${variant}`} aria-hidden="true">
       <span className="neutral-project-surface__signal" />
-      <span className="neutral-project-surface__context">عرض المشروع</span>
+      <span className="neutral-project-surface__context">تصور توضيحي · غير توثيقي</span>
       <b dir="ltr">{project.index}</b>
       <strong dir="ltr">{project.family}</strong>
       {variant === 'desktop' && <small>{project.title}</small>}
@@ -70,20 +71,20 @@ export function ReferenceProof() {
       <div className="reference-proof-v2__seam" aria-hidden="true" />
 
       <ProjectMedia
-        label={`مساحات العرض للمشروع المختار: ${active.family}`}
+        label={`منطقة الوسائط للمشروع المرجعي: ${active.family}`}
         desktop={{
           src: activeMedia.desktop,
-          alt: `السطح الرئيسي للمشروع ${active.family}`,
+          alt: `تمثيل بصري رئيسي للمشروع ${active.family}`,
           placeholder: <NeutralProjectSurface project={active} variant="desktop" />,
         }}
         mobile={{
           src: activeMedia.mobile,
-          alt: `السطح المساند للمشروع ${active.family}`,
+          alt: `تمثيل بصري مساند للمشروع ${active.family}`,
           placeholder: <NeutralProjectSurface project={active} variant="mobile" />,
         }}
         detail={{
           src: activeMedia.detail,
-          alt: `سطح التفاصيل للمشروع ${active.family}`,
+          alt: `تمثيل بصري للتفاصيل للمشروع ${active.family}`,
           placeholder: <NeutralProjectSurface project={active} variant="detail" />,
         }}
       />
