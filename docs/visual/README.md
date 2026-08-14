@@ -1,15 +1,15 @@
 # GS Visual Execution Entry Point
 
-This file records stable implementation boundaries for authorized GS visual work. It does not authorize implementation by itself.
+This file records stable implementation and evidence boundaries for authorized GS visual work. It does not authorize implementation by itself.
 
-## Active W05 visual authority — V2
+## Active W05 homepage visual authority — V2
 
-The controlling W05 homepage visual-integration contract is now:
+When W05 V2 homepage visual work is explicitly in scope, the controlling homepage visual-integration references are:
 
 - `GS_W05_VISUAL_INTEGRATION_MANIFEST_V2.md`
 - `gs-home-v2/integrated-targets/` — owner-approved **Integrated Targets / Visual Composition Authority**
 - `../../src/assets/gs-home-v2/` — approved **Clean Production Assets / Runtime Visual Material**
-- `codex/gs-visual-integration/SKILL.md` — project-specific procedural guidance
+- `codex/gs-visual-integration/SKILL.md` — repository-local procedural guidance
 - `codex/gs-visual-integration/references/QA_RUBRIC.md` — visual self-review rubric
 
 The prior [`GS_HOMEPAGE_VISUAL_MASTER_V1.png`](./GS_HOMEPAGE_VISUAL_MASTER_V1.png) is **SUPERSEDED FOR W05 IMPLEMENTATION AUTHORITY**. Retain it as historical/supporting reference only; do not use it to override the V2 Integrated Targets.
@@ -48,16 +48,29 @@ The Hero is one persistent system across four states. Use one clean Hero environ
 - Do not add dependencies merely for animation when CSS/React state is sufficient.
 - Do not recompress/regenerate V2 production derivatives during a section implementation workstream.
 
-## Desktop-first visual gate
+## Desktop-first homepage visual gate
 
-For the V2 reconstruction, 1440px is the primary fidelity viewport.
+For W05 V2 homepage reconstruction, 1440px is the primary fidelity viewport.
 
-Implement and review each section against its Integrated Target at 1440 before responsive closure. 768px and 390px are independently authored responsive compositions, not proportional scale-downs.
+Implement and review each bounded homepage section against its Integrated Target at 1440 before responsive closure. 768px and 390px are independently authored responsive compositions, not proportional scale-downs.
 
-## Evidence
+## Current whole-public-site validation and evidence model
 
-Visual acceptance requires direct screenshot comparison, not a green CI result alone.
+The current W07-era public site is larger than the W05 Hero/Homepage-only evidence scope. Repository-native whole-public-site evidence therefore uses:
 
-A section fails visual acceptance when the imagery and DOM still read as two separate layers, even if both look individually polished.
+- `tests/visual/public-site.integration.spec.ts` for current integrated public routes, navigation, public behavior, handoffs, and related runtime assertions;
+- `tests/visual/public-site.evidence.spec.ts` for the current multi-route, multi-viewport screenshot evidence matrix and critical public-site states.
 
-Existing repository screenshots/artifacts remain `REFERENCE_ONLY` unless explicitly promoted by the Controller.
+`tests/visual/hero.visual.spec.ts` remains useful for bounded Hero/Homepage-specific review. It must not be treated as the generic future whole-public-site evidence contract.
+
+The generic Visual Evidence workflow must run the whole-public-site harnesses above and verify that screenshot evidence was actually produced. It must not encode a permanent W05 screenshot-filename manifest as repository-wide policy. Screenshot filenames emitted by a current harness are an implementation detail of that harness and may evolve with an authorized future site baseline.
+
+## Evidence and acceptance
+
+Visual review requires direct rendered evidence when the Workstream Contract requires visual judgment; a green CI result or successful artifact upload alone is not visual acceptance.
+
+A section may fail visual review when imagery and DOM still read as separate layers even if both are individually polished.
+
+Repository screenshots and GitHub Actions artifacts are `REFERENCE_ONLY` by default unless a separately authorized governance action promotes them under `docs/governance/EVIDENCE_AND_HANDOFF.md`. Executors do not write them to Google Drive.
+
+Controller review and owner acceptance are distinct. `CONTROLLER VISUAL PASS` does not equal `OWNER VISUAL ACCEPTANCE`. Where owner visual acceptance is reserved by the governed control state or Workstream Contract, only explicit owner acceptance satisfies that gate.
