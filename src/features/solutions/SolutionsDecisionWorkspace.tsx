@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   budgetPreferences,
   configurationDirections,
@@ -16,10 +16,12 @@ import type {
   ConfigurationDirectionId,
   ConfigurationPhase,
   DecisionFacts,
+  DecisionOrigin,
   DecisionSnapshot,
   EntryMode,
   EvidenceState,
   Recommendation,
+  RecommendationResolution,
   SolutionFamily,
   SolutionFamilyId,
   SolutionsDecisionWorkspaceProps,
@@ -84,7 +86,7 @@ type SummaryKind = 'fact' | 'recommendation' | 'configuration' | 'unknown' | 'ev
 
 const summaryKindLabels: Record<SummaryKind, string> = {
   fact: 'معلومة قدّمتها',
-  recommendation: 'توصية النظام / الاتجاه الحالي',
+  recommendation: 'مصدر الاتجاه الحالي',
   configuration: 'التكوين الحالي',
   unknown: 'يحتاج اكتشافًا',
   evidence: 'حالة تحقق من النظام',
@@ -142,6 +144,7 @@ function ProgressRail({ step }: { step: WorkspaceStep }) {
             key={item}
             className={index === activeIndex ? 'is-current' : index < activeIndex ? 'is-complete' : ''}
             aria-current={index === activeIndex ? 'step' : undefined}
+            aria-label={`${index + 1}. ${stepLabels[item].ar}${index === activeIndex ? ' — المرحلة الحالية' : ''}`}
           >
             <span className="gsdw-progress-node"><i />{String(index + 1).padStart(2, '0')}</span>
             <span><strong>{stepLabels[item].ar}</strong><small dir="ltr">{stepLabels[item].en}</small></span>
@@ -308,6 +311,8 @@ export function SolutionsDecisionWorkspace({
   const [manualFamilyId, setManualFamilyId] = useState<SolutionFamilyId>();
   const [compareIds, setCompareIds] = useState<SolutionFamilyId[]>([]);
   const [recommendation, setRecommendation] = useState<Recommendation>();
+  const [decisionOrigin, setDecisionOrigin] = useState<DecisionOrigin>();
+  const [recommendationResolution, setRecommendationResolution] = useState<RecommendationResolution>();
   const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>([]);
   const [userSelectedCapabilities, setUserSelectedCapabilities] = useState<string[]>([]);
   const [configuration, setConfiguration] = useState<ConfigurationDirectionId>('focused');
@@ -316,6 +321,8 @@ export function SolutionsDecisionWorkspace({
   const [budgetRange, setBudgetRange] = useState('');
   const [confirmedDependencies, setConfirmedDependencies] = useState<string[]>([]);
   const [transitionPrepared, setTransitionPrepared] = useState(false);
+  const workspaceRef = useRef<HTMLElement>(null);
+  const pendingFocusStepRef = useRef<WorkspaceStep>();
 
   const selectedFamily = recommendation?.recommendedId
     ? familyById[recommendation.recommendedId]
@@ -323,6 +330,19 @@ export function SolutionsDecisionWorkspace({
   const alternativeFamily = recommendation?.alternativeId ? familyById[recommendation.alternativeId] : undefined;
   const activeQuestion = finderQuestions[questionIndex];
   const activeOptionId = activeQuestion ? facts[activeQuestion.key] : undefined;
+
+  const moveToStep = (nextStep: WorkspaceStep) => {
+    pendingFocusStepRef.current = nextStep;
+    setStep(nextStep);
+  };
+
+  useEffect(() => {
+    if (pendingFocusStepRef.current !== step) return;
+    const target = workspaceRef.current?.querySelector<HTMLElement>(`[data-step-focus="${step}"]`);
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    pendingFocusStepRef.current = undefined;
+  }, [configurationPhase, mode, recommendation, selectedFamily, step]);
 
   const unknowns = useMemo(() => {
     if (!recommendation || !selectedFamily) return [];
@@ -353,12 +373,14 @@ export function SolutionsDecisionWorkspace({
   }, [selectedCapabilities, selectedFamily, userSelectedCapabilities]);
 
   const snapshot = useMemo<DecisionSnapshot | undefined>(() => {
-    if (!mode || !recommendation?.recommendedId || !selectedFamily) return undefined;
+    if (!mode || !recommendation?.recommendedId || !selectedFamily || !decisionOrigin) return undefined;
     return {
       entryMode: mode,
       facts,
       recommendedFamily: recommendation.recommendedId,
       alternativeFamily: recommendation.alternativeId,
+      decisionOrigin,
+      recommendationResolution,
       selectedCapabilities,
       capabilitySelections,
       configuration,
@@ -368,7 +390,7 @@ export function SolutionsDecisionWorkspace({
       unknowns,
       evidenceState: selectedFamily.reference.evidenceState,
     };
-  }, [budgetPreference, budgetRange, capabilitySelections, configuration, confirmedDependencies, facts, mode, recommendation, selectedCapabilities, selectedFamily, unknowns]);
+  }, [budgetPreference, budgetRange, capabilitySelections, configuration, confirmedDependencies, decisionOrigin, facts, mode, recommendation, recommendationResolution, selectedCapabilities, selectedFamily, unknowns]);
 
   useEffect(() => {
     if (snapshot) onDecisionChange?.(snapshot);
@@ -376,12 +398,13 @@ export function SolutionsDecisionWorkspace({
 
   const resetDecision = (nextMode?: EntryMode) => {
     setMode(nextMode);
-    setStep(nextMode ? 'qualify' : 'entry');
     setQuestionIndex(0);
     setFacts({ constraints: '' });
     setManualFamilyId(undefined);
     setCompareIds([]);
     setRecommendation(undefined);
+    setDecisionOrigin(undefined);
+    setRecommendationResolution(undefined);
     setSelectedCapabilities([]);
     setUserSelectedCapabilities([]);
     setConfiguration('focused');
@@ -390,27 +413,60 @@ export function SolutionsDecisionWorkspace({
     setBudgetRange('');
     setConfirmedDependencies([]);
     setTransitionPrepared(false);
+    moveToStep(nextMode ? 'qualify' : 'entry');
   };
 
-  const buildRecommendation = (recommendedId: SolutionFamilyId, alternativeId?: SolutionFamilyId, reasons: string[] = []) => {
+  const buildUserSelection = (
+    recommendedId: SolutionFamilyId,
+    origin: DecisionOrigin,
+    alternativeId?: SolutionFamilyId,
+    reasons: string[] = [],
+    resolutionContext?: RecommendationResolution,
+  ) => {
     const nextRecommendation: Recommendation = {
-      resolution: 'decisive',
+      resolution: resolutionContext ?? 'decisive',
       recommendedId,
       candidateIds: [recommendedId],
       alternativeId,
       reasons,
-      missing: ['النتيجة التفصيلية لم تُجمع عبر Finder', 'القيود الخاصة غير مذكورة'],
+      missing: recommendation?.missing ?? ['النتيجة التفصيلية لم تُجمع عبر Finder', 'القيود الخاصة غير مذكورة'],
     };
     setRecommendation(nextRecommendation);
+    setDecisionOrigin(origin);
+    setRecommendationResolution(resolutionContext);
     setSelectedCapabilities(initialCapabilities(familyById[recommendedId]));
     setUserSelectedCapabilities([]);
     setConfirmedDependencies([]);
-    setStep('recommend');
+    moveToStep('recommend');
+  };
+
+  const chooseOpenDirection = (recommendedId: SolutionFamilyId) => {
+    if (!recommendation || recommendation.recommendedId) return;
+    const previousResolution = recommendation.resolution;
+    const alternativeId = recommendation.candidateIds.find((candidateId) => candidateId !== recommendedId);
+    const nextRecommendation: Recommendation = {
+      ...recommendation,
+      recommendedId,
+      alternativeId,
+      reasons: [
+        ...recommendation.reasons,
+        `اخترت أنت ${familyById[recommendedId].title} من الاتجاهات التي بقيت مفتوحة.`,
+      ],
+    };
+    setRecommendation(nextRecommendation);
+    setDecisionOrigin('USER_OPEN_DIRECTION');
+    setRecommendationResolution(previousResolution);
+    setSelectedCapabilities(initialCapabilities(familyById[recommendedId]));
+    setUserSelectedCapabilities([]);
+    setConfirmedDependencies([]);
+    moveToStep('recommend');
   };
 
   const finishFinder = () => {
     const nextRecommendation = recommendFromFacts(facts);
     setRecommendation(nextRecommendation);
+    setDecisionOrigin(nextRecommendation.recommendedId ? 'SYSTEM_FINDER' : undefined);
+    setRecommendationResolution(nextRecommendation.resolution);
     setSelectedCapabilities(
       nextRecommendation.recommendedId
         ? initialCapabilities(familyById[nextRecommendation.recommendedId])
@@ -418,7 +474,7 @@ export function SolutionsDecisionWorkspace({
     );
     setUserSelectedCapabilities([]);
     setConfirmedDependencies([]);
-    setStep('recommend');
+    moveToStep('recommend');
   };
 
   const toggleCompare = (id: SolutionFamilyId) => {
@@ -453,12 +509,12 @@ export function SolutionsDecisionWorkspace({
 
   const goToConfiguration = () => {
     setConfigurationPhase('capabilities');
-    setStep('configure');
+    moveToStep('configure');
   };
 
   const showSummary = () => {
     setTransitionPrepared(false);
-    setStep('summary');
+    moveToStep('summary');
   };
 
   const prepareDiscovery = () => {
@@ -471,25 +527,74 @@ export function SolutionsDecisionWorkspace({
     .map((question) => ({ label: question.eyebrow, value: getFactLabel(question.key, facts[question.key]) }))
     .filter((item) => item.value);
 
-  const recommendationProvenance = mode === 'discover'
-    ? 'توصية النظام الحاسمة من المدخلات المتاحة'
-    : mode === 'compare'
-      ? 'اتجاه اعتمدته بعد المقارنة'
-      : 'اتجاه بدأت منه أنت';
+  const directionPresentation = (() => {
+    switch (decisionOrigin) {
+      case 'SYSTEM_FINDER':
+        return {
+          code: 'RECOMMENDED DIRECTION',
+          badge: 'اتجاه أولي قابل للمراجعة',
+          label: 'الاتجاه الموصى به الآن',
+          reasonLabel: 'لماذا أوصى Finder بهذا الاتجاه؟',
+          summaryLabel: 'الاتجاه الموصى به',
+          provenance: 'توصية النظام الحاسمة من المدخلات المتاحة',
+        };
+      case 'USER_COMPARE':
+        return {
+          code: 'CHOSEN AFTER COMPARE',
+          badge: 'اختيارك بعد المقارنة',
+          label: 'الاتجاه الذي اخترته بعد المقارنة',
+          reasonLabel: 'سياق اختيارك بعد المقارنة',
+          summaryLabel: 'الاتجاه المختار بعد المقارنة',
+          provenance: 'اتجاه اخترته أنت بعد المقارنة',
+        };
+      case 'USER_OPEN_DIRECTION':
+        return {
+          code: 'SELECTED OPEN DIRECTION',
+          badge: recommendationResolution === 'tied' ? 'اختيارك بعد تعادل الاتجاهات' : 'اختيارك مع بقاء معلومات ناقصة',
+          label: 'الاتجاه الذي اخترته من الخيارات المفتوحة',
+          reasonLabel: 'سياق اختيارك من الاتجاهات المفتوحة',
+          summaryLabel: 'الاتجاه المختار من خيارات مفتوحة',
+          provenance: recommendationResolution === 'tied'
+            ? 'اختيارك بعد تعادل Finder؛ لم يحوّل النظام التعادل إلى توصية'
+            : 'اختيارك مع بقاء معلومات Finder غير كافية للحسم',
+        };
+      case 'USER_ALTERNATIVE':
+        return {
+          code: 'SELECTED ALTERNATIVE',
+          badge: 'اختيارك بعد مراجعة البديل',
+          label: 'الاتجاه البديل الذي اخترته',
+          reasonLabel: 'سياق تغييرك للاتجاه',
+          summaryLabel: 'الاتجاه الذي اخترته بعد مراجعة البديل',
+          provenance: 'اتجاه بديل اخترته أنت بعد المراجعة',
+        };
+      case 'USER_DIRECT':
+      default:
+        return {
+          code: 'SELECTED DIRECTION',
+          badge: 'اختيارك المباشر',
+          label: 'الاتجاه الذي اخترته',
+          reasonLabel: 'سياق اختيارك المباشر',
+          summaryLabel: 'الاتجاه الذي اخترته',
+          provenance: 'اتجاه بدأت منه أنت مباشرة',
+        };
+    }
+  })();
 
-  const alternativeProvenance = mode === 'discover'
+  const alternativeProvenance = decisionOrigin === 'SYSTEM_FINDER'
     ? 'بديل اقترحه النظام'
-    : 'بديل في المقارنة الحالية';
+    : 'اتجاه بديل ضمن الخيارات التي راجعتها';
 
   return (
     <section
+      ref={workspaceRef}
       id="solutions-decision-workspace"
       className="gsdw"
       dir="rtl"
       data-step={step}
       data-mode={mode ?? 'unset'}
       data-family={selectedFamily?.id ?? 'unset'}
-      data-recommendation-resolution={recommendation?.resolution ?? 'unset'}
+      data-decision-origin={decisionOrigin ?? 'unset'}
+      data-recommendation-resolution={recommendationResolution ?? 'unset'}
     >
       <div className="gsdw-atmosphere" aria-hidden="true"><i /><i /><i /></div>
 
@@ -511,7 +616,7 @@ export function SolutionsDecisionWorkspace({
           <section className="gsdw-entry" aria-labelledby="gsdw-entry-title">
             <div className="gsdw-entry-copy">
               <span className="gsdw-eyebrow"><i /> GS-PUB-002 <b>مساحة قرار واحدة</b></span>
-              <h1 id="gsdw-entry-title" data-route-focus tabIndex={-1}>لا تحتاج أن تعرف<br />اسم الحل قبل أن تبدأ.</h1>
+              <h1 id="gsdw-entry-title" data-route-focus data-step-focus="entry" tabIndex={-1}>لا تحتاج أن تعرف<br />اسم الحل قبل أن تبدأ.</h1>
               <p>ابدأ من النتيجة أو من اتجاه تعرفه، وسنحافظ على الفرق بين ما ذكرته، وما فضّلته، وما لا يزال مجهولًا.</p>
               <div className="gsdw-principle">
                 <span dir="ltr">NO ASSUMED CERTAINTY</span>
@@ -556,7 +661,7 @@ export function SolutionsDecisionWorkspace({
             </div>
             <div className="gsdw-question-field">
               <span className="gsdw-mini-label">{activeQuestion.eyebrow}</span>
-              <h2 id="gsdw-question-title">{activeQuestion.title}</h2>
+              <h2 id="gsdw-question-title" data-step-focus="qualify" tabIndex={-1}>{activeQuestion.title}</h2>
               <p>{activeQuestion.help}</p>
               <div className="gsdw-options" role="radiogroup" aria-label={activeQuestion.title}>
                 {activeQuestion.options.map((option, index) => (
@@ -610,7 +715,7 @@ export function SolutionsDecisionWorkspace({
           <section className="gsdw-family-selection" aria-labelledby="gsdw-direction-title">
             <div className="gsdw-section-heading">
               <span className="gsdw-eyebrow"><i /> DIRECTION <b>اتجاه أولي</b></span>
-              <h2 id="gsdw-direction-title">اختر المجال الأقرب،<br />ثم اختبر حدوده.</h2>
+              <h2 id="gsdw-direction-title" data-step-focus="qualify" tabIndex={-1}>اختر المجال الأقرب،<br />ثم اختبر حدوده.</h2>
               <p>الاختيار هنا نقطة بداية وليس توصيفًا نهائيًا للنطاق.</p>
             </div>
             <FamilyField
@@ -622,11 +727,16 @@ export function SolutionsDecisionWorkspace({
               <>
                 <FamilyQuickContext family={familyById[manualFamilyId]} />
                 <div className="gsdw-inline-action">
-                  <span>سيتحقق الاتجاه التالي من الملاءمة والحدود والمعلومات الناقصة.</span>
+                  <span>سيراجع الاتجاه التالي الملاءمة والحدود والمعلومات الناقصة دون تحويل اختيارك إلى توصية نظام.</span>
                   <button
                     type="button"
                     className="gsdw-button gsdw-button--primary"
-                    onClick={() => buildRecommendation(manualFamilyId, undefined, [`اتجاهك الأولي: ${familyById[manualFamilyId].title}`])}
+                    onClick={() => buildUserSelection(
+                      manualFamilyId,
+                      'USER_DIRECT',
+                      undefined,
+                      [`اخترت مباشرة: ${familyById[manualFamilyId].title}`],
+                    )}
                   >
                     مراجعة هذا الاتجاه <span aria-hidden="true">←</span>
                   </button>
@@ -640,7 +750,7 @@ export function SolutionsDecisionWorkspace({
           <section className="gsdw-family-selection" aria-labelledby="gsdw-compare-title">
             <div className="gsdw-section-heading">
               <span className="gsdw-eyebrow"><i /> COMPARE <b>{compareIds.length} / 2</b></span>
-              <h2 id="gsdw-compare-title">اختر اتجاهين<br />لمقارنة ما يغيّر القرار.</h2>
+              <h2 id="gsdw-compare-title" data-step-focus="qualify" tabIndex={-1}>اختر اتجاهين<br />لمقارنة ما يغيّر القرار.</h2>
               <p>نقارن التشغيل والاعتمادات والحدود، لا عدد المزايا.</p>
             </div>
             <FamilyField
@@ -654,7 +764,12 @@ export function SolutionsDecisionWorkspace({
                 families={compareIds.map((id) => familyById[id])}
                 onChoose={(id) => {
                   const alternativeId = compareIds.find((item) => item !== id);
-                  buildRecommendation(id, alternativeId, [`اخترت هذا الاتجاه بعد مقارنة ${familyById[id].title} مع ${alternativeId ? familyById[alternativeId].title : 'اتجاه آخر'}`]);
+                  buildUserSelection(
+                    id,
+                    'USER_COMPARE',
+                    alternativeId,
+                    [`اخترت هذا الاتجاه بعد مقارنة ${familyById[id].title} مع ${alternativeId ? familyById[alternativeId].title : 'اتجاه آخر'}`],
+                  );
                 }}
               />
             ) : (
@@ -668,7 +783,7 @@ export function SolutionsDecisionWorkspace({
             <div className="gsdw-recommendation-lead">
               <span className="gsdw-eyebrow"><i /> OPEN DIRECTIONS <b>{recommendation.resolution === 'tied' ? 'تعادل يحتاج فرقًا حقيقيًا' : 'الدليل غير كافٍ للحسم'}</b></span>
               <div className="gsdw-open-direction-title">
-                <h2 id="gsdw-open-directions-title">لا يوجد اتجاه منفرد يمكن تبريره بعد.</h2>
+                <h2 id="gsdw-open-directions-title" data-step-focus="recommend" tabIndex={-1}>لا يوجد اتجاه منفرد يمكن تبريره بعد.</h2>
                 <p>
                   {recommendation.resolution === 'tied'
                     ? 'أكثر من عائلة تتصدر بالقدر نفسه وفق المعلومات الحالية. لن نكسر التعادل بترتيب خفي.'
@@ -692,6 +807,13 @@ export function SolutionsDecisionWorkspace({
                     <span className="gsdw-mini-label">اتجاه يحتاج معلومة مميِّزة</span>
                     <h3>{family.title}</h3>
                     <p>{family.problem}</p>
+                    <button
+                      type="button"
+                      className="gsdw-button gsdw-button--quiet"
+                      onClick={() => chooseOpenDirection(family.id)}
+                    >
+                      اختيار {family.title}
+                    </button>
                   </article>
                 );
               })}
@@ -703,11 +825,11 @@ export function SolutionsDecisionWorkspace({
             </div>
 
             <div className="gsdw-decision-bar">
-              <div><span>الخطوة التالية</span><p>راجع إجابة غير محسومة أو أضف قيدًا يفرّق فعليًا بين الاتجاهات.</p></div>
+              <div><span>الخطوة التالية</span><p>يمكنك مراجعة إجابة غير محسومة، أو اختيار اتجاه مفتوح مع إبقاء عدم الحسم صريحًا.</p></div>
               <button
                 type="button"
                 className="gsdw-button gsdw-button--primary"
-                onClick={() => { setQuestionIndex(0); setStep('qualify'); }}
+                onClick={() => { setQuestionIndex(0); moveToStep('qualify'); }}
               >
                 مراجعة الإجابات <span aria-hidden="true">←</span>
               </button>
@@ -718,16 +840,16 @@ export function SolutionsDecisionWorkspace({
         {step === 'recommend' && selectedFamily && recommendation ? (
           <section className="gsdw-recommendation" aria-labelledby="gsdw-recommendation-title">
             <div className="gsdw-recommendation-lead">
-              <span className="gsdw-eyebrow"><i /> RECOMMENDED DIRECTION <b>اتجاه أولي قابل للمراجعة</b></span>
+              <span className="gsdw-eyebrow"><i /> {directionPresentation.code} <b>{directionPresentation.badge}</b></span>
               <div className="gsdw-recommendation-title">
                 <FamilyMark family={selectedFamily} />
-                <div><small>الاتجاه الموصى به الآن</small><h2 id="gsdw-recommendation-title">{selectedFamily.title}</h2><p>{selectedFamily.problem}</p></div>
+                <div><small>{directionPresentation.label}</small><h2 id="gsdw-recommendation-title" data-step-focus="recommend" tabIndex={-1}>{selectedFamily.title}</h2><p>{selectedFamily.problem}</p></div>
               </div>
               <div className="gsdw-fit-reasons">
-                <span className="gsdw-mini-label">لماذا ظهر هذا الاتجاه؟</span>
+                <span className="gsdw-mini-label">{directionPresentation.reasonLabel}</span>
                 {recommendation.reasons.length > 0 ? (
                   <ul>{recommendation.reasons.map((reason) => <li key={reason}><i />{reason}</li>)}</ul>
-                ) : <p>بناءً على الاتجاه الذي اخترته مباشرة، دون استنتاج معلومات إضافية.</p>}
+                ) : <p>لم تُضف معلومات تتجاوز اختيارك الحالي.</p>}
               </div>
             </div>
 
@@ -753,7 +875,13 @@ export function SolutionsDecisionWorkspace({
                   <p>{alternativeFamily.problem}</p>
                   <button
                     type="button"
-                    onClick={() => buildRecommendation(alternativeFamily.id, selectedFamily.id, [`راجعت الاتجاه البديل: ${alternativeFamily.title}`])}
+                    onClick={() => buildUserSelection(
+                      alternativeFamily.id,
+                      'USER_ALTERNATIVE',
+                      selectedFamily.id,
+                      [`اخترت الاتجاه البديل بعد المراجعة: ${alternativeFamily.title}`],
+                      recommendationResolution,
+                    )}
                   >
                     اجعله الاتجاه الأساسي
                   </button>
@@ -799,7 +927,7 @@ export function SolutionsDecisionWorkspace({
           <section className="gsdw-configure" aria-labelledby="gsdw-configure-title" data-phase={configurationPhase}>
             <div className="gsdw-section-heading gsdw-section-heading--compact">
               <span className="gsdw-eyebrow"><i /> CONFIGURATION <b>ليس عرض سعر</b></span>
-              <h2 id="gsdw-configure-title">كوّن ما يخدم القرار،<br />واترك الباقي خارج المشهد.</h2>
+              <h2 id="gsdw-configure-title" data-step-focus="configure" tabIndex={-1}>كوّن ما يخدم القرار،<br />واترك الباقي خارج المشهد.</h2>
               <p>{selectedFamily.title} — كل اختيار هنا تفضيل قابل للمراجعة.</p>
             </div>
             <nav className="gsdw-config-phases" aria-label="مراحل التكوين">
@@ -960,11 +1088,11 @@ export function SolutionsDecisionWorkspace({
           <section className="gsdw-summary" aria-labelledby="gsdw-summary-title">
             <div className="gsdw-summary-heading">
               <span className="gsdw-eyebrow"><i /> DECISION SUMMARY <b>جاهز للمراجعة</b></span>
-              <h2 id="gsdw-summary-title">قرار منظم،<br />لا يقين مصطنع.</h2>
-              <p>يفصل هذا الملخص بين ما قدّمته، وتوصية النظام أو اتجاهك الحالي، والتكوين المدرج الآن، وما يحتاج اكتشافًا لاحقًا.</p>
+              <h2 id="gsdw-summary-title" data-step-focus="summary" tabIndex={-1}>قرار منظم،<br />لا يقين مصطنع.</h2>
+              <p>يفصل هذا الملخص بين ما قدّمته، ومصدر الاتجاه الحالي، والتكوين المدرج الآن، وما يحتاج اكتشافًا لاحقًا.</p>
               <div className="gsdw-summary-legend" aria-label="مفتاح أنواع المعلومات">
                 <span data-kind="fact"><i /> معلومات قدّمتها</span>
-                <span data-kind="recommendation"><i /> توصية النظام / الاتجاه الحالي</span>
+                <span data-kind="recommendation"><i /> {decisionOrigin === 'SYSTEM_FINDER' ? 'توصية النظام' : 'اتجاه اخترته أنت'}</span>
                 <span data-kind="configuration"><i /> التكوين الحالي</span>
                 <span data-kind="unknown"><i /> يحتاج اكتشافًا</span>
               </div>
@@ -985,7 +1113,7 @@ export function SolutionsDecisionWorkspace({
                 <SummaryRow kind="unknown" label="المشكلة والنتيجة">لم تُجمع عبر Finder؛ بدأ القرار من عائلة حل.</SummaryRow>
               )}
 
-              <SummaryRow kind="recommendation" label={mode === 'discover' ? 'الاتجاه الموصى به' : 'الاتجاه الحالي'} provenance={recommendationProvenance}>
+              <SummaryRow kind="recommendation" label={directionPresentation.summaryLabel} provenance={directionPresentation.provenance}>
                 <strong>{selectedFamily.title}</strong><p>{selectedFamily.problem}</p>
               </SummaryRow>
 
@@ -1049,9 +1177,9 @@ export function SolutionsDecisionWorkspace({
 
             <aside className="gsdw-summary-actions">
               <span className="gsdw-mini-label">راجع قبل الانتقال</span>
-              <button type="button" onClick={() => setStep('recommend')}><span>01</span> راجع الاتجاه</button>
-              <button type="button" onClick={() => { setConfigurationPhase('capabilities'); setStep('configure'); }}><span>02</span> عدّل القدرات</button>
-              <button type="button" onClick={() => { setConfigurationPhase('constraints'); setStep('configure'); }}><span>03</span> عدّل الميزانية والاعتمادات</button>
+              <button type="button" onClick={() => moveToStep('recommend')}><span>01</span> راجع الاتجاه</button>
+              <button type="button" onClick={() => { setConfigurationPhase('capabilities'); moveToStep('configure'); }}><span>02</span> عدّل القدرات</button>
+              <button type="button" onClick={() => { setConfigurationPhase('constraints'); moveToStep('configure'); }}><span>03</span> عدّل الميزانية والاعتمادات</button>
               <div className="gsdw-next-action">
                 <small>الخطوة المقترحة</small>
                 <strong>بدء جلسة <bdi dir="ltr">Discovery</bdi> بهذه الخلاصة</strong>
