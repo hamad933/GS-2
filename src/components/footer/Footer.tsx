@@ -1,4 +1,6 @@
 import { MailIcon } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { FOOTER_NAV_ITEMS } from '../../routes/publicRoutes';
 
 export function Footer() {
   return (
@@ -17,11 +19,11 @@ export function Footer() {
         </p>
 
         <nav className="gs-footer__links" aria-label="روابط أسفل الصفحة">
-          <a href="#hero">الرئيسية</a>
-          <a href="#solutions-universe">الحلول</a>
-          <a href="#reference-proof">الأعمال</a>
-          <a href="#system-anatomy">منهجنا</a>
-          <a href="#project-gateway">ابدأ مشروعك</a>
+          {FOOTER_NAV_ITEMS.map((item) => (
+            <NavLink key={item.path} to={item.path} end={item.path === '/'}>
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
 
         <a
