@@ -23,6 +23,7 @@ const emptyDraft: StartDiscoveryDraft = {
   expectedOutcomes: '',
   importantWorkflows: '',
   recommendedFamily: '',
+  solutionFamilyId: '',
   selectedCapabilities: [],
   optionalCapabilities: [],
   uncertainCapabilities: [],
@@ -128,6 +129,39 @@ function normalizeCapturedFacts(
   return Object.keys(result).length ? result : undefined;
 }
 
+function familyContextLabel(draft: StartDiscoveryDraft) {
+  switch (draft.decisionOrigin) {
+    case 'SYSTEM_FINDER':
+      return 'عائلة أوصى بها Finder من المدخلات المتاحة';
+    case 'USER_DIRECT':
+      return 'عائلة اخترتها مباشرة في مساحة الحلول';
+    case 'USER_COMPARE':
+      return 'عائلة اخترتها بعد المقارنة';
+    case 'USER_OPEN_DIRECTION':
+      return 'عائلة اخترتها من اتجاهات بقيت مفتوحة';
+    case 'USER_ALTERNATIVE':
+      return 'عائلة بديلة اخترتها بعد المراجعة';
+    default:
+      return 'عائلة محمولة من السياق';
+  }
+}
+
+function decisionResolutionContext(draft: StartDiscoveryDraft) {
+  if (draft.decisionOrigin === 'SYSTEM_FINDER' && draft.recommendationResolution === 'decisive') {
+    return 'Finder أعطى اتجاهًا حاسمًا وفق المدخلات المتاحة.';
+  }
+  if (draft.decisionOrigin === 'USER_OPEN_DIRECTION' && draft.recommendationResolution === 'tied') {
+    return 'اختيار المستخدم تم بعد تعادل اتجاهات Finder؛ لم يحوّل النظام التعادل إلى توصية.';
+  }
+  if (
+    draft.decisionOrigin === 'USER_OPEN_DIRECTION'
+    && draft.recommendationResolution === 'insufficient'
+  ) {
+    return 'اختيار المستخدم تم مع بقاء معلومات Finder غير كافية للحسم.';
+  }
+  return undefined;
+}
+
 export function createStartDiscoveryDraft(
   prefill?: StartDiscoveryPrefill,
   initialCertainty?: DiscoveryCertainty,
@@ -155,6 +189,9 @@ export function createStartDiscoveryDraft(
     objective: prefill.selectedOutcome?.trim() ?? '',
     currentProblem: prefill.selectedProblem?.trim() ?? '',
     recommendedFamily: prefill.recommendedFamily?.trim() ?? '',
+    solutionFamilyId: prefill.solutionFamilyId?.trim() ?? '',
+    decisionOrigin: prefill.decisionOrigin,
+    recommendationResolution: prefill.recommendationResolution,
     selectedCapabilities: hasExplicitProvenance
       ? unique(
           carriedUserSelections
@@ -241,6 +278,7 @@ export function buildDiscoverySummary(
       (selection) =>
         `${selection.name} — ${capabilityClassificationLabels[selection.classification]}`,
     );
+  const carriedDecisionResolution = decisionResolutionContext(draft);
 
   return {
     title: draft.objective || 'ملخص تعريف المشروع',
@@ -266,7 +304,8 @@ export function buildDiscoverySummary(
         item('قدرات اخترتها أنت', draft.selectedCapabilities),
       ]),
       group('preferred', [
-        item('عائلة موصى بها من السياق', values(draft.recommendedFamily)),
+        item(familyContextLabel(draft), values(draft.recommendedFamily)),
+        item('سياق حسم الاتجاه', values(carriedDecisionResolution)),
         item('قدرات أدرجها النظام مبدئيًا', systemSeededCapabilities),
         item('قدرات اختيارية اخترتها أنت', draft.optionalCapabilities),
         item('تفضيل التكوين', values(draft.configurationPreference)),
