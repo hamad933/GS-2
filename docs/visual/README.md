@@ -73,27 +73,86 @@ The Visual Evidence workflow validates the exact candidate commit, not an inferr
 2. verify `git rev-parse HEAD` equals that exact SHA;
 3. for pull requests, run `git diff --check` from the event base SHA to the event head SHA;
 4. run `npm ci`, lint, typecheck, build, and install Chromium before browser validation;
-5. run every browser command with the Chromium project and `workers=1`.
+5. preserve visible failures: required suites do not use `continue-on-error`, and Playwright exit codes are not swallowed.
 
-The dedicated regression matrix is:
+## Canonical Playwright harness map
 
-- `tests/visual/solutions/solutions-workspace.visual.spec.ts`
-- `tests/visual/start-discovery/start-discovery.spec.ts`
-- `tests/visual/route-performance/route-performance.spec.ts`
-- `tests/visual/public-semantics/public-semantics.spec.ts`
+Fixture/config-specific suites execute through their repository-native configs so each config owns its intended server, fixture, base URL, and browser contract. They must not be forced through the root public-app server on port 4173.
 
-The W08-B specialized regression is conditional because it belongs to a future integrated candidate path:
+The canonical specialized executions are:
+
+```sh
+npx playwright test --config=tests/visual/solutions/playwright.config.ts
+npx playwright test --config=tests/visual/start-discovery/playwright.config.ts
+npx playwright test --config=tests/visual/public-semantics/playwright.config.ts
+npx playwright test --config=tests/visual/reference-projects/playwright.config.ts
+```
+
+The root public-app Playwright config remains the contract for the root-app suites. The Visual Evidence workflow runs these explicitly with Chromium and one worker:
+
+```sh
+npx playwright test tests/visual/route-performance/route-performance.spec.ts --project=chromium --workers=1
+npx playwright test tests/visual/how-we-work/how-we-work.visual.spec.ts --project=chromium --workers=1
+npx playwright test tests/visual/shell.routing.spec.ts --project=chromium --workers=1
+npx playwright test tests/visual/home-public-routing/home-public-routing.spec.ts --project=chromium --workers=1
+npx playwright test tests/visual/public-site.integration.spec.ts --project=chromium --workers=1
+npx playwright test tests/visual/public-site.evidence.spec.ts --project=chromium --workers=1
+```
+
+Do not invent a shared Playwright config merely to reduce command count. Harness ownership is part of the evidence contract.
+
+## W08-B diff-aware specialized regression contract
+
+For pull-request events, the workflow inspects the exact event base-to-head changed paths before deciding whether the W08-B specialized regression is required. The bounded canonical W08-B product-scope set is the accepted PR67/Home-RP product surface:
+
+- `src/components/footer/Footer.remediation.css`
+- `src/components/footer/Footer.tsx`
+- `src/components/project/ProjectMedia.tsx`
+- `src/components/sections/ReferenceProof.remediation.css`
+- `src/components/sections/ReferenceProof.tsx`
+- `src/data/homeShowcase.ts`
+
+The specialized regression path is:
 
 - `tests/visual/home-public-routing/gs-pages-w08-b-home-truth.spec.ts`
 
-If that file exists on the exact tested head, the workflow must execute it. If it does not exist, the workflow must emit an explicit informational skip. A present file must never be silently ignored.
+The deterministic rule is:
 
-After the dedicated regression matrix and conditional W08-B route, the workflow runs both whole-site layers:
+- if any bounded W08-B-owned product path appears in the pull-request base-to-head diff, the specialized regression file must exist; absence is a required-suite failure;
+- if the specialized regression file exists on the exact tested head, it is executed even when the current pull-request diff contains no W08-B-owned product path;
+- only when no bounded W08-B product path is in scope and the specialized file is also absent may the workflow emit an explicit out-of-scope informational skip;
+- no future integration branch name is used as the criterion.
 
-- `tests/visual/public-site.integration.spec.ts` — whole-site integration validation;
-- `tests/visual/public-site.evidence.spec.ts` — whole-site rendered evidence capture.
+This allows standalone governance PRs to remain correctly out of scope while preventing a future integrated candidate from false-passing after accepting W08-B product changes without its required specialized regression.
 
-The evidence harness includes two governed W08-R5 Family Compare at-limit captures after opening `/solutions`, choosing `أريد مقارنة الخيارات`, selecting exactly two families, and exposing a remaining unselected family with `aria-disabled="true"` and its visible semantic cue:
+## Final evidence route coverage and M14 dependency
+
+The source-ready workflow is intended to be capable of executing on one exact future integrated SHA:
+
+- lint;
+- typecheck;
+- build;
+- Solutions canonical suite;
+- Start / Discovery canonical suite;
+- Public Semantics canonical suite;
+- Reference Projects canonical suite;
+- route-performance;
+- How We Work;
+- shell routing;
+- Home public routing;
+- W08-B specialized regression when in scope, and whenever the file exists;
+- whole-site integration;
+- whole-site evidence;
+- the governed R5 Compare-at-limit capture at `1440x900`;
+- the governed R5 Compare-at-limit capture at `390x844`.
+
+`FINAL EVIDENCE ROUTE SOURCE_READY` is contingent on the accepted PR69 R6 correction for `GS-DR001-M14` being integrated. The current stale `tests/visual/public-site.integration.spec.ts` is not modified by GS-GOV-W08-C-R3. This governance route must not compensate for M14 by changing application or test semantics, and no PASS is claimed for final integrated execution until all required suites actually run on that exact integrated SHA.
+
+## R5 rendered capture preservation
+
+The whole-site evidence harness remains the owner of the two governed W08-R5 Family Compare at-limit captures. GS-GOV-W08-C-R3 does not modify `tests/visual/public-site.evidence.spec.ts` or their semantics.
+
+The required preserved files are:
 
 - `w08-r5-1440-solutions-compare-at-limit.png` at a `1440x900` viewport;
 - `w08-r5-390-solutions-compare-at-limit.png` at a `390x844` viewport.
