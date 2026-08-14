@@ -89,6 +89,10 @@ export function ReferenceProof() {
         }}
       />
 
+      <p className="reference-proof-v2__mobile-evidence-boundary" data-visible-evidence-boundary>
+        التصورات المرئية هنا توضيحية وغير توثيقية؛ ليست لقطات من المنتج ولا دليلًا إنتاجيًا معتمدًا.
+      </p>
+
       <div ref={selectorGroupRef} className="reference-proof-v2__selectors project-index" role="group" aria-label="اختر مشروعًا آخر">
         {alternatives.map((project) => (
           <button
