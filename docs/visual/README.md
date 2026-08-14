@@ -63,7 +63,48 @@ The current W07-era public site is larger than the W05 Hero/Homepage-only eviden
 
 `tests/visual/hero.visual.spec.ts` remains useful for bounded Hero/Homepage-specific review. It must not be treated as the generic future whole-public-site evidence contract.
 
-The generic Visual Evidence workflow must run the whole-public-site harnesses above and verify that screenshot evidence was actually produced. It must not encode a permanent W05 screenshot-filename manifest as repository-wide policy. Screenshot filenames emitted by a current harness are an implementation detail of that harness and may evolve with an authorized future site baseline.
+The generic Visual Evidence workflow must run the whole-public-site harnesses above and verify that screenshot evidence was actually produced. It must not encode a permanent historical screenshot-filename manifest as repository-wide policy. Screenshot filenames emitted by a current harness may evolve with an authorized future site baseline; only explicitly governed critical captures are required by name when a current workstream contract demands them.
+
+## Exact-head evidence route contract
+
+The Visual Evidence workflow validates the exact candidate commit, not an inferred branch tip or a stale checkout. It must:
+
+1. check out `${{ github.event.pull_request.head.sha || github.sha }}` with full history;
+2. verify `git rev-parse HEAD` equals that exact SHA;
+3. for pull requests, run `git diff --check` from the event base SHA to the event head SHA;
+4. run `npm ci`, lint, typecheck, build, and install Chromium before browser validation;
+5. run every browser command with the Chromium project and `workers=1`.
+
+The dedicated regression matrix is:
+
+- `tests/visual/solutions/solutions-workspace.visual.spec.ts`
+- `tests/visual/start-discovery/start-discovery.spec.ts`
+- `tests/visual/route-performance/route-performance.spec.ts`
+- `tests/visual/public-semantics/public-semantics.spec.ts`
+
+The W08-B specialized regression is conditional because it belongs to a future integrated candidate path:
+
+- `tests/visual/home-public-routing/gs-pages-w08-b-home-truth.spec.ts`
+
+If that file exists on the exact tested head, the workflow must execute it. If it does not exist, the workflow must emit an explicit informational skip. A present file must never be silently ignored.
+
+After the dedicated regression matrix and conditional W08-B route, the workflow runs both whole-site layers:
+
+- `tests/visual/public-site.integration.spec.ts` — whole-site integration validation;
+- `tests/visual/public-site.evidence.spec.ts` — whole-site rendered evidence capture.
+
+The evidence harness includes two governed W08-R5 Family Compare at-limit captures after opening `/solutions`, choosing `أريد مقارنة الخيارات`, selecting exactly two families, and exposing a remaining unselected family with `aria-disabled="true"` and its visible semantic cue:
+
+- `w08-r5-1440-solutions-compare-at-limit.png` at a `1440x900` viewport;
+- `w08-r5-390-solutions-compare-at-limit.png` at a `390x844` viewport.
+
+Artifact validation remains generic for the rest of the evidence directory: at least one PNG must exist and every discovered PNG must be non-empty. The two governed W08-R5 captures above are additionally required to exist and be non-empty. This does not create a fixed historical manifest for every screenshot.
+
+The uploaded artifact name is SHA-bound:
+
+`gs-public-site-reference-only-${{ github.event.pull_request.head.sha || github.sha }}`
+
+That artifact is technical evidence bound to one exact candidate SHA. It is `REFERENCE_ONLY`; it is not release authority, merge authority, or Owner acceptance.
 
 ## Evidence and acceptance
 
@@ -73,4 +114,6 @@ A section may fail visual review when imagery and DOM still read as separate lay
 
 Repository screenshots and GitHub Actions artifacts are `REFERENCE_ONLY` by default unless a separately authorized governance action promotes them under `docs/governance/EVIDENCE_AND_HANDOFF.md`. Executors do not write them to Google Drive.
 
-Controller review and owner acceptance are distinct. `CONTROLLER VISUAL PASS` does not equal `OWNER VISUAL ACCEPTANCE`. Where owner visual acceptance is reserved by the governed control state or Workstream Contract, only explicit owner acceptance satisfies that gate.
+Controller technical review and Owner acceptance are distinct. `CONTROLLER VISUAL PASS` or another Controller technical pass does not equal `OWNER VISUAL ACCEPTANCE`. Where Owner acceptance is reserved by the governed control state or Workstream Contract, only explicit Owner acceptance satisfies that gate.
+
+A GitHub Actions job that never starts because of account billing, spending-limit, runner-platform, or equivalent platform restriction is classified as `PLATFORM/BILLING BLOCKED` when that is the directly verified cause. That state is neither an implementation PASS nor an implementation FAIL. No lint, typecheck, build, browser, screenshot, or artifact conclusion may be inferred from an unstarted job.
