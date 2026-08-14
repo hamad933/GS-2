@@ -347,7 +347,6 @@
   opacity: .25;
   clip-path: inherit;
 }
-
 .e2-cta svg {
   width: 16px;
   height: 16px;
@@ -1723,5 +1722,39 @@
     animation-duration: .01ms;
     transition-duration: .01ms;
     scroll-behavior: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .e2-kicker,
+  .e2-wall-header small,
+  .e2-wall-intro,
+  .e2-direction-selector > p,
+  .e2-direction-selector .e2-choice-label small,
+  .e2-build-header small,
+  .e2-build-header > span,
+  .e2-build-phases li strong,
+  .e2-build-phases li small,
+  .e2-build-workbench label,
+  .e2-build-workbench input,
+  .e2-launch-chamber header small,
+  .e2-launch-chamber header p,
+  .e2-launch-primary small,
+  .e2-resolution-flow b,
+  .e2-resolution-flow small,
+  .e2-stage-rail-title,
+  .e2-stage-track b {
+    font-size: 10px;
+  }
+
+  .e2-cta,
+  .e2-build-workbench > button,
+  .e2-build-workbench form button {
+    font-size: 11px;
+  }
+
+  .e2-cta,
+  .e2-build-workbench > button {
+    min-height: 44px;
   }
 }
