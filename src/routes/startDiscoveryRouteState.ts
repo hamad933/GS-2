@@ -4,7 +4,9 @@ import {
   type DiscoveryCapabilityProvenance,
   type DiscoveryCapabilitySelection,
   type DiscoveryCapturedFacts,
+  type DiscoveryDecisionOrigin,
   type DiscoveryPrefillSource,
+  type DiscoveryRecommendationResolution,
   type StartDiscoveryPrefill,
 } from '../types/start-discovery';
 
@@ -20,6 +22,18 @@ const capabilityClassifications = new Set<DiscoveryCapabilityClassification>([
 const capabilityProvenance = new Set<DiscoveryCapabilityProvenance>([
   'SYSTEM_SEEDED',
   'USER_SELECTED',
+]);
+const decisionOrigins = new Set<DiscoveryDecisionOrigin>([
+  'SYSTEM_FINDER',
+  'USER_DIRECT',
+  'USER_COMPARE',
+  'USER_OPEN_DIRECTION',
+  'USER_ALTERNATIVE',
+]);
+const recommendationResolutions = new Set<DiscoveryRecommendationResolution>([
+  'decisive',
+  'tied',
+  'insufficient',
 ]);
 const capturedFactFields = [
   'outcome',
@@ -135,6 +149,7 @@ export function readStartDiscoveryRouteState(
     'selectedProblem',
     'selectedOutcome',
     'recommendedFamily',
+    'solutionFamilyId',
     'configurationPreference',
     'budgetPreference',
     'relevantReferenceContext',
@@ -144,6 +159,25 @@ export function readStartDiscoveryRouteState(
     if (typeof value !== 'string') continue;
     prefill[field] = value;
     if (value.trim()) hasUsableContext = true;
+  }
+
+  if (
+    typeof candidate.decisionOrigin === 'string'
+    && decisionOrigins.has(candidate.decisionOrigin as DiscoveryDecisionOrigin)
+  ) {
+    prefill.decisionOrigin = candidate.decisionOrigin as DiscoveryDecisionOrigin;
+    hasUsableContext = true;
+  }
+
+  if (
+    typeof candidate.recommendationResolution === 'string'
+    && recommendationResolutions.has(
+      candidate.recommendationResolution as DiscoveryRecommendationResolution,
+    )
+  ) {
+    prefill.recommendationResolution =
+      candidate.recommendationResolution as DiscoveryRecommendationResolution;
+    hasUsableContext = true;
   }
 
   const arrayFields = [
