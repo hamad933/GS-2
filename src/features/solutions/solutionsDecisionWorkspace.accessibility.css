@@ -109,6 +109,15 @@
   color: #938b83;
 }
 
+/* Keep Compare-at-limit families unavailable without reducing semantic text opacity. */
+.gsdw .gsdw-family-field button[aria-disabled='true']:not(.is-selected) {
+  opacity: 1;
+  cursor: not-allowed;
+  border-color: rgba(169, 137, 93, .12);
+  background: rgba(7, 15, 19, .58);
+  transform: none;
+}
+
 /* Preserve blue semantic distinctions with a contrast-safe source color. */
 .gsdw .gsdw-principle span,
 .gsdw .gsdw-answer-ledger button b,
