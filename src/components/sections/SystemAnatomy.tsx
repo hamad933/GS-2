@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import anatomyObject from '../../assets/gs-home-v2/04_GS_System_Anatomy_Clean_Production_Asset.webp';
 import './SystemAnatomy.v2.css';
 
@@ -134,7 +135,14 @@ export function SystemAnatomy() {
 
         <div className="anatomy-top-band" aria-label="هوية القسم">
           <span className="anatomy-brand">GENERAL SOLUTIONS</span>
-          <span>منهج العمل</span>
+          <span>
+            <Link
+              className="anatomy-route-link"
+              to="/how-we-work"
+              aria-label="استكشف كيف نعمل">
+              كيف نعمل
+            </Link>
+          </span>
           <span>خمس مراحل</span>
           <strong><b>04</b> تشريح النظام</strong>
         </div>

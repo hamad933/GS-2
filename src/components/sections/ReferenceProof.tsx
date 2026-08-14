@@ -1,4 +1,5 @@
 import { useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { ProjectMedia } from '../project/ProjectMedia';
 import { referenceProjects, type ReferenceProject } from '../../data/homeShowcase';
 import { referenceProjectMedia } from '../../data/referenceProjectMedia';
@@ -129,6 +130,9 @@ export function ReferenceProof() {
         <div className="reference-proof-v2__project-heading">
           <span dir="ltr">{active.index}</span>
           <p>المشروع المعروض</p>
+          <Link className="reference-proof-v2__route" to="/reference-projects">
+            شاهد المشاريع المرجعية <span aria-hidden="true">←</span>
+          </Link>
         </div>
 
         <div className="reference-proof-v2__project-copy">
