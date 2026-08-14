@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const HOME = '#main-content';
 
@@ -75,6 +75,11 @@ async function openHome(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator(HOME)).toBeFocused();
   await expect(page.locator('#hero')).toHaveAttribute('data-stage', 'need');
+}
+
+async function expectFontAtLeast(locator: Locator, minimumPx: number) {
+  const fontSize = await locator.evaluate((element) => Number.parseFloat(window.getComputedStyle(element).fontSize));
+  expect(fontSize).toBeGreaterThanOrEqual(minimumPx);
 }
 
 async function expectVisibleFocus(page: Page, selector: string, label: string) {
@@ -208,6 +213,39 @@ test('Homepage entry metadata and deliberate RTL/LTR direction are preserved', a
   expect(entryHtml).toContain('<title>حلول رقمية تبدأ من احتياجك | General Solutions</title>');
   expect(entryHtml).not.toContain('/vite.svg');
 });
+
+for (const width of [430, 390]) {
+  test(`Homepage primary mobile controls remain readable and menu target is at least 44px at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await openHome(page);
+
+    const menu = page.locator('.hero-nav__menu-toggle');
+    await expect(menu).toBeVisible();
+    const menuBox = await menu.boundingBox();
+    expect(menuBox).not.toBeNull();
+    expect(menuBox?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(menuBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    const navContact = page.locator('.hero-nav__contact');
+    await expect(navContact).toBeVisible();
+    await expectFontAtLeast(navContact, 11);
+    const contactBox = await navContact.boundingBox();
+    expect(contactBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    await expectFontAtLeast(page.locator('#hero .e2-cta-primary'), 11);
+    await expectFontAtLeast(page.locator('#hero .e2-wall-intro'), 10);
+
+    const solutions = page.locator('#solutions-universe');
+    await expectFontAtLeast(solutions.locator('.s02-actions a[href="/solutions"]'), 11);
+    await expectFontAtLeast(solutions.locator('.s02-station-5 .s02-station-copy strong'), 10);
+    await expectFontAtLeast(solutions.locator('.s02-segment-band span').first(), 10);
+
+    const proof = page.locator('#reference-proof');
+    await expectFontAtLeast(proof.locator('.reference-proof-v2__route'), 11);
+    await expectFontAtLeast(proof.locator('.reference-proof-v2__selector-title').first(), 10);
+    await expectFontAtLeast(proof.locator('.reference-proof-v2__selector-family').first(), 10);
+  });
+}
 
 for (const width of [1440, 1024, 768, 430, 390]) {
   test(`Homepage route affordances have no horizontal overflow at ${width}px`, async ({ page }) => {
