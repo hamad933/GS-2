@@ -32,6 +32,15 @@ export type DiscoveryCapabilityClassification =
 
 export type DiscoveryCapabilityProvenance = 'SYSTEM_SEEDED' | 'USER_SELECTED';
 
+export type DiscoveryDecisionOrigin =
+  | 'SYSTEM_FINDER'
+  | 'USER_DIRECT'
+  | 'USER_COMPARE'
+  | 'USER_OPEN_DIRECTION'
+  | 'USER_ALTERNATIVE';
+
+export type DiscoveryRecommendationResolution = 'decisive' | 'tied' | 'insufficient';
+
 export interface DiscoveryCapabilitySelection {
   name: string;
   classification: DiscoveryCapabilityClassification;
@@ -66,6 +75,12 @@ export interface StartDiscoveryPrefill {
   selectedProblem?: string;
   selectedOutcome?: string;
   recommendedFamily?: string;
+  /** Stable family identity from the originating decision surface. */
+  solutionFamilyId?: string;
+  /** Whether the family was recommended by the system or chosen by the user. */
+  decisionOrigin?: DiscoveryDecisionOrigin;
+  /** Finder resolution carried as context when a Finder result was involved. */
+  recommendationResolution?: DiscoveryRecommendationResolution;
   selectedCapabilities?: readonly string[];
   optionalCapabilities?: readonly string[];
   capabilitySelections?: readonly DiscoveryCapabilitySelection[];
@@ -86,6 +101,9 @@ export interface StartDiscoveryDraft {
   expectedOutcomes: string;
   importantWorkflows: string;
   recommendedFamily: string;
+  solutionFamilyId: string;
+  decisionOrigin?: DiscoveryDecisionOrigin;
+  recommendationResolution?: DiscoveryRecommendationResolution;
   selectedCapabilities: string[];
   optionalCapabilities: string[];
   uncertainCapabilities: string[];
