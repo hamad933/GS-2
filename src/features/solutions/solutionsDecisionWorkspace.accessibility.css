@@ -40,72 +40,73 @@
 /*
  * Functional metadata carries decision, provenance, evidence, or classification
  * meaning. Keep that layer above the former 5–6px floor at every breakpoint.
+ * The root prefix deliberately outranks the older breakpoint-specific selectors.
  */
-.gsdw-progress small,
-.gsdw-principle span,
-.gsdw-answer-ledger > span,
-.gsdw-answer-ledger button b,
-.gsdw-answer-ledger button small,
-.gsdw-mini-label,
-.gsdw-options button small,
-.gsdw-constraints-input > span small,
-.gsdw-family-field button small,
-.gsdw-quick-context li,
-.gsdw-comparison-head span,
-.gsdw-comparison-row > span,
-.gsdw-comparison-actions > span,
-.gsdw-recommendation-title small,
-.gsdw-panel-code,
-.gsdw-unknown-panel li,
-.gsdw-alternative-panel button,
-.gsdw-family-context summary small,
-.gsdw-details-grid ul em,
-.gsdw-reference-context p,
-.gsdw-evidence > strong,
-.gsdw-decision-bar > div > span,
-.gsdw-capability small,
-.gsdw-capability em,
-.gsdw-matrix-labels span,
-.gsdw-matrix-head small,
-.gsdw-matrix-head p,
-.gsdw-option-matrix > button > span:not(.gsdw-matrix-head),
-.gsdw-budget-status small,
-.gsdw-budget-status strong,
-.gsdw-dependencies label small,
-.gsdw-summary-legend,
-.gsdw-sheet-head span,
-.gsdw-sheet-head small,
-.gsdw-summary-row > div:first-child em,
-.gsdw-summary-row li > span,
-.gsdw-summary-capabilities small,
-.gsdw-next-action small,
-.gsdw-next-action p,
-.gsdw-prepared {
+.gsdw .gsdw-progress small,
+.gsdw .gsdw-principle span,
+.gsdw .gsdw-answer-ledger > span,
+.gsdw .gsdw-answer-ledger button b,
+.gsdw .gsdw-answer-ledger button small,
+.gsdw .gsdw-mini-label,
+.gsdw .gsdw-options button small,
+.gsdw .gsdw-constraints-input > span small,
+.gsdw .gsdw-family-field button small,
+.gsdw .gsdw-quick-context li,
+.gsdw .gsdw-comparison-head span,
+.gsdw .gsdw-comparison-row > span,
+.gsdw .gsdw-comparison-actions > span,
+.gsdw .gsdw-recommendation-title small,
+.gsdw .gsdw-panel-code,
+.gsdw .gsdw-unknown-panel li,
+.gsdw .gsdw-alternative-panel button,
+.gsdw .gsdw-family-context summary small,
+.gsdw .gsdw-details-grid ul em,
+.gsdw .gsdw-reference-context p,
+.gsdw .gsdw-evidence > strong,
+.gsdw .gsdw-decision-bar > div > span,
+.gsdw .gsdw-capability small,
+.gsdw .gsdw-capability em,
+.gsdw .gsdw-matrix-labels span,
+.gsdw .gsdw-matrix-head small,
+.gsdw .gsdw-matrix-head p,
+.gsdw .gsdw-option-matrix > button > span:not(.gsdw-matrix-head),
+.gsdw .gsdw-budget-status small,
+.gsdw .gsdw-budget-status strong,
+.gsdw .gsdw-dependencies label small,
+.gsdw .gsdw-summary-legend,
+.gsdw .gsdw-sheet-head span,
+.gsdw .gsdw-sheet-head small,
+.gsdw .gsdw-summary-row > div:first-child em,
+.gsdw .gsdw-summary-row li > span,
+.gsdw .gsdw-summary-capabilities small,
+.gsdw .gsdw-next-action small,
+.gsdw .gsdw-next-action p,
+.gsdw .gsdw-prepared {
   font-size: 8px;
 }
 
-.gsdw-matrix-labels::before {
+.gsdw .gsdw-matrix-labels::before {
   font-size: 8px;
 }
 
-.gsdw-panel-code,
-.gsdw-summary-row > div:first-child em,
-.gsdw-summary-row li > span,
-.gsdw-summary-capabilities small,
-.gsdw-capability em,
-.gsdw-details-grid ul em,
-.gsdw-budget-status small,
-.gsdw-family-context summary small,
-.gsdw-reference-context p {
+.gsdw .gsdw-panel-code,
+.gsdw .gsdw-summary-row > div:first-child em,
+.gsdw .gsdw-summary-row li > span,
+.gsdw .gsdw-summary-capabilities small,
+.gsdw .gsdw-capability em,
+.gsdw .gsdw-details-grid ul em,
+.gsdw .gsdw-budget-status small,
+.gsdw .gsdw-family-context summary small,
+.gsdw .gsdw-reference-context p {
   color: #938b83;
 }
 
-.gsdw-evidence > strong {
+.gsdw .gsdw-evidence > strong {
   color: #a98a62;
 }
 
-.gsdw-panel-code,
-.gsdw-sheet-head span {
+.gsdw .gsdw-panel-code,
+.gsdw .gsdw-sheet-head span {
   color: #91a7e8;
 }
 
