@@ -96,6 +96,9 @@ const budgetLabels = Object.fromEntries(
   budgetPreferences.map((preference) => [preference.id, preference.title]),
 ) as Record<BudgetPreferenceId, string>;
 
+const decisionTextStyle = { fontSize: '10px' } as const;
+const primaryControlTextStyle = { fontSize: '11px' } as const;
+
 function handleRovingRadioKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
   const navigationKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
   if (!navigationKeys.includes(event.key)) return;
@@ -213,8 +216,8 @@ function ComparisonField({ families, onChoose }: { families: SolutionFamily[]; o
   return (
     <div className="gsdw-comparison" aria-label="مقارنة اتجاهي الحل">
       <div className="gsdw-comparison-head" aria-hidden="true">
-        <span>بُعد القرار</span>
-        {families.map((family) => <strong key={family.id}>{family.title}</strong>)}
+        <span style={decisionTextStyle}>بُعد القرار</span>
+        {families.map((family) => <strong key={family.id} style={primaryControlTextStyle}>{family.title}</strong>)}
       </div>
       {[
         { label: 'النتيجة', render: (family: SolutionFamily) => family.problem },
@@ -224,14 +227,20 @@ function ComparisonField({ families, onChoose }: { families: SolutionFamily[]; o
         { label: 'الحدود', render: (family: SolutionFamily) => family.doesNotFit },
       ].map((row) => (
         <div className="gsdw-comparison-row" key={row.label}>
-          <span>{row.label}</span>
-          {families.map((family) => <p key={family.id}>{row.render(family)}</p>)}
+          <span style={decisionTextStyle}>{row.label}</span>
+          {families.map((family) => <p key={family.id} style={decisionTextStyle}>{row.render(family)}</p>)}
         </div>
       ))}
       <div className="gsdw-comparison-actions">
-        <span>الاتجاه الأقرب الآن</span>
+        <span style={decisionTextStyle}>الاتجاه الأقرب الآن</span>
         {families.map((family) => (
-          <button key={family.id} type="button" className="gsdw-button gsdw-button--quiet" onClick={() => onChoose(family.id)}>
+          <button
+            key={family.id}
+            type="button"
+            className="gsdw-button gsdw-button--quiet"
+            style={primaryControlTextStyle}
+            onClick={() => onChoose(family.id)}
+          >
             اعتماد {family.title}
           </button>
         ))}
@@ -322,7 +331,7 @@ export function SolutionsDecisionWorkspace({
   const [confirmedDependencies, setConfirmedDependencies] = useState<string[]>([]);
   const [transitionPrepared, setTransitionPrepared] = useState(false);
   const workspaceRef = useRef<HTMLElement>(null);
-  const pendingFocusStepRef = useRef<WorkspaceStep>();
+  const pendingFocusStepRef = useRef<WorkspaceStep | undefined>(undefined);
 
   const selectedFamily = recommendation?.recommendedId
     ? familyById[recommendation.recommendedId]
@@ -943,7 +952,7 @@ export function SolutionsDecisionWorkspace({
                   aria-current={configurationPhase === phase ? 'step' : undefined}
                   onClick={() => setConfigurationPhase(phase)}
                 >
-                  <b dir="ltr">{number}</b><span>{label}</span>
+                  <b dir="ltr">{number}</b><span style={primaryControlTextStyle}>{label}</span>
                 </button>
               ))}
             </nav>
