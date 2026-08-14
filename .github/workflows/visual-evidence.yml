@@ -60,6 +60,27 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Run dedicated public-site regression matrix
+        run: >-
+          npx playwright test
+          tests/visual/solutions/solutions-workspace.visual.spec.ts
+          tests/visual/start-discovery/start-discovery.spec.ts
+          tests/visual/route-performance/route-performance.spec.ts
+          tests/visual/public-semantics/public-semantics.spec.ts
+          --project=chromium
+          --workers=1
+
+      - name: Run W08-B home truth regression when present
+        shell: bash
+        run: |
+          test_path='tests/visual/home-public-routing/gs-pages-w08-b-home-truth.spec.ts'
+          if [[ -f "$test_path" ]]; then
+            echo "W08-B specialized regression present; executing: $test_path"
+            npx playwright test "$test_path" --project=chromium --workers=1
+          else
+            echo "::notice::W08-B specialized regression is absent on this exact head; informational skip: $test_path"
+          fi
+
       - name: Validate whole public site
         run: npx playwright test tests/visual/public-site.integration.spec.ts --project=chromium --workers=1
 
@@ -74,6 +95,12 @@ jobs:
           test "${#files[@]}" -gt 0
           for file in "${files[@]}"; do
             test -s "$file"
+          done
+
+          for required in \
+            'w08-r5-1440-solutions-compare-at-limit.png' \
+            'w08-r5-390-solutions-compare-at-limit.png'; do
+            test -s "$EVIDENCE_DIR/$required"
           done
 
       - name: Upload reference-only visual evidence
