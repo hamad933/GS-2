@@ -7,132 +7,6 @@
   --gs-blue: #557ff0;
 }
 
-.hero-nav {
-  position: absolute;
-  z-index: 40;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 80px;
-  display: grid;
-  grid-template-columns: minmax(240px, 1fr) auto minmax(240px, 1fr);
-  align-items: center;
-  gap: 28px;
-  padding: 0 clamp(34px, 4.2vw, 68px);
-  border-bottom: 1px solid #d1a56d38;
-  background:
-    linear-gradient(90deg, #071014d9 0 31.5%, #050b10ae 31.5% 54%, #03080dbf 54% 100%),
-    linear-gradient(180deg, #02070cf2, #02070ca1 72%, transparent);
-  box-shadow: inset 0 -1px #05090dcc, 0 18px 45px #0003;
-  color: var(--gs-paper);
-  direction: ltr;
-}
-
-.hero-nav::after {
-  content: '';
-  position: absolute;
-  right: 4.2vw;
-  bottom: -1px;
-  width: 91.6%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #8d704d52 31%, #e4bd86a3 47%, #8d704d4d 56%, transparent);
-}
-
-.hero-nav a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.hero-nav__brand {
-  justify-self: start;
-  display: inline-flex;
-  align-items: center;
-  gap: 13px;
-  direction: ltr;
-}
-
-.hero-nav__mark {
-  width: 30px;
-  height: 39px;
-  flex: 0 0 auto;
-  fill: none;
-  stroke: #d7ad75;
-  stroke-linecap: square;
-  stroke-linejoin: miter;
-  stroke-width: 1.25;
-  filter: drop-shadow(0 0 10px #d1a56d22);
-}
-
-.hero-nav__brand > span {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.hero-nav__brand b {
-  color: #e1bd88;
-  font: 500 17px/1.1 Georgia, serif;
-}
-
-.hero-nav__brand small {
-  color: #988e82;
-  font-size: 9px;
-  direction: rtl;
-}
-
-.hero-nav__links {
-  display: flex;
-  align-items: center;
-  gap: clamp(24px, 3vw, 48px);
-  direction: rtl;
-}
-
-.hero-nav__links a {
-  position: relative;
-  padding: 30px 0 25px;
-  color: #bdb5aa;
-  font-size: 12px;
-  transition: color 180ms ease;
-}
-
-.hero-nav__links a:hover,
-.hero-nav__links a[aria-current='page'] {
-  color: #f1e7db;
-}
-
-.hero-nav__links a[aria-current='page']::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 17px;
-  left: 0;
-  height: 1px;
-  background: #d8ab70;
-  box-shadow: 0 0 10px #d8ab708c;
-}
-
-.hero-nav__contact {
-  justify-self: end;
-  min-width: 132px;
-  min-height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #c4a06d5c;
-  background: #070d12a8;
-  color: #e9dfd2;
-  font-size: 10px;
-  direction: rtl;
-  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
-  transition: border-color 180ms ease, background 180ms ease;
-}
-
-.hero-nav__contact:hover {
-  border-color: #e4bd86;
-  background: #181a19d4;
-}
-
-.hero-nav a:focus-visible,
 .e2-hero a:focus-visible,
 .e2-hero button:focus-visible,
 .e2-hero input:focus-visible {
@@ -1437,16 +1311,6 @@
 }
 
 @media (max-width: 1100px) and (min-width: 801px) {
-  .hero-nav {
-    grid-template-columns: minmax(190px, 1fr) auto minmax(150px, 1fr);
-    gap: 18px;
-    padding-inline: 28px;
-  }
-
-  .hero-nav__links {
-    gap: 22px;
-  }
-
   .living-hero.e2-hero {
     height: 900px;
   }
@@ -1503,40 +1367,6 @@
 }
 
 @media (max-width: 800px) {
-  .hero-nav {
-    height: 72px;
-    grid-template-columns: 1fr auto;
-    gap: 16px;
-    padding: 0 18px;
-  }
-
-  .hero-nav__brand {
-    gap: 9px;
-  }
-
-  .hero-nav__mark {
-    width: 24px;
-    height: 32px;
-  }
-
-  .hero-nav__brand b {
-    font-size: 14px;
-  }
-
-  .hero-nav__brand small {
-    font-size: 7.5px;
-  }
-
-  .hero-nav__links {
-    display: none;
-  }
-
-  .hero-nav__contact {
-    min-width: 105px;
-    min-height: 34px;
-    font-size: 9px;
-  }
-
   .living-hero.e2-hero {
     height: 1020px;
     min-height: 1020px;
@@ -1661,18 +1491,6 @@
 }
 
 @media (max-width: 520px) {
-  .hero-nav {
-    padding-inline: 13px;
-  }
-
-  .hero-nav__brand small {
-    display: none;
-  }
-
-  .hero-nav__contact {
-    min-width: 98px;
-  }
-
   .living-hero.e2-hero {
     height: 1010px;
     min-height: 1010px;
@@ -1899,7 +1717,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-nav *,
   .e2-hero *,
   .e2-hero *::before,
   .e2-hero *::after {

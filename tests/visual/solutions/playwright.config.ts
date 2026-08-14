@@ -1,15 +1,15 @@
 import { defineConfig } from '@playwright/test';
 
-const previewPort = process.env.PLAYWRIGHT_PORT ?? '4173';
-const previewUrl = `http://127.0.0.1:${previewPort}`;
-
 export default defineConfig({
-  testDir: './tests/visual',
+  testDir: '.',
+  testMatch: 'solutions-workspace.visual.spec.ts',
   workers: 1,
   retries: 0,
   reporter: 'line',
+  timeout: 45_000,
+  expect: { timeout: 8_000 },
   use: {
-    baseURL: previewUrl,
+    baseURL: 'http://127.0.0.1:4182',
     browserName: 'chromium',
     headless: true,
     screenshot: 'off',
@@ -23,8 +23,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run preview -- --host 127.0.0.1 --port ${previewPort}`,
-    url: previewUrl,
-    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === 'true',
+    command: 'npx vite ../fixtures/solutions --host 127.0.0.1 --port 4182',
+    url: 'http://127.0.0.1:4182',
+    reuseExistingServer: false,
+    timeout: 30_000,
   },
 });
