@@ -39,6 +39,39 @@ jobs:
         shell: bash
         run: git diff --check "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
 
+      - name: Classify W08-B product scope from pull request diff
+        id: w08b-scope
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t changed_paths < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          w08b_product_paths=(
+            'src/components/footer/Footer.remediation.css'
+            'src/components/footer/Footer.tsx'
+            'src/components/project/ProjectMedia.tsx'
+            'src/components/sections/ReferenceProof.remediation.css'
+            'src/components/sections/ReferenceProof.tsx'
+            'src/data/homeShowcase.ts'
+          )
+
+          in_scope=false
+          for owned_path in "${w08b_product_paths[@]}"; do
+            if printf '%s\n' "${changed_paths[@]}" | grep -Fxq "$owned_path"; then
+              echo "W08-B product scope changed: $owned_path"
+              in_scope=true
+            fi
+          done
+
+          echo "in_scope=$in_scope" >> "$GITHUB_OUTPUT"
+          if [[ "$in_scope" == 'false' ]]; then
+            echo '::notice::No W08-B-owned product path changed in the pull request base-to-head diff.'
+          fi
+
       - name: Set up Node 20
         uses: actions/setup-node@v4
         with:
@@ -60,25 +93,46 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run dedicated public-site regression matrix
-        run: >-
-          npx playwright test
-          tests/visual/solutions/solutions-workspace.visual.spec.ts
-          tests/visual/start-discovery/start-discovery.spec.ts
-          tests/visual/route-performance/route-performance.spec.ts
-          tests/visual/public-semantics/public-semantics.spec.ts
-          --project=chromium
-          --workers=1
+      - name: Run Solutions canonical harness
+        run: npx playwright test --config=tests/visual/solutions/playwright.config.ts
 
-      - name: Run W08-B home truth regression when present
+      - name: Run Start and Discovery canonical harness
+        run: npx playwright test --config=tests/visual/start-discovery/playwright.config.ts
+
+      - name: Run Public Semantics canonical harness
+        run: npx playwright test --config=tests/visual/public-semantics/playwright.config.ts
+
+      - name: Run Reference Projects canonical harness
+        run: npx playwright test --config=tests/visual/reference-projects/playwright.config.ts
+
+      - name: Run root route-performance suite
+        run: npx playwright test tests/visual/route-performance/route-performance.spec.ts --project=chromium --workers=1
+
+      - name: Run root How We Work suite
+        run: npx playwright test tests/visual/how-we-work/how-we-work.visual.spec.ts --project=chromium --workers=1
+
+      - name: Run root shell-routing suite
+        run: npx playwright test tests/visual/shell.routing.spec.ts --project=chromium --workers=1
+
+      - name: Run root Home public-routing suite
+        run: npx playwright test tests/visual/home-public-routing/home-public-routing.spec.ts --project=chromium --workers=1
+
+      - name: Enforce and run W08-B specialized regression
         shell: bash
+        env:
+          W08_B_IN_SCOPE: ${{ steps.w08b-scope.outputs.in_scope || 'false' }}
         run: |
+          set -euo pipefail
+
           test_path='tests/visual/home-public-routing/gs-pages-w08-b-home-truth.spec.ts'
           if [[ -f "$test_path" ]]; then
             echo "W08-B specialized regression present; executing: $test_path"
             npx playwright test "$test_path" --project=chromium --workers=1
+          elif [[ "$W08_B_IN_SCOPE" == 'true' ]]; then
+            echo "::error::W08-B-owned product scope changed, but required specialized regression is missing: $test_path"
+            exit 1
           else
-            echo "::notice::W08-B specialized regression is absent on this exact head; informational skip: $test_path"
+            echo "::notice::W08-B product scope is out of scope for this exact candidate and the specialized regression is absent; informational skip: $test_path"
           fi
 
       - name: Validate whole public site
