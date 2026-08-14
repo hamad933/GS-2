@@ -23,6 +23,38 @@ export type DiscoverySummaryStatus =
   | 'dependent'
   | 'unknown';
 
+export type DiscoveryCapabilityClassification =
+  | 'CORE'
+  | 'RECOMMENDED'
+  | 'OPTIONAL'
+  | 'CONDITIONAL'
+  | 'CUSTOM';
+
+export type DiscoveryCapabilityProvenance = 'SYSTEM_SEEDED' | 'USER_SELECTED';
+
+export type DiscoveryDecisionOrigin =
+  | 'SYSTEM_FINDER'
+  | 'USER_DIRECT'
+  | 'USER_COMPARE'
+  | 'USER_OPEN_DIRECTION'
+  | 'USER_ALTERNATIVE';
+
+export type DiscoveryRecommendationResolution = 'decisive' | 'tied' | 'insufficient';
+
+export interface DiscoveryCapabilitySelection {
+  name: string;
+  classification: DiscoveryCapabilityClassification;
+  provenance: DiscoveryCapabilityProvenance;
+}
+
+export interface DiscoveryCapturedFacts {
+  outcome?: string;
+  activity?: string;
+  audience?: string;
+  complexity?: string;
+  constraints?: string;
+}
+
 export interface DiscoveryPrefillSource {
   /** Adapter identifier such as `solutions-decision-workspace`. */
   adapter: string;
@@ -43,8 +75,16 @@ export interface StartDiscoveryPrefill {
   selectedProblem?: string;
   selectedOutcome?: string;
   recommendedFamily?: string;
+  /** Stable family identity from the originating decision surface. */
+  solutionFamilyId?: string;
+  /** Whether the family was recommended by the system or chosen by the user. */
+  decisionOrigin?: DiscoveryDecisionOrigin;
+  /** Finder resolution carried as context when a Finder result was involved. */
+  recommendationResolution?: DiscoveryRecommendationResolution;
   selectedCapabilities?: readonly string[];
   optionalCapabilities?: readonly string[];
+  capabilitySelections?: readonly DiscoveryCapabilitySelection[];
+  capturedFacts?: DiscoveryCapturedFacts;
   configurationPreference?: string;
   budgetPreference?: string;
   knownDependencies?: readonly string[];
@@ -61,9 +101,14 @@ export interface StartDiscoveryDraft {
   expectedOutcomes: string;
   importantWorkflows: string;
   recommendedFamily: string;
+  solutionFamilyId: string;
+  decisionOrigin?: DiscoveryDecisionOrigin;
+  recommendationResolution?: DiscoveryRecommendationResolution;
   selectedCapabilities: string[];
   optionalCapabilities: string[];
   uncertainCapabilities: string[];
+  capabilitySelections: DiscoveryCapabilitySelection[];
+  capturedFacts?: DiscoveryCapturedFacts;
   configurationPreference: string;
   existingSystems: string;
   integrations: string;

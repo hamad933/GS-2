@@ -19,6 +19,14 @@ export type CapabilityClassification =
   | 'CONDITIONAL'
   | 'CUSTOM';
 
+export type CapabilitySelectionProvenance = 'SYSTEM_SEEDED' | 'USER_SELECTED';
+
+export type CapabilitySelection = {
+  name: string;
+  classification: CapabilityClassification;
+  provenance: CapabilitySelectionProvenance;
+};
+
 export type EvidenceState =
   | 'VERIFIED_IMPLEMENTATION'
   | 'REVIEWED_VISUAL_EVIDENCE'
@@ -98,8 +106,19 @@ export type ConfigurationDirection = {
 
 export type BudgetPreferenceId = 'control' | 'flexible' | 'complex' | 'unknown';
 
+export type RecommendationResolution = 'decisive' | 'tied' | 'insufficient';
+
+export type DecisionOrigin =
+  | 'SYSTEM_FINDER'
+  | 'USER_DIRECT'
+  | 'USER_COMPARE'
+  | 'USER_OPEN_DIRECTION'
+  | 'USER_ALTERNATIVE';
+
 export type Recommendation = {
-  recommendedId: SolutionFamilyId;
+  resolution: RecommendationResolution;
+  recommendedId?: SolutionFamilyId;
+  candidateIds: SolutionFamilyId[];
   alternativeId?: SolutionFamilyId;
   reasons: string[];
   missing: string[];
@@ -110,7 +129,16 @@ export type DecisionSnapshot = {
   facts: DecisionFacts;
   recommendedFamily: SolutionFamilyId;
   alternativeFamily?: SolutionFamilyId;
+  /** Stable semantic origin of the current family decision. */
+  decisionOrigin?: DecisionOrigin;
+  /** Finder resolution that produced or preceded the current decision, when applicable. */
+  recommendationResolution?: RecommendationResolution;
   selectedCapabilities: string[];
+  /**
+   * Explicit provenance for selected capabilities. Optional for compatibility
+   * with older in-memory integrations; current Solutions snapshots always set it.
+   */
+  capabilitySelections?: CapabilitySelection[];
   configuration: ConfigurationDirectionId;
   budgetPreference: BudgetPreferenceId;
   budgetRange: string;

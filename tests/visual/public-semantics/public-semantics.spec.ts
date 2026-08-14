@@ -145,36 +145,56 @@ test('separates customer facts, system direction, current configuration, unknown
   await expect(page.locator('.gsdw-summary-row[data-kind="configuration"]')).not.toHaveCount(0);
   await expect(page.locator('.gsdw-summary-row[data-kind="unknown"]')).toHaveCount(1);
   await expect(page.locator('.gsdw-summary-row[data-kind="evidence"]')).toHaveCount(1);
-  await expect(page.getByText('توصية النظام الحتمية', { exact: true })).toBeVisible();
+  await expect(page.getByText('توصية النظام الحاسمة من المدخلات المتاحة', { exact: true })).toBeVisible();
 
   const capabilities = page.locator('.gsdw-summary-capabilities');
-  await expect(page.locator('.gsdw-summary-row[data-kind="configuration"]').filter({ has: capabilities })).toContainText('يبدأ النموذج بالقدرات الأساسية والموصى بها');
-  await expect(capabilities.locator('[data-classification="CORE"]')).not.toHaveCount(0);
-  await expect(capabilities.locator('[data-classification="RECOMMENDED"]')).not.toHaveCount(0);
-  await expect(capabilities.locator('[data-classification="CUSTOM"]')).toHaveCount(1);
+  await expect(page.locator('.gsdw-summary-row[data-kind="configuration"]').filter({ has: capabilities })).toContainText('تُعرض كل قدرة مع مصدر إدراجها');
+  const core = capabilities.locator('[data-classification="CORE"]').first();
+  const recommended = capabilities.locator('[data-classification="RECOMMENDED"]').first();
+  const custom = capabilities.locator('[data-classification="CUSTOM"]').first();
+  await expect(core).toHaveAttribute('data-provenance', 'SYSTEM_SEEDED');
+  await expect(recommended).toHaveAttribute('data-provenance', 'SYSTEM_SEEDED');
+  await expect(custom).toHaveAttribute('data-provenance', 'USER_SELECTED');
+  await expect(core).toContainText('مدرجة مبدئيًا من النظام');
+  await expect(custom).toContainText('اخترتها أنت');
   await expect(page.locator('.gsdw-summary-row').filter({ hasText: 'قيد أو تفضيل الميزانية' })).toContainText('قيد مالي يحدده صاحب القرار');
   await expect(page.getByText(/سعرًا أو تقييم ملاءمة مالية/)).toBeVisible();
 
   await expect(page.locator('.gsdw-evidence > strong')).toHaveText('مرجع سياقي فقط');
-  await expect(page.locator('.gsdw-evidence > small')).toHaveText('REFERENCE_ONLY');
+  await expect(page.locator(`${WORKSPACE} .gsdw-evidence > small`)).toHaveCount(0);
+  await expect(page.locator(WORKSPACE).getByText('REFERENCE_ONLY', { exact: true })).toHaveCount(0);
   await expect(page.getByText(/\b(?:399|387)\b/)).toHaveCount(0);
 });
 
-test('keeps the Solutions to Start handoff contract compatible and budget user-supplied', async ({ page }) => {
+test('keeps the Solutions to Start handoff truthful and capability provenance explicit', async ({ page }) => {
   await reachDecisionSummary(page);
   await page.getByRole('button', { name: /تجهيز الانتقال إلى Discovery/ }).click();
 
   await expect(page).toHaveURL(/\/start$/);
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
-  await expect(page.getByLabel('الهدف الرئيسي بصياغتك')).toHaveValue('تنظيم عمل وطلبات داخلية');
+  await expect(page.getByLabel('الهدف الرئيسي بصياغتك')).toHaveValue('');
+  const carriedFacts = page.locator('[data-carried-facts="true"]');
+  await expect(carriedFacts).toContainText('النتيجة: تنظيم عمل وطلبات داخلية');
+  await expect(carriedFacts).toContainText('النشاط: عمليات وفرق');
+  await expect(carriedFacts).toContainText('الجمهور: فريق داخلي');
+  await expect(carriedFacts).toContainText('العمق: أنظمة أو تكاملات مهمة');
+  await expect(carriedFacts).toContainText('القيد: نظام داخلي قائم يحتاج تحققًا تقنيًا');
+
+  await page.getByLabel('الهدف الرئيسي بصياغتك').fill('تنظيم بوابة تشغيلية موحدة');
   await page.getByLabel('المشكلة الحالية').fill('الطلبات موزعة وتحتاج حالة تشغيل مشتركة.');
   await page.getByRole('button', { name: 'متابعة' }).click();
   await expect(page.getByLabel('الحل أو العائلة المقترحة')).toHaveValue('الأنظمة التشغيلية والبوابات');
-  await expect(page.getByLabel('قدرات حُسمت مبدئيًا')).toHaveValue(/نمذجة الطلب والحالة/);
+  await expect(page.getByLabel('قدرات حُسمت مبدئيًا')).toHaveValue(/تكاملات وهوية وصلاحيات متقدمة/);
+  await expect(page.getByLabel('قدرات حُسمت مبدئيًا')).not.toHaveValue(/نمذجة الطلب والحالة/);
   await page.getByRole('button', { name: 'متابعة' }).click();
   await expect(page.getByLabel('تبعيات معروفة')).toHaveValue(/عملية تشغيل قابلة للوصف/);
   await page.getByRole('button', { name: 'متابعة' }).click();
   await expect(page.locator('[data-carried-prefill="true"]')).toContainText('قيد مالي يحدده صاحب القرار');
+  await page.getByRole('button', { name: 'مراجعة الملخص' }).click();
+  await expect(page.locator('[data-summary-status="known"]')).toContainText('تنظيم عمل وطلبات داخلية');
+  await expect(page.locator('[data-summary-status="known"]')).toContainText('عمليات وفرق');
+  await expect(page.locator('[data-summary-status="preferred"]')).toContainText('نمذجة الطلب والحالة — أساسي من النظام');
+  await expect(page.locator('.start-discovery').getByText('REFERENCE_ONLY', { exact: true })).toHaveCount(0);
 });
 
 test('preserves keyboard focus and deliberate RTL/LTR direction', async ({ page }) => {

@@ -7,7 +7,9 @@ import {
   formatDiscoverySummary,
   getDiscoverySteps,
 } from '../../../src/features/start-discovery/discoveryModel';
+import { mapSolutionsDecisionToDiscovery } from '../../../src/integration/solutionsToDiscovery';
 import { START_DISCOVERY_PREFILL_VERSION } from '../../../src/types/start-discovery';
+import type { DecisionSnapshot } from '../../../src/types/solutions';
 
 const previewPath = './';
 const evidenceDirectory = resolve(
@@ -128,6 +130,7 @@ test('prefill adapter maps future Solutions context without coupling', () => {
 
   expect(draft.currentProblem).toBe('مشكلة مختارة');
   expect(draft.objective).toBe('نتيجة مختارة');
+  expect(draft.expectedOutcomes).toBe('');
   expect(draft.selectedCapabilities).toEqual(['بحث', 'حجز']);
   expect(draft.prefillSource?.referenceId).toBe('decision-42');
 
@@ -140,6 +143,90 @@ test('prefill adapter maps future Solutions context without coupling', () => {
     'unknown',
   ]);
   expect(formatDiscoverySummary(summary)).toContain('UNKNOWN / NEEDS DISCOVERY');
+});
+
+test('Solutions handoff preserves captured facts and capability provenance without semantic duplication', () => {
+  const snapshot: DecisionSnapshot = {
+    entryMode: 'discover',
+    facts: {
+      outcome: 'operate',
+      activity: 'operations',
+      audience: 'team',
+      complexity: 'integrations',
+      constraints: 'نظام قائم يجب مراعاته',
+    },
+    recommendedFamily: 'portals',
+    selectedCapabilities: [
+      'نمذجة الطلب والحالة',
+      'قدرة موصى بها من النظام',
+      'تكاملات وهوية وصلاحيات متقدمة',
+    ],
+    capabilitySelections: [
+      {
+        name: 'نمذجة الطلب والحالة',
+        classification: 'CORE',
+        provenance: 'SYSTEM_SEEDED',
+      },
+      {
+        name: 'قدرة موصى بها من النظام',
+        classification: 'RECOMMENDED',
+        provenance: 'SYSTEM_SEEDED',
+      },
+      {
+        name: 'تكاملات وهوية وصلاحيات متقدمة',
+        classification: 'CUSTOM',
+        provenance: 'USER_SELECTED',
+      },
+    ],
+    configuration: 'connected',
+    budgetPreference: 'flexible',
+    budgetRange: 'حسب القيمة',
+    confirmedDependencies: ['عملية تشغيل قابلة للوصف'],
+    unknowns: ['اعتماد يحتاج تحققًا'],
+    evidenceState: 'REFERENCE_ONLY',
+  };
+
+  const prefill = mapSolutionsDecisionToDiscovery(snapshot);
+  expect(prefill.selectedOutcome).toBeUndefined();
+  expect(prefill.capturedFacts).toEqual({
+    outcome: 'تنظيم عمل وطلبات داخلية',
+    activity: 'عمليات وفرق',
+    audience: 'فريق داخلي',
+    complexity: 'أنظمة أو تكاملات مهمة',
+    constraints: 'نظام قائم يجب مراعاته',
+  });
+  expect(prefill.selectedCapabilities).toEqual(['تكاملات وهوية وصلاحيات متقدمة']);
+  expect(prefill.capabilitySelections).toEqual(snapshot.capabilitySelections);
+  expect(prefill.relevantReferenceContext).not.toContain('REFERENCE_ONLY');
+
+  const draft = createStartDiscoveryDraft(prefill, 'configured');
+  expect(draft.objective).toBe('');
+  expect(draft.expectedOutcomes).toBe('');
+  expect(draft.selectedCapabilities).toEqual(['تكاملات وهوية وصلاحيات متقدمة']);
+  expect(draft.capturedFacts).toEqual(prefill.capturedFacts);
+
+  const summary = buildDiscoverySummary(draft);
+  const known = summary.groups.find((group) => group.status === 'known');
+  const preferred = summary.groups.find((group) => group.status === 'preferred');
+  expect(known?.items.find((item) => item.label === 'النتيجة المحفوظة من قرار الحلول')?.values).toEqual([
+    'تنظيم عمل وطلبات داخلية',
+  ]);
+  expect(known?.items.find((item) => item.label === 'طبيعة النشاط المحفوظة')?.values).toEqual([
+    'عمليات وفرق',
+  ]);
+  expect(known?.items.find((item) => item.label === 'الجمهور المحفوظ')?.values).toEqual([
+    'فريق داخلي',
+  ]);
+  expect(known?.items.find((item) => item.label === 'عمق التشغيل المحفوظ')?.values).toEqual([
+    'أنظمة أو تكاملات مهمة',
+  ]);
+  expect(known?.items.find((item) => item.label === 'القيد الحر المحفوظ')?.values).toEqual([
+    'نظام قائم يجب مراعاته',
+  ]);
+  expect(preferred?.items.find((item) => item.label === 'قدرات أدرجها النظام مبدئيًا')?.values).toEqual([
+    'نمذجة الطلب والحالة — أساسي من النظام',
+    'قدرة موصى بها من النظام — موصى به من النظام',
+  ]);
 });
 
 test('all four certainty conditions produce distinct progressive paths', async ({ page }) => {
@@ -283,13 +370,19 @@ test('local completion never claims remote submission and can return to review',
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-step', 'summary');
 });
 
-test('keyboard activation, focus transfer, and auto LTR input work', async ({ page }) => {
+test('keyboard activation, Arrow-key roving tabindex, focus transfer, and auto LTR input work', async ({ page }) => {
   await openDiscovery(page);
-  const option = page.getByRole('radio', { name: /لدي اتجاه عام/ });
-  await option.focus();
-  await expect(option).toBeFocused();
-  await page.keyboard.press('Space');
-  await expect(option).toHaveAttribute('aria-checked', 'true');
+  const group = page.getByRole('radiogroup', { name: 'مستوى وضوح متطلبات المشروع' });
+  const radios = group.getByRole('radio');
+  await expect(radios.nth(0)).toHaveAttribute('tabindex', '0');
+  await expect(radios.nth(1)).toHaveAttribute('tabindex', '-1');
+  await radios.nth(0).focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(radios.nth(1)).toBeFocused();
+  await expect(radios.nth(1)).toHaveAttribute('aria-checked', 'true');
+  await expect(radios.nth(1)).toHaveAttribute('tabindex', '0');
+  await expect(radios.nth(0)).toHaveAttribute('tabindex', '-1');
+
   await page.getByRole('button', { name: 'متابعة' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'ما الذي يستحق أن يتغيّر؟' })).toBeFocused();
