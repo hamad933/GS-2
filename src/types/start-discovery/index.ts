@@ -23,6 +23,29 @@ export type DiscoverySummaryStatus =
   | 'dependent'
   | 'unknown';
 
+export type DiscoveryCapabilityClassification =
+  | 'CORE'
+  | 'RECOMMENDED'
+  | 'OPTIONAL'
+  | 'CONDITIONAL'
+  | 'CUSTOM';
+
+export type DiscoveryCapabilityProvenance = 'SYSTEM_SEEDED' | 'USER_SELECTED';
+
+export interface DiscoveryCapabilitySelection {
+  name: string;
+  classification: DiscoveryCapabilityClassification;
+  provenance: DiscoveryCapabilityProvenance;
+}
+
+export interface DiscoveryCapturedFacts {
+  outcome?: string;
+  activity?: string;
+  audience?: string;
+  complexity?: string;
+  constraints?: string;
+}
+
 export interface DiscoveryPrefillSource {
   /** Adapter identifier such as `solutions-decision-workspace`. */
   adapter: string;
@@ -45,6 +68,8 @@ export interface StartDiscoveryPrefill {
   recommendedFamily?: string;
   selectedCapabilities?: readonly string[];
   optionalCapabilities?: readonly string[];
+  capabilitySelections?: readonly DiscoveryCapabilitySelection[];
+  capturedFacts?: DiscoveryCapturedFacts;
   configurationPreference?: string;
   budgetPreference?: string;
   knownDependencies?: readonly string[];
@@ -64,6 +89,8 @@ export interface StartDiscoveryDraft {
   selectedCapabilities: string[];
   optionalCapabilities: string[];
   uncertainCapabilities: string[];
+  capabilitySelections: DiscoveryCapabilitySelection[];
+  capturedFacts?: DiscoveryCapturedFacts;
   configurationPreference: string;
   existingSystems: string;
   integrations: string;
