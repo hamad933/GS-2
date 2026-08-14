@@ -143,7 +143,7 @@ export function SystemAnatomy() {
               كيف نعمل
             </Link>
           </span>
-          <span>خمس مراحل</span>
+          <span>معاينة مختصرة للمنهج · خمس مراحل</span>
           <strong><b>04</b> تشريح النظام</strong>
         </div>
 
