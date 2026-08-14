@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import {
   budgetPreferences,
   configurationDirections,
@@ -12,6 +12,7 @@ import type {
   BudgetPreferenceId,
   Capability,
   CapabilityClassification,
+  CapabilitySelection,
   ConfigurationDirectionId,
   ConfigurationPhase,
   DecisionFacts,
@@ -25,6 +26,7 @@ import type {
   WorkspaceStep,
 } from '../../types/solutions';
 import './solutionsDecisionWorkspace.css';
+import './solutionsDecisionWorkspace.accessibility.css';
 
 const stepOrder: WorkspaceStep[] = ['entry', 'qualify', 'recommend', 'configure', 'summary'];
 
@@ -91,6 +93,34 @@ const summaryKindLabels: Record<SummaryKind, string> = {
 const budgetLabels = Object.fromEntries(
   budgetPreferences.map((preference) => [preference.id, preference.title]),
 ) as Record<BudgetPreferenceId, string>;
+
+function handleRovingRadioKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+  const navigationKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+  if (!navigationKeys.includes(event.key)) return;
+
+  const group = event.currentTarget.closest('[role="radiogroup"]');
+  const radios = group
+    ? Array.from(group.querySelectorAll<HTMLButtonElement>('[role="radio"]:not(:disabled)'))
+    : [];
+  if (!radios.length) return;
+
+  const currentIndex = radios.indexOf(event.currentTarget);
+  if (currentIndex < 0) return;
+
+  let nextIndex = currentIndex;
+  if (event.key === 'Home') nextIndex = 0;
+  if (event.key === 'End') nextIndex = radios.length - 1;
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    nextIndex = (currentIndex + 1) % radios.length;
+  }
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    nextIndex = (currentIndex - 1 + radios.length) % radios.length;
+  }
+
+  event.preventDefault();
+  radios[nextIndex].focus();
+  radios[nextIndex].click();
+}
 
 function FamilyMark({ family }: { family: SolutionFamily }) {
   return (
@@ -256,7 +286,6 @@ function EvidenceBadge({ state }: { state: EvidenceState }) {
   return (
     <span className="gsdw-evidence" data-state={state}>
       <strong>{evidenceLabels[state]}</strong>
-      <small dir="ltr">{state}</small>
     </span>
   );
 }
@@ -280,6 +309,7 @@ export function SolutionsDecisionWorkspace({
   const [compareIds, setCompareIds] = useState<SolutionFamilyId[]>([]);
   const [recommendation, setRecommendation] = useState<Recommendation>();
   const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>([]);
+  const [userSelectedCapabilities, setUserSelectedCapabilities] = useState<string[]>([]);
   const [configuration, setConfiguration] = useState<ConfigurationDirectionId>('focused');
   const [configurationPhase, setConfigurationPhase] = useState<ConfigurationPhase>('capabilities');
   const [budgetPreference, setBudgetPreference] = useState<BudgetPreferenceId>('unknown');
@@ -287,7 +317,9 @@ export function SolutionsDecisionWorkspace({
   const [confirmedDependencies, setConfirmedDependencies] = useState<string[]>([]);
   const [transitionPrepared, setTransitionPrepared] = useState(false);
 
-  const selectedFamily = recommendation ? familyById[recommendation.recommendedId] : undefined;
+  const selectedFamily = recommendation?.recommendedId
+    ? familyById[recommendation.recommendedId]
+    : undefined;
   const alternativeFamily = recommendation?.alternativeId ? familyById[recommendation.alternativeId] : undefined;
   const activeQuestion = finderQuestions[questionIndex];
   const activeOptionId = activeQuestion ? facts[activeQuestion.key] : undefined;
@@ -308,14 +340,27 @@ export function SolutionsDecisionWorkspace({
     return Array.from(new Set(items));
   }, [budgetPreference, configuration, confirmedDependencies, recommendation, selectedCapabilities, selectedFamily]);
 
+  const capabilitySelections = useMemo<CapabilitySelection[]>(() => {
+    if (!selectedFamily) return [];
+    return selectedCapabilities.map((name) => {
+      const capability = selectedFamily.capabilities.find((item) => item.name === name);
+      return {
+        name,
+        classification: capability?.classification ?? 'CUSTOM',
+        provenance: userSelectedCapabilities.includes(name) ? 'USER_SELECTED' : 'SYSTEM_SEEDED',
+      };
+    });
+  }, [selectedCapabilities, selectedFamily, userSelectedCapabilities]);
+
   const snapshot = useMemo<DecisionSnapshot | undefined>(() => {
-    if (!mode || !recommendation || !selectedFamily) return undefined;
+    if (!mode || !recommendation?.recommendedId || !selectedFamily) return undefined;
     return {
       entryMode: mode,
       facts,
       recommendedFamily: recommendation.recommendedId,
       alternativeFamily: recommendation.alternativeId,
       selectedCapabilities,
+      capabilitySelections,
       configuration,
       budgetPreference,
       budgetRange,
@@ -323,7 +368,7 @@ export function SolutionsDecisionWorkspace({
       unknowns,
       evidenceState: selectedFamily.reference.evidenceState,
     };
-  }, [budgetPreference, budgetRange, configuration, confirmedDependencies, facts, mode, recommendation, selectedCapabilities, selectedFamily, unknowns]);
+  }, [budgetPreference, budgetRange, capabilitySelections, configuration, confirmedDependencies, facts, mode, recommendation, selectedCapabilities, selectedFamily, unknowns]);
 
   useEffect(() => {
     if (snapshot) onDecisionChange?.(snapshot);
@@ -338,6 +383,7 @@ export function SolutionsDecisionWorkspace({
     setCompareIds([]);
     setRecommendation(undefined);
     setSelectedCapabilities([]);
+    setUserSelectedCapabilities([]);
     setConfiguration('focused');
     setConfigurationPhase('capabilities');
     setBudgetPreference('unknown');
@@ -348,13 +394,16 @@ export function SolutionsDecisionWorkspace({
 
   const buildRecommendation = (recommendedId: SolutionFamilyId, alternativeId?: SolutionFamilyId, reasons: string[] = []) => {
     const nextRecommendation: Recommendation = {
+      resolution: 'decisive',
       recommendedId,
+      candidateIds: [recommendedId],
       alternativeId,
       reasons,
       missing: ['النتيجة التفصيلية لم تُجمع عبر Finder', 'القيود الخاصة غير مذكورة'],
     };
     setRecommendation(nextRecommendation);
     setSelectedCapabilities(initialCapabilities(familyById[recommendedId]));
+    setUserSelectedCapabilities([]);
     setConfirmedDependencies([]);
     setStep('recommend');
   };
@@ -362,7 +411,12 @@ export function SolutionsDecisionWorkspace({
   const finishFinder = () => {
     const nextRecommendation = recommendFromFacts(facts);
     setRecommendation(nextRecommendation);
-    setSelectedCapabilities(initialCapabilities(familyById[nextRecommendation.recommendedId]));
+    setSelectedCapabilities(
+      nextRecommendation.recommendedId
+        ? initialCapabilities(familyById[nextRecommendation.recommendedId])
+        : [],
+    );
+    setUserSelectedCapabilities([]);
     setConfirmedDependencies([]);
     setStep('recommend');
   };
@@ -377,10 +431,16 @@ export function SolutionsDecisionWorkspace({
 
   const toggleCapability = (capability: Capability) => {
     if (capability.classification === 'CORE') return;
+    const wasSelected = selectedCapabilities.includes(capability.name);
     setSelectedCapabilities((current) => (
-      current.includes(capability.name)
+      wasSelected
         ? current.filter((item) => item !== capability.name)
         : [...current, capability.name]
+    ));
+    setUserSelectedCapabilities((current) => (
+      wasSelected
+        ? current.filter((item) => item !== capability.name)
+        : Array.from(new Set([...current, capability.name]))
     ));
   };
 
@@ -412,7 +472,7 @@ export function SolutionsDecisionWorkspace({
     .filter((item) => item.value);
 
   const recommendationProvenance = mode === 'discover'
-    ? 'توصية النظام الحتمية'
+    ? 'توصية النظام الحاسمة من المدخلات المتاحة'
     : mode === 'compare'
       ? 'اتجاه اعتمدته بعد المقارنة'
       : 'اتجاه بدأت منه أنت';
@@ -429,6 +489,7 @@ export function SolutionsDecisionWorkspace({
       data-step={step}
       data-mode={mode ?? 'unset'}
       data-family={selectedFamily?.id ?? 'unset'}
+      data-recommendation-resolution={recommendation?.resolution ?? 'unset'}
     >
       <div className="gsdw-atmosphere" aria-hidden="true"><i /><i /><i /></div>
 
@@ -498,12 +559,14 @@ export function SolutionsDecisionWorkspace({
               <h2 id="gsdw-question-title">{activeQuestion.title}</h2>
               <p>{activeQuestion.help}</p>
               <div className="gsdw-options" role="radiogroup" aria-label={activeQuestion.title}>
-                {activeQuestion.options.map((option) => (
+                {activeQuestion.options.map((option, index) => (
                   <button
                     key={option.id}
                     type="button"
                     role="radio"
                     aria-checked={activeOptionId === option.id}
+                    tabIndex={activeOptionId === option.id || (!activeOptionId && index === 0) ? 0 : -1}
+                    onKeyDown={handleRovingRadioKeyDown}
                     onClick={() => setFacts((current) => ({ ...current, [activeQuestion.key]: option.id }))}
                   >
                     <span className="gsdw-radio" aria-hidden="true"><i /></span>
@@ -597,6 +660,58 @@ export function SolutionsDecisionWorkspace({
             ) : (
               <div className="gsdw-waiting-cue"><i /> اختر {2 - compareIds.length} {compareIds.length === 0 ? 'اتجاهين' : 'اتجاه إضافي'} لفتح المقارنة.</div>
             )}
+          </section>
+        ) : null}
+
+        {step === 'recommend' && recommendation && !recommendation.recommendedId ? (
+          <section className="gsdw-recommendation gsdw-recommendation--open" aria-labelledby="gsdw-open-directions-title">
+            <div className="gsdw-recommendation-lead">
+              <span className="gsdw-eyebrow"><i /> OPEN DIRECTIONS <b>{recommendation.resolution === 'tied' ? 'تعادل يحتاج فرقًا حقيقيًا' : 'الدليل غير كافٍ للحسم'}</b></span>
+              <div className="gsdw-open-direction-title">
+                <h2 id="gsdw-open-directions-title">لا يوجد اتجاه منفرد يمكن تبريره بعد.</h2>
+                <p>
+                  {recommendation.resolution === 'tied'
+                    ? 'أكثر من عائلة تتصدر بالقدر نفسه وفق المعلومات الحالية. لن نكسر التعادل بترتيب خفي.'
+                    : 'المعلومات المحسومة قليلة جدًا لإظهار عائلة واحدة كتوصية فريدة. تبقى الاتجاهات التالية مفتوحة للمراجعة.'}
+                </p>
+              </div>
+              <div className="gsdw-fit-reasons">
+                <span className="gsdw-mini-label">ما الذي نعرفه الآن؟</span>
+                {recommendation.reasons.length ? (
+                  <ul>{recommendation.reasons.map((reason) => <li key={reason}><i />{reason}</li>)}</ul>
+                ) : <p>لم تُجمع بعد معلومة تفاضل بين عائلات الحل.</p>}
+              </div>
+            </div>
+
+            <div className="gsdw-recommendation-grid gsdw-open-directions" aria-label="الاتجاهات التي ما زالت مفتوحة">
+              {recommendation.candidateIds.map((familyId) => {
+                const family = familyById[familyId];
+                return (
+                  <article className="gsdw-alternative-panel" key={family.id} data-open-family={family.id}>
+                    <span className="gsdw-panel-code" dir="ltr">OPEN DIRECTION</span>
+                    <span className="gsdw-mini-label">اتجاه يحتاج معلومة مميِّزة</span>
+                    <h3>{family.title}</h3>
+                    <p>{family.problem}</p>
+                  </article>
+                );
+              })}
+              <article className="gsdw-unknown-panel gsdw-open-unknowns">
+                <span className="gsdw-panel-code" dir="ltr">NEEDS DIFFERENTIATION</span>
+                <span className="gsdw-mini-label">ما الذي يمكن أن يغيّر القرار؟</span>
+                <ul>{recommendation.missing.map((item) => <li key={item}><i />{item}</li>)}</ul>
+              </article>
+            </div>
+
+            <div className="gsdw-decision-bar">
+              <div><span>الخطوة التالية</span><p>راجع إجابة غير محسومة أو أضف قيدًا يفرّق فعليًا بين الاتجاهات.</p></div>
+              <button
+                type="button"
+                className="gsdw-button gsdw-button--primary"
+                onClick={() => { setQuestionIndex(0); setStep('qualify'); }}
+              >
+                مراجعة الإجابات <span aria-hidden="true">←</span>
+              </button>
+            </div>
           </section>
         ) : null}
 
@@ -746,7 +861,9 @@ export function SolutionsDecisionWorkspace({
                       type="button"
                       role="radio"
                       aria-checked={configuration === direction.id}
+                      tabIndex={configuration === direction.id ? 0 : -1}
                       className={configuration === direction.id ? 'is-selected' : ''}
+                      onKeyDown={handleRovingRadioKeyDown}
                       onClick={() => setConfiguration(direction.id)}
                     >
                       <span className="gsdw-matrix-head"><i /><small>{direction.shortLabel}</small><strong>{direction.title}</strong><p>{direction.description}</p></span>
@@ -782,6 +899,8 @@ export function SolutionsDecisionWorkspace({
                         type="button"
                         role="radio"
                         aria-checked={budgetPreference === preference.id}
+                        tabIndex={budgetPreference === preference.id ? 0 : -1}
+                        onKeyDown={handleRovingRadioKeyDown}
                         onClick={() => setBudgetPreference(preference.id)}
                       >
                         <span className="gsdw-radio" aria-hidden="true"><i /></span>
@@ -877,17 +996,20 @@ export function SolutionsDecisionWorkspace({
               ) : null}
 
               <SummaryRow kind="configuration" label="القدرات المدرجة حاليًا">
-                <p className="gsdw-capability-provenance">يبدأ النموذج بالقدرات الأساسية والموصى بها؛ لذلك لا يعني ظهور كل قدرة هنا أنك اخترتها فرديًا.</p>
+                <p className="gsdw-capability-provenance">تُعرض كل قدرة مع مصدر إدراجها؛ القدرات الأساسية والموصى بها قد يبدأ بها النظام، ولا تتحول إلى اختيار منك إلا إذا أضفتها بعد إزالتها أو اخترت قدرة أخرى بنفسك.</p>
                 <div className="gsdw-summary-capabilities">
-                  {selectedCapabilities.map((capabilityName) => {
-                    const capability = selectedFamily.capabilities.find((item) => item.name === capabilityName);
-                    return (
-                      <span key={capabilityName} data-classification={capability?.classification}>
-                        <strong>{capabilityName}</strong>
-                        {capability ? <small>{classificationLabels[capability.classification]}</small> : null}
-                      </span>
-                    );
-                  })}
+                  {capabilitySelections.map((selection) => (
+                    <span
+                      key={selection.name}
+                      data-classification={selection.classification}
+                      data-provenance={selection.provenance}
+                    >
+                      <strong>{selection.name}</strong>
+                      <small>
+                        {classificationLabels[selection.classification]} · {selection.provenance === 'USER_SELECTED' ? 'اخترتها أنت' : 'مدرجة مبدئيًا من النظام'}
+                      </small>
+                    </span>
+                  ))}
                 </div>
               </SummaryRow>
 
