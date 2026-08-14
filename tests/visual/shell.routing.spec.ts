@@ -97,12 +97,17 @@ test('mobile navigation supports keyboard operation, active state, and Escape', 
   await expect(page.getByRole('button', { name: 'فتح قائمة التنقل' })).toHaveAttribute('aria-expanded', 'false');
 });
 
-test('renders a recoverable branded 404 without dead links', async ({ page }) => {
+test('renders a recoverable branded 404 without unsupported geographic precision', async ({ page }) => {
   await page.goto('/route-that-does-not-exist');
   await expect(page.getByRole('heading', { level: 1, name: 'هذه الصفحة غير موجودة' })).toBeFocused();
   await expect(page).toHaveTitle('الصفحة غير موجودة | General Solutions');
+  await expect(page.getByText('24.7136° N', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('46.6753° E', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.internal-page__coordinate')).toContainText('GS');
+
   await page.getByRole('link', { name: 'العودة إلى الرئيسية' }).click();
   await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator('#main-content')).toBeFocused();
 
   const internalHrefs = await page.locator('a[href]').evaluateAll((links) => links
     .map((link) => link.getAttribute('href'))
