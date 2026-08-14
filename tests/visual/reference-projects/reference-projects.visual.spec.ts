@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const FIXTURE = '/tests/visual/fixtures/reference-projects/index.html';
 const EVIDENCE_DIR = resolve('tests/visual/reference-projects/evidence');
@@ -18,6 +18,11 @@ async function expectNoHorizontalOverflow(page: Page) {
     scrollWidth: document.documentElement.scrollWidth,
   }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+}
+
+async function expectFontAtLeast(locator: Locator, minimumPx: number) {
+  const fontSize = await locator.evaluate((element) => Number.parseFloat(window.getComputedStyle(element).fontSize));
+  expect(fontSize).toBeGreaterThanOrEqual(minimumPx);
 }
 
 test.beforeAll(async () => {
@@ -53,6 +58,42 @@ test('reference selector supports keyboard focus and activation', async ({ page 
   await page.keyboard.press('End');
   await expect(page.locator(BODY)).toHaveAttribute('data-active-project', 'rp04');
 });
+
+test('public RP display notation is hyphenated while internal selector ids remain canonical', async ({ page }) => {
+  await openFixture(page);
+
+  const selectorCodes = await page.locator('.rp-project-selector__code').allTextContents();
+  expect(selectorCodes).toEqual(['RP-01', 'RP-02', 'RP-03', 'RP-04']);
+
+  const selectorIds = await page.locator('[data-project-selector]').evaluateAll((elements) => (
+    elements.map((element) => element.getAttribute('data-project-selector'))
+  ));
+  expect(selectorIds).toEqual(['rp01', 'rp02', 'rp03', 'rp04']);
+
+  await page.locator('[data-project-selector="rp04"]').click();
+  await expect(page.locator(BODY)).toHaveAttribute('data-active-project', 'rp04');
+  await expect(page.locator('.rp-active-project__identity')).toContainText('RP-04');
+  await expect(page.locator('.rp-capability-map__core')).toContainText('RP-04');
+});
+
+for (const width of [430, 390]) {
+  test(`mobile RP capability and evidence microtype keeps a 10px meaning-bearing floor at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await openFixture(page);
+    await page.locator('[data-project-selector="rp02"]').click();
+
+    await expectFontAtLeast(page.locator('.rp-capability-map figcaption'), 10);
+    await expectFontAtLeast(page.locator('.rp-capability-map__nodes strong').first(), 10);
+    await expectFontAtLeast(page.locator('.rp-capability-map__core small'), 10);
+
+    const toggle = page.getByRole('button', { name: /سجل الحدود والتحقق/ });
+    await toggle.click();
+    await expect(page.locator('.rp-ledger')).toHaveClass(/is-open/);
+    await expectFontAtLeast(page.locator('.rp-ledger__evidence article p').first(), 10);
+    await expectFontAtLeast(page.locator('.rp-state-label > strong').first(), 10);
+    await expectNoHorizontalOverflow(page);
+  });
+}
 
 for (const width of [1440, 1024, 768, 430, 390]) {
   test(`reference body has no overflow or runtime errors at ${width}px`, async ({ page }) => {
