@@ -237,7 +237,7 @@ test('Solutions Finder produces the deterministic recommendation and alternative
   await expect(page.getByText('عمق التشغيل: أنظمة أو تكاملات مهمة')).toBeVisible();
 });
 
-test('Solutions configuration preserves capabilities, budget, dependencies, and summary', async ({ page }) => {
+test('Solutions configuration preserves capabilities, budget, dependencies, and human-readable evidence truth', async ({ page }) => {
   await reachDecisionSummary(page);
   await expect(page.getByText('تكاملات وهوية وصلاحيات متقدمة', { exact: true })).toBeVisible();
   await expect(page.getByText('مرونة حسب القيمة', { exact: true })).toBeVisible();
@@ -245,10 +245,11 @@ test('Solutions configuration preserves capabilities, budget, dependencies, and 
   const unresolved = page.locator('.gsdw-summary-row[data-kind="unknown"]');
   await expect(unresolved).toHaveCount(1);
   await expect(unresolved).not.toContainText('اعتماد غير محسوم: عملية تشغيل قابلة للوصف');
-  await expect(page.getByText('REFERENCE_ONLY', { exact: true })).toBeVisible();
+  await expect(page.getByText('مرجع سياقي فقط', { exact: true })).toBeVisible();
+  await expect(page.getByText('REFERENCE_ONLY', { exact: true })).toHaveCount(0);
 });
 
-test('Solutions Decision Summary hands truthful mapped context to Start', async ({ page }) => {
+test('Solutions Decision Summary carries fact context and decision metadata to Start without authoring the objective', async ({ page }) => {
   await reachDecisionSummary(page);
   await page.getByRole('button', { name: /تجهيز الانتقال إلى Discovery/ }).click();
 
@@ -257,9 +258,31 @@ test('Solutions Decision Summary hands truthful mapped context to Start', async 
   await expectSkipLinkParked(page);
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-certainty', 'configured');
   await expect(page.getByText('ملخص قرار الحلول')).toBeVisible();
-  await expect(page.getByLabel('الهدف الرئيسي بصياغتك')).toHaveValue('تنظيم عمل وطلبات داخلية');
+
+  const carriedContext = await page.evaluate(() => {
+    const state = window.history.state as {
+      usr?: {
+        discoveryPrefill?: {
+          solutionFamilyId?: string;
+          decisionOrigin?: string;
+          recommendationResolution?: string;
+        };
+      };
+    } | null;
+    return state?.usr?.discoveryPrefill;
+  });
+  expect(carriedContext?.solutionFamilyId).toBe('portals');
+  expect(carriedContext?.decisionOrigin).toBe('SYSTEM_FINDER');
+  expect(carriedContext?.recommendationResolution).toBe('decisive');
+
+  const objective = page.getByLabel('الهدف الرئيسي بصياغتك');
+  await expect(objective).toHaveValue('');
+  await expect(page.locator('[data-carried-facts="true"]')).toContainText(
+    'النتيجة: تنظيم عمل وطلبات داخلية',
+  );
   await expect(page.getByLabel('المشكلة الحالية')).toHaveValue('');
 
+  await objective.fill('تنظيم تدفق الطلبات بصياغة المستخدم');
   await page.getByLabel('المشكلة الحالية').fill('الطلبات الحالية موزعة وتحتاج تعريفًا مشتركًا.');
   await page.getByRole('button', { name: 'متابعة' }).click();
   await expect(page.getByLabel('الحل أو العائلة المقترحة')).toHaveValue(
@@ -283,7 +306,9 @@ test('Solutions Decision Summary hands truthful mapped context to Start', async 
 
   await page.getByRole('button', { name: 'مراجعة الملخص' }).click();
   await expect(page.getByText(/RP02 — نظام تشغيل يوضّح العمل/)).toBeVisible();
-  await expect(page.getByText(/حالة المرجع: REFERENCE_ONLY/)).toBeVisible();
+  await expect(page.getByText(/حالة السياق: سياق مرجعي للاستئناس فقط/)).toBeVisible();
+  await expect(page.getByText('عائلة أوصى بها Finder من المدخلات المتاحة')).toBeVisible();
+  await expect(page.getByText('REFERENCE_ONLY', { exact: true })).toHaveCount(0);
   await expect(page.getByText('portals', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'تثبيت نسخة المراجعة' }).click();
   await expect(page.getByText('تم تثبيت نسخة المراجعة محليًا.')).toBeVisible();
