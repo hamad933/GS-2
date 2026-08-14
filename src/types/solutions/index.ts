@@ -108,6 +108,13 @@ export type BudgetPreferenceId = 'control' | 'flexible' | 'complex' | 'unknown';
 
 export type RecommendationResolution = 'decisive' | 'tied' | 'insufficient';
 
+export type DecisionOrigin =
+  | 'SYSTEM_FINDER'
+  | 'USER_DIRECT'
+  | 'USER_COMPARE'
+  | 'USER_OPEN_DIRECTION'
+  | 'USER_ALTERNATIVE';
+
 export type Recommendation = {
   resolution: RecommendationResolution;
   recommendedId?: SolutionFamilyId;
@@ -122,6 +129,10 @@ export type DecisionSnapshot = {
   facts: DecisionFacts;
   recommendedFamily: SolutionFamilyId;
   alternativeFamily?: SolutionFamilyId;
+  /** Stable semantic origin of the current family decision. */
+  decisionOrigin?: DecisionOrigin;
+  /** Finder resolution that produced or preceded the current decision, when applicable. */
+  recommendationResolution?: RecommendationResolution;
   selectedCapabilities: string[];
   /**
    * Explicit provenance for selected capabilities. Optional for compatibility
