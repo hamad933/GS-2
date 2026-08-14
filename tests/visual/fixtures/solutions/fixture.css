@@ -1,0 +1,15 @@
+html {
+  min-width: 320px;
+  background: #03080d;
+}
+
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow-x: hidden;
+  background: #03080d;
+}
