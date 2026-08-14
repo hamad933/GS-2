@@ -212,7 +212,7 @@ test('a direct hash waits for lazy content, scrolls to its target, and keeps rou
   )).toBeLessThan(2);
 });
 
-test('Start accepts valid W02 prefill state and ignores malformed optional fields safely', async ({ page }) => {
+test('Start accepts valid W02/current prefill state and ignores malformed optional fields safely', async ({ page }) => {
   await navigateWithRouteState(page, {
     discoveryPrefill: {
       version: 1,
@@ -224,6 +224,20 @@ test('Start accepts valid W02 prefill state and ignores malformed optional field
       recommendedFamily: 'الأنظمة التشغيلية والبوابات',
       selectedCapabilities: ['نمذجة الطلب والحالة'],
       optionalCapabilities: ['تكاملات وهوية وصلاحيات متقدمة'],
+      capabilitySelections: [
+        {
+          name: 'نمذجة الطلب والحالة',
+          classification: 'CORE',
+          provenance: 'SYSTEM_SEEDED',
+        },
+      ],
+      capturedFacts: {
+        outcome: 'تنظيم عمل وطلبات داخلية',
+        activity: 'عمليات وفرق',
+        audience: 'فريق داخلي',
+        complexity: 'أنظمة أو تكاملات مهمة',
+        constraints: 'قيد محفوظ من المصدر',
+      },
       knownDependencies: ['عملية تشغيل قابلة للوصف'],
       unknowns: ['اعتماد غير محسوم'],
     },
@@ -231,6 +245,7 @@ test('Start accepts valid W02 prefill state and ignores malformed optional field
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-certainty', 'configured');
   await expect(page.locator('#sd-objective')).toHaveValue('تنظيم عمل وطلبات داخلية');
+  await expect(page.locator('[data-carried-facts="true"]')).toContainText('النشاط: عمليات وفرق');
 
   await navigateWithRouteState(page, {
     discoveryPrefill: {
@@ -239,6 +254,11 @@ test('Start accepts valid W02 prefill state and ignores malformed optional field
       selectedOutcome: 'سياق صالح وحيد',
       selectedCapabilities: ['قدرة سليمة', 42],
       optionalCapabilities: { unsafe: true },
+      capabilitySelections: [
+        { name: 'قدرة سليمة', classification: 'CORE', provenance: 'SYSTEM_SEEDED' },
+        { name: 42, classification: 'CORE', provenance: 'USER_SELECTED' },
+      ],
+      capturedFacts: { outcome: 'سليم', activity: 42 },
       knownDependencies: 'not-an-array',
       budgetPreference: { unsafe: true },
     },
@@ -246,6 +266,7 @@ test('Start accepts valid W02 prefill state and ignores malformed optional field
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
   await expect(page.locator('#sd-objective')).toHaveValue('سياق صالح وحيد');
   await expect(page.getByText('قدرة سليمة', { exact: true })).toHaveCount(0);
+  await expect(page.locator('[data-carried-facts="true"]')).toHaveCount(0);
 });
 
 test('Start stays fully direct-entry functional when route state is absent or unusable', async ({ page }) => {
@@ -259,6 +280,10 @@ test('Start stays fully direct-entry functional when route state is absent or un
       source: { adapter: 42 },
       selectedOutcome: { unsafe: true },
       selectedCapabilities: [42],
+      capabilitySelections: [
+        { name: '', classification: 'CORE', provenance: 'SYSTEM_SEEDED' },
+      ],
+      capturedFacts: { outcome: 42 },
       unknowns: 'not-an-array',
     },
   }, 'unusable-prefill');
