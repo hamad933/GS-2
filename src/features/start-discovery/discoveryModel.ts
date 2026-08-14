@@ -1,5 +1,8 @@
 import {
   START_DISCOVERY_PREFILL_VERSION,
+  type DiscoveryCapabilityClassification,
+  type DiscoveryCapabilitySelection,
+  type DiscoveryCapturedFacts,
   type DiscoveryCertainty,
   type DiscoveryStepId,
   type DiscoverySummary,
@@ -23,6 +26,7 @@ const emptyDraft: StartDiscoveryDraft = {
   selectedCapabilities: [],
   optionalCapabilities: [],
   uncertainCapabilities: [],
+  capabilitySelections: [],
   configurationPreference: '',
   existingSystems: '',
   integrations: '',
@@ -72,8 +76,46 @@ const branchSteps: Record<DiscoveryCertainty, readonly DiscoveryStepId[]> = {
   ],
 };
 
+const capabilityClassificationLabels: Record<DiscoveryCapabilityClassification, string> = {
+  CORE: 'أساسي من النظام',
+  RECOMMENDED: 'موصى به من النظام',
+  OPTIONAL: 'اختياري',
+  CONDITIONAL: 'مشروط',
+  CUSTOM: 'مخصص / يحتاج اكتشافًا',
+};
+
 function unique(values: readonly string[] | undefined) {
   return [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))];
+}
+
+function normalizeCapabilitySelections(
+  selections: readonly DiscoveryCapabilitySelection[] | undefined,
+): DiscoveryCapabilitySelection[] {
+  const result: DiscoveryCapabilitySelection[] = [];
+  const seen = new Set<string>();
+
+  for (const selection of selections ?? []) {
+    const name = selection.name.trim();
+    if (!name) continue;
+    const key = `${selection.provenance}:${selection.classification}:${name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push({ ...selection, name });
+  }
+
+  return result;
+}
+
+function normalizeCapturedFacts(
+  capturedFacts: DiscoveryCapturedFacts | undefined,
+): DiscoveryCapturedFacts | undefined {
+  if (!capturedFacts) return undefined;
+  const result: DiscoveryCapturedFacts = {};
+  for (const key of ['outcome', 'activity', 'audience', 'complexity', 'constraints'] as const) {
+    const value = capturedFacts[key]?.trim();
+    if (value) result[key] = value;
+  }
+  return Object.keys(result).length ? result : undefined;
 }
 
 export function createStartDiscoveryDraft(
@@ -88,15 +130,34 @@ export function createStartDiscoveryDraft(
     return { ...emptyDraft, certainty: initialCertainty };
   }
 
+  const capabilitySelections = normalizeCapabilitySelections(prefill.capabilitySelections);
+  const hasExplicitProvenance = capabilitySelections.length > 0;
+  const carriedUserSelections = capabilitySelections.filter(
+    (selection) => selection.provenance === 'USER_SELECTED',
+  );
+
   return {
     ...emptyDraft,
     certainty: initialCertainty,
     objective: prefill.selectedOutcome?.trim() ?? '',
     currentProblem: prefill.selectedProblem?.trim() ?? '',
-    expectedOutcomes: prefill.selectedOutcome?.trim() ?? '',
     recommendedFamily: prefill.recommendedFamily?.trim() ?? '',
-    selectedCapabilities: unique(prefill.selectedCapabilities),
-    optionalCapabilities: unique(prefill.optionalCapabilities),
+    selectedCapabilities: hasExplicitProvenance
+      ? unique(
+          carriedUserSelections
+            .filter((selection) => selection.classification !== 'OPTIONAL')
+            .map((selection) => selection.name),
+        )
+      : unique(prefill.selectedCapabilities),
+    optionalCapabilities: hasExplicitProvenance
+      ? unique(
+          carriedUserSelections
+            .filter((selection) => selection.classification === 'OPTIONAL')
+            .map((selection) => selection.name),
+        )
+      : unique(prefill.optionalCapabilities),
+    capabilitySelections,
+    capturedFacts: normalizeCapturedFacts(prefill.capturedFacts),
     configurationPreference: prefill.configurationPreference?.trim() ?? '',
     budgetPreference: prefill.budgetPreference?.trim() ?? '',
     dependencies: unique(prefill.knownDependencies),
@@ -161,6 +222,12 @@ export function buildDiscoverySummary(
       ? []
       : defaultUnknown(draft.certainty)),
   ]);
+  const systemSeededCapabilities = draft.capabilitySelections
+    .filter((selection) => selection.provenance === 'SYSTEM_SEEDED')
+    .map(
+      (selection) =>
+        `${selection.name} — ${capabilityClassificationLabels[selection.classification]}`,
+    );
 
   return {
     title: draft.objective || 'ملخص تعريف المشروع',
@@ -169,6 +236,11 @@ export function buildDiscoverySummary(
       group('known', [
         item('الهدف التشغيلي أو التجاري', values(draft.objective)),
         item('المشكلة الحالية', values(draft.currentProblem)),
+        item('النتيجة المحفوظة من قرار الحلول', values(draft.capturedFacts?.outcome)),
+        item('طبيعة النشاط المحفوظة', values(draft.capturedFacts?.activity)),
+        item('الجمهور المحفوظ', values(draft.capturedFacts?.audience)),
+        item('عمق التشغيل المحفوظ', values(draft.capturedFacts?.complexity)),
+        item('القيد الحر المحفوظ', values(draft.capturedFacts?.constraints)),
         item('المستخدمون المقصودون', values(draft.intendedUsers)),
         item('النشاط أو المجال', values(draft.domain)),
         item('النتائج المتوقعة', values(draft.expectedOutcomes)),
@@ -178,11 +250,12 @@ export function buildDiscoverySummary(
         item('ملاحظات إضافية', values(draft.additionalNotes)),
       ]),
       group('selected', [
-        item('قدرات محددة', draft.selectedCapabilities),
+        item('قدرات اخترتها أنت', draft.selectedCapabilities),
       ]),
       group('preferred', [
         item('عائلة موصى بها من السياق', values(draft.recommendedFamily)),
-        item('قدرات اختيارية', draft.optionalCapabilities),
+        item('قدرات أدرجها النظام مبدئيًا', systemSeededCapabilities),
+        item('قدرات اختيارية اخترتها أنت', draft.optionalCapabilities),
         item('تفضيل التكوين', values(draft.configurationPreference)),
         item('تفضيل الميزانية', values(draft.budgetPreference)),
         item('تفضيل التوقيت', values(draft.timingPreference)),
