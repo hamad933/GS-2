@@ -101,6 +101,10 @@ const evidenceStateLabels: Record<EvidenceState, LocalizedText> = {
 
 const routeMachineState = 'ROUTE_NOT_CONFIGURED' as const;
 
+function publicProjectCode(code: ReferenceProject['code']): string {
+  return code.replace(/^RP(\d{2})$/, 'RP-$1');
+}
+
 function StateLabel({
   label,
   machineState,
@@ -130,7 +134,7 @@ function CapabilityMap({ project, locale }: { project: ReferenceProject; locale:
       </svg>
 
       <div className="rp-capability-map__core" aria-hidden="true">
-        <span>{project.code}</span>
+        <span>{publicProjectCode(project.code)}</span>
         <i />
         <strong dir="ltr">{project.name}</strong>
         {localized(project.domain, locale) !== project.name ? <small>{localized(project.domain, locale)}</small> : null}
@@ -211,7 +215,7 @@ export function ReferenceProjectsBody({
 
         <div className="rp-theatre" aria-label={copy.theatreLabel}>
           <div className="rp-theatre__signal" aria-hidden="true">
-            <span>{active.code}</span><i /><span>04 / {String(activeIndex + 1).padStart(2, '0')}</span>
+            <span>{publicProjectCode(active.code)}</span><i /><span>04 / {String(activeIndex + 1).padStart(2, '0')}</span>
           </div>
 
           <div className="rp-project-selector" role="tablist" aria-label={copy.selectorLabel} aria-orientation="vertical">
@@ -232,7 +236,7 @@ export function ReferenceProjectsBody({
                   onClick={() => selectProject(project.id)}
                   onKeyDown={(event) => handleProjectKey(event, index)}
                 >
-                  <span className="rp-project-selector__code" dir="ltr">{project.code}</span>
+                  <span className="rp-project-selector__code" dir="ltr">{publicProjectCode(project.code)}</span>
                   <span className="rp-project-selector__copy">
                     <strong dir="ltr">{project.name}</strong>
                     {localized(project.domain, locale) !== project.name ? <small>{localized(project.domain, locale)}</small> : null}
@@ -251,7 +255,7 @@ export function ReferenceProjectsBody({
             tabIndex={0}
           >
             <div className="rp-active-project__identity">
-              <span>{copy.activeReference} / {active.code}</span>
+              <span>{copy.activeReference} / {publicProjectCode(active.code)}</span>
               <p>{copy.independent}</p>
               <h2 dir="ltr">{active.name}</h2>
               {localized(active.domain, locale) !== active.name ? <strong>{localized(active.domain, locale)}</strong> : null}
@@ -297,7 +301,7 @@ export function ReferenceProjectsBody({
       >
         <div className="rp-ledger__inner">
           <header>
-            <p>{active.code} / {copy.ledger}</p>
+            <p>{publicProjectCode(active.code)} / {copy.ledger}</p>
             <h2 id={`${panelId}-ledger-title`} dir="ltr">{active.name}</h2>
           </header>
 
@@ -350,7 +354,7 @@ export function ReferenceProjectsBody({
         <ol className="rp-comparison__rows">
           {referenceProjects.map((project) => (
             <li key={project.id} data-project-row={project.id}>
-              <div><span dir="ltr">{project.code}</span><strong dir="ltr">{project.name}</strong></div>
+              <div><span dir="ltr">{publicProjectCode(project.code)}</span><strong dir="ltr">{project.name}</strong></div>
               <p>{localized(project.domain, locale)}</p>
               <p>{localized(project.capabilityClass, locale)}</p>
               <StateLabel
