@@ -697,7 +697,6 @@
   font-family: ui-monospace, monospace;
   font-size: 8px;
 }
-
 .rp-ledger__limit h3,
 .rp-ledger__route h3,
 .rp-ledger__evidence > h3 {
@@ -1245,5 +1244,18 @@
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .rp-active-project__identity > span,
+  .rp-active-project__identity > p:first-of-type,
+  .rp-capability-map__core small,
+  .rp-capability-map__nodes strong,
+  .rp-capability-map figcaption,
+  .rp-active-project__summary dt,
+  .rp-ledger__evidence article p,
+  .rp-state-label > strong {
+    font-size: 10px;
   }
 }
