@@ -25,7 +25,7 @@ export const solutionFamilies: SolutionFamily[] = [
     boundaries: ['ليس نظام تشغيل داخليًا كاملًا', 'لا يفترض متجرًا أو دفعًا', 'التكاملات تخضع لاكتشاف تقني'],
     reference: {
       title: 'لا يوجد مرجع مطابق متاح حاليًا',
-      note: 'يمكن مناقشة اتجاه بصري أو هيكلي في Discovery دون تقديمه كدليل تنفيذ.',
+      note: 'يمكن مناقشة اتجاه بصري أو هيكلي في جلسة الاكتشاف دون تقديمه كدليل تنفيذ.',
       evidenceState: 'NOT_AVAILABLE',
     },
     complexityNote: 'يبقى الاتجاه مركزًا ما دام المحتوى ومسار الطلب محدودين؛ يرتفع التعقيد مع تعدد اللغات والأنظمة المرتبطة.',
@@ -48,7 +48,7 @@ export const solutionFamilies: SolutionFamily[] = [
       { name: 'الدفع والمخزون والوفاء', description: 'يتحدد وفق مزودي الخدمة والأنظمة المعتمدة.', classification: 'CONDITIONAL' },
     ],
     dependencies: ['بيانات منتجات موثوقة', 'سياسات تجارية معتمدة', 'حسم أنظمة الدفع والمخزون عند الحاجة'],
-    boundaries: ['لا توجد أسعار GS مفترضة', 'لا تُفترض بوابات دفع أو تكاملات', 'منطق الوفاء يحتاج Discovery'],
+    boundaries: ['لا توجد أسعار GS مفترضة', 'لا تُفترض بوابات دفع أو تكاملات', 'منطق الوفاء يحتاج جلسة اكتشاف'],
     reference: {
       code: 'RP01',
       title: 'تجربة تجارة وهوية بصرية متصلة',
@@ -126,17 +126,17 @@ export const solutionFamilies: SolutionFamily[] = [
       { name: 'الأدوار ومساحات العمل', description: 'إظهار العمل المناسب لكل مستخدم.', classification: 'CORE' },
       { name: 'قواعد التوجيه والمتابعة', description: 'تنظيم انتقال الطلب والتنبيه للخطوة التالية.', classification: 'RECOMMENDED' },
       { name: 'تقارير وتحكم تشغيلي', description: 'رؤية الحالة والاختناقات وفق تعريفات متفق عليها.', classification: 'RECOMMENDED' },
-      { name: 'تكاملات وهوية وصلاحيات متقدمة', description: 'تحتاج Discovery تقنيًا وأمنيًا قبل الالتزام.', classification: 'CUSTOM' },
+      { name: 'تكاملات وهوية وصلاحيات متقدمة', description: 'تحتاج اكتشافًا تقنيًا وأمنيًا قبل الالتزام.', classification: 'CUSTOM' },
     ],
     dependencies: ['عملية تشغيل قابلة للوصف', 'أدوار ومالكو قرار', 'مصادر بيانات وأنظمة حالية معروفة'],
-    boundaries: ['لا تُفترض تكاملات أو جاهزية إنتاج', 'الأمن والهوية يحتاجان Discovery', 'لا توجد مؤشرات أداء مضمونة'],
+    boundaries: ['لا تُفترض تكاملات أو جاهزية إنتاج', 'الأمن والهوية يحتاجان جلسة اكتشاف', 'لا توجد مؤشرات أداء مضمونة'],
     reference: {
       code: 'RP02',
       title: 'نظام تشغيل يوضّح العمل',
       note: 'سياق مرجعي محدود لتنظيم المهام والحالات؛ المشروع مستقل ولا يثبت تكاملًا أو تشغيلًا حاليًا.',
       evidenceState: 'REFERENCE_ONLY',
     },
-    complexityNote: 'غالبًا أعلى تعقيدًا بسبب الأدوار والقواعد والبيانات والتكاملات، ويحتاج Discovery مبكرًا.',
+    complexityNote: 'غالبًا أعلى تعقيدًا بسبب الأدوار والقواعد والبيانات والتكاملات، ويحتاج جلسة اكتشاف مبكرة.',
     nextDecision: 'ما العملية الأولى التي تستحق التنظيم، ومن يملك كل انتقال فيها؟',
   },
   {
@@ -159,7 +159,7 @@ export const solutionFamilies: SolutionFamily[] = [
     boundaries: ['لا تُفترض شهادات معتمدة', 'لا يُفترض نظام تعلم مؤسسي كامل', 'جودة التجربة تعتمد على جاهزية المحتوى'],
     reference: {
       title: 'لا يوجد مرجع مطابق متاح حاليًا',
-      note: 'تُراجع بنية المحتوى المطلوبة في Discovery دون ادعاء دليل تنفيذ غير متاح.',
+      note: 'تُراجع بنية المحتوى المطلوبة في جلسة الاكتشاف دون ادعاء دليل تنفيذ غير متاح.',
       evidenceState: 'NOT_AVAILABLE',
     },
     complexityNote: 'يتأثر التعقيد بحجم المحتوى ونموذج النشر والتقدم والتقييمات والصلاحيات.',
@@ -198,7 +198,7 @@ export const configurationDirections: ConfigurationDirection[] = [
   },
   {
     id: 'custom',
-    title: 'تخصيص تشغيلي يحتاج Discovery',
+    title: 'تخصيص تشغيلي يحتاج جلسة اكتشاف',
     shortLabel: 'احتياج مخصص',
     description: 'اتجاه مبدئي عندما لا يمكن تثبيت الحل قبل فهم الأنظمة والقواعد والقيود.',
     dimensions: {
@@ -216,7 +216,7 @@ export const budgetPreferences: Array<{ id: BudgetPreferenceId; title: string; d
   { id: 'control', title: 'الأولوية لضبط التعقيد', detail: 'نحافظ على نطاق مركز ونؤجل ما لا يثبت ضرورته.' },
   { id: 'flexible', title: 'مرونة حسب القيمة', detail: 'نوازن بين النطاق والاعتمادات بعد توضيح الأولويات.' },
   { id: 'complex', title: 'مستعد لنطاق أعلى تعقيدًا', detail: 'مناسب فقط عندما تبرر العملية والتكاملات ذلك.' },
-  { id: 'unknown', title: 'غير محدد بعد', detail: 'نسجل الميزانية كقيد غير محسوم يحتاج Discovery.' },
+  { id: 'unknown', title: 'غير محدد بعد', detail: 'نسجل الميزانية كقيد غير محسوم يحتاج جلسة اكتشاف.' },
 ];
 
 export const familyById = Object.fromEntries(
