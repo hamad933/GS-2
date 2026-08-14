@@ -82,34 +82,52 @@
 .gsdw .gsdw-summary-capabilities small,
 .gsdw .gsdw-next-action small,
 .gsdw .gsdw-next-action p,
-.gsdw .gsdw-prepared {
+.gsdw .gsdw-prepared,
+.gsdw .gsdw-matrix-labels::before,
+.gsdw .gsdw-option-matrix > button > span:not(.gsdw-matrix-head)::before {
   font-size: 10px;
 }
 
-.gsdw .gsdw-matrix-labels::before {
-  font-size: 10px;
-}
-
-.gsdw .gsdw-panel-code,
+/* Neutral semantic metadata whose base/inherited colors fall below 4.5:1. */
+.gsdw .gsdw-progress small,
+.gsdw .gsdw-answer-ledger > span,
+.gsdw .gsdw-answer-ledger button small,
+.gsdw .gsdw-constraints-input > span small,
+.gsdw .gsdw-family-field button small,
+.gsdw .gsdw-family-context summary small,
+.gsdw .gsdw-reference-context p,
+.gsdw .gsdw-capability small,
+.gsdw .gsdw-dependencies label small,
+.gsdw .gsdw-summary-legend,
 .gsdw .gsdw-summary-legend span,
+.gsdw .gsdw-sheet-head small,
 .gsdw .gsdw-summary-row > div:first-child em,
 .gsdw .gsdw-summary-row li > span,
-.gsdw .gsdw-summary-capabilities small,
-.gsdw .gsdw-capability em,
-.gsdw .gsdw-details-grid ul em,
-.gsdw .gsdw-budget-status small,
-.gsdw .gsdw-family-context summary small,
-.gsdw .gsdw-reference-context p {
+.gsdw .gsdw-next-action p {
   color: #938b83;
 }
 
-.gsdw .gsdw-evidence > strong {
-  color: #a98a62;
+/* Preserve blue semantic distinctions with a contrast-safe source color. */
+.gsdw .gsdw-answer-ledger button b,
+.gsdw .gsdw-panel-code,
+.gsdw .gsdw-sheet-head span,
+.gsdw .gsdw-summary-capabilities small {
+  color: #91a7e8;
 }
 
-.gsdw .gsdw-panel-code,
-.gsdw .gsdw-sheet-head span {
-  color: #91a7e8;
+/* Preserve gold semantic distinctions while guaranteeing normal-text contrast. */
+.gsdw .gsdw-comparison-head span,
+.gsdw .gsdw-comparison-row > span,
+.gsdw .gsdw-comparison-actions > span,
+.gsdw .gsdw-recommendation-title small,
+.gsdw .gsdw-details-grid ul em,
+.gsdw .gsdw-evidence > strong,
+.gsdw .gsdw-decision-bar > div > span,
+.gsdw .gsdw-matrix-labels span,
+.gsdw .gsdw-matrix-labels::before,
+.gsdw .gsdw-matrix-head small,
+.gsdw .gsdw-option-matrix > button > span:not(.gsdw-matrix-head)::before {
+  color: #a98a62;
 }
 
 @media (max-width: 860px) {
