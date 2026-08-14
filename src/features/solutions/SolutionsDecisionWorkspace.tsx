@@ -393,7 +393,7 @@ export function SolutionsDecisionWorkspace({
     .filter((item) => item.value);
 
   return (
-    <main
+    <section
       id="solutions-decision-workspace"
       className="gsdw"
       dir="rtl"
@@ -421,7 +421,7 @@ export function SolutionsDecisionWorkspace({
           <section className="gsdw-entry" aria-labelledby="gsdw-entry-title">
             <div className="gsdw-entry-copy">
               <span className="gsdw-eyebrow"><i /> GS-PUB-002 <b>مساحة قرار واحدة</b></span>
-              <h1 id="gsdw-entry-title">لا تحتاج أن تعرف<br />اسم الحل قبل أن تبدأ.</h1>
+              <h1 id="gsdw-entry-title" data-route-focus tabIndex={-1}>لا تحتاج أن تعرف<br />اسم الحل قبل أن تبدأ.</h1>
               <p>ابدأ من النتيجة أو من اتجاه تعرفه، وسنحافظ على الفرق بين ما ذكرته، وما فضّلته، وما لا يزال مجهولًا.</p>
               <div className="gsdw-principle">
                 <span dir="ltr">NO ASSUMED CERTAINTY</span>
@@ -897,10 +897,10 @@ export function SolutionsDecisionWorkspace({
         ) : null}
       </div>
 
-      <footer className="gsdw-footer">
+      <div className="gsdw-footer">
         <span dir="ltr">GS / SOLUTIONS / DECISION WORKSPACE</span>
         <span>قرار مبني على معلوماتك — بلا أسعار أو وعود أو أدلة مفترضة.</span>
-      </footer>
-    </main>
+      </div>
+    </section>
   );
 }

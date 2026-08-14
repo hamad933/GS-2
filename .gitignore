@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Browser evidence is generated per reviewed SHA and remains artifact-only.
+tests/visual/solutions/evidence/*.png
+tests/visual/reference-projects/evidence/*.png
+tests/visual/how-we-work/evidence/*.png
+visual-evidence/
+test-results/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

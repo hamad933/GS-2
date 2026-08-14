@@ -168,7 +168,7 @@ export function ReferenceProjectsBody({
         <div className="rp-grid" aria-hidden="true" />
         <header className="rp-hero__header">
           <p className="rp-eyebrow"><i />{copy.eyebrow}</p>
-          <h1 id="reference-projects-title">
+          <h1 id="reference-projects-title" data-route-focus tabIndex={-1}>
             <span>{copy.titleLead}</span>
             <span>{copy.titleClose}</span>
           </h1>

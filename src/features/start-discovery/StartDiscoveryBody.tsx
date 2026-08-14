@@ -176,9 +176,23 @@ function ChoiceSet({
   onChange: (value: string) => void;
   optional?: boolean;
 }) {
+  const hasCarriedValue = Boolean(value) && !options.includes(value);
+
   return (
     <Field label={label} optional={optional}>
       <div className="sd-choice-set" role="group" aria-label={label}>
+        {hasCarriedValue ? (
+          <button
+            type="button"
+            className="is-selected"
+            aria-pressed="true"
+            data-carried-prefill="true"
+            onClick={() => onChange('')}
+          >
+            <span>{value}</span>
+            <i aria-hidden="true"><Check /></i>
+          </button>
+        ) : null}
         {options.map((option) => (
           <button
             key={option}
@@ -778,7 +792,7 @@ export function StartDiscoveryBody({
               <span aria-hidden="true" />
               GS / START · DISCOVERY
             </p>
-            <h1 id="start-discovery-title">حوّل الفكرة غير المكتملة إلى بداية واضحة.</h1>
+            <h1 id="start-discovery-title" data-route-focus tabIndex={-1}>حوّل الفكرة غير المكتملة إلى بداية واضحة.</h1>
           </div>
           <div className="sd-intro__copy">
             <p>

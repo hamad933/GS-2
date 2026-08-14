@@ -197,7 +197,7 @@ export function HowWeWorkBody({
         <div className="method-hero__grid" aria-hidden="true" />
         <header className="method-hero__header">
           <p className="method-eyebrow"><i />{copy.eyebrow}</p>
-          <h1 id="how-we-work-title">
+          <h1 id="how-we-work-title" data-route-focus tabIndex={-1}>
             <span>{copy.titleLead}</span>
             <span>{copy.titleClose}</span>
           </h1>
