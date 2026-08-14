@@ -141,7 +141,10 @@ export function createStartDiscoveryDraft(
   }
 
   const capabilitySelections = normalizeCapabilitySelections(prefill.capabilitySelections);
-  const hasExplicitProvenance = capabilitySelections.length > 0;
+  const hasExplicitProvenance = Object.prototype.hasOwnProperty.call(
+    prefill,
+    'capabilitySelections',
+  );
   const carriedUserSelections = capabilitySelections.filter(
     (selection) => selection.provenance === 'USER_SELECTED',
   );
