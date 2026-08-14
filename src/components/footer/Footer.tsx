@@ -1,4 +1,3 @@
-import { ArrowLeftIcon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { FOOTER_NAV_ITEMS } from '../../routes/publicRoutes';
 import './Footer.remediation.css';
@@ -28,7 +27,7 @@ export function Footer() {
         </nav>
 
         <NavLink to="/start" className="gs-footer__email">
-          <ArrowLeftIcon aria-hidden="true" />
+          <span aria-hidden="true">←</span>
           <span>ابدأ اختيارك</span>
         </NavLink>
 
