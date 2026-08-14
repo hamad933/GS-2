@@ -1,0 +1,57 @@
+Represented application SHA: 54d18e2625897482d018b17d2dc87ba0bb219639
+Total source image count: 47
+Contact sheet 1 image count: 26
+Contact sheet 2 image count: 21
+
+Sheet 1 - GS-W07-Visual-Review-Desktop-Tablet.jpg
+  public-site\w05-1024-home.png
+  public-site\w05-1440-home.png
+  public-site\w05-768-home.png
+  public-site\w05-1024-solutions-entry.png
+  public-site\w05-1440-solutions-entry.png
+  public-site\w05-768-solutions-entry.png
+  public-site\w05-1024-reference-projects.png
+  public-site\w05-1440-reference-projects.png
+  public-site\w05-768-reference-projects.png
+  public-site\w05-1024-how-we-work.png
+  public-site\w05-1440-how-we-work.png
+  public-site\w05-768-how-we-work.png
+  public-site\w05-1024-start-direct.png
+  start-fixture\start-discovery-1024-foundation.png
+  public-site\w05-1440-start-direct.png
+  start-fixture\start-discovery-1440-foundation.png
+  public-site\w05-768-start-direct.png
+  start-fixture\start-discovery-768-foundation.png
+  public-site\w05-1024-404.png
+  public-site\w05-1440-404.png
+  public-site\w05-768-404.png
+  public-site\w05-1440-solutions-configuration.png
+  public-site\w05-1440-solutions-decision-summary.png
+  public-site\w05-1440-solutions-recommendation.png
+  public-site\w05-1440-start-solutions-prefill.png
+  start-fixture\start-discovery-1440-prefilled-summary.png
+
+Sheet 2 - GS-W07-Visual-Review-Mobile-States.jpg
+  public-site\w05-390-home.png
+  public-site\w05-430-home.png
+  public-site\w05-390-solutions-entry.png
+  public-site\w05-430-solutions-entry.png
+  public-site\w05-390-reference-projects.png
+  public-site\w05-430-reference-projects.png
+  public-site\w05-390-how-we-work.png
+  public-site\w05-430-how-we-work.png
+  public-site\w05-390-start-direct.png
+  start-fixture\start-discovery-390-foundation.png
+  public-site\w05-430-start-direct.png
+  start-fixture\start-discovery-430-foundation.png
+  public-site\w05-390-404.png
+  public-site\w05-430-404.png
+  public-site\w05-390-mobile-navigation.png
+  public-site\w05-390-reference-projects-rp04-boundary.png
+  public-site\w05-390-solutions-configuration.png
+  public-site\w05-390-solutions-decision-summary.png
+  public-site\w05-390-solutions-recommendation.png
+  public-site\w05-390-start-solutions-prefill.png
+  start-fixture\start-discovery-390-prefilled-summary.png
+
+Confirmation: every source image appears exactly once across the two contact sheets.
