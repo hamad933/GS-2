@@ -73,7 +73,7 @@ test.beforeEach(async ({ page }) => {
   runtimeErrors.set(page, errors);
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
   page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(`console: ${message.text()}`);
+    if (message.type() === 'error') errors.push(`console: ${message.text()}`));
   });
 });
 
@@ -232,6 +232,7 @@ test('direct selection stays user-selected and hands focus through configure and
 
   await page.getByRole('button', { name: /تكوين الاتجاه/ }).click();
   await expect(page.locator('#gsdw-configure-title')).toBeFocused();
+  await page.getByRole('button', { name: /مقارنة اتجاه التكوين/ }).click();
   await page.getByRole('button', { name: /إضافة القيود والميزانية/ }).click();
   await page.getByRole('button', { name: /إنتاج ملخص القرار/ }).click();
   await expect(page.locator('#gsdw-summary-title')).toBeFocused();
@@ -299,7 +300,8 @@ test('mobile Compare and configuration decision text stays readable without over
 
     await page.getByRole('button', { name: /اعتماد التجارة الرقمية وتجارب العلامات/ }).click();
     await page.getByRole('button', { name: /تكوين الاتجاه/ }).click();
-    for (const label of page.locator('.gsdw-config-phases button > span').all()) {
+    const phaseLabels = await page.locator('.gsdw-config-phases button > span').all();
+    for (const label of phaseLabels) {
       await expectMinimumFontSize(label, 11);
     }
     await expectNoHorizontalOverflow(page);
