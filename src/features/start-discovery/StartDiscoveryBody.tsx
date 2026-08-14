@@ -13,6 +13,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent,
   type ReactNode,
 } from 'react';
 import {
@@ -84,6 +85,34 @@ const stageIntros: Partial<Record<DiscoveryStepId, string>> = {
   dependencies: 'هذه ليست وعود تكامل. إنها قائمة تحقق لما يجب فحصه لاحقًا.',
   preferences: 'التفضيلات هنا تساعد على تشكيل النقاش ولا تنشئ سعرًا أو موعدًا.',
 };
+
+function handleRovingRadioKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+  const navigationKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+  if (!navigationKeys.includes(event.key)) return;
+
+  const group = event.currentTarget.closest('[role="radiogroup"]');
+  const radios = group
+    ? Array.from(group.querySelectorAll<HTMLButtonElement>('[role="radio"]:not(:disabled)'))
+    : [];
+  if (!radios.length) return;
+
+  const currentIndex = radios.indexOf(event.currentTarget);
+  if (currentIndex < 0) return;
+
+  let nextIndex = currentIndex;
+  if (event.key === 'Home') nextIndex = 0;
+  if (event.key === 'End') nextIndex = radios.length - 1;
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    nextIndex = (currentIndex + 1) % radios.length;
+  }
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    nextIndex = (currentIndex - 1 + radios.length) % radios.length;
+  }
+
+  event.preventDefault();
+  radios[nextIndex].focus();
+  radios[nextIndex].click();
+}
 
 function Field({
   label,
@@ -267,6 +296,13 @@ export function StartDiscoveryBody({
       total + summaryGroup.items.reduce((count, entry) => count + entry.values.length, 0),
     0,
   );
+  const carriedFactSummary = [
+    draft.capturedFacts?.outcome ? `النتيجة: ${draft.capturedFacts.outcome}` : undefined,
+    draft.capturedFacts?.activity ? `النشاط: ${draft.capturedFacts.activity}` : undefined,
+    draft.capturedFacts?.audience ? `الجمهور: ${draft.capturedFacts.audience}` : undefined,
+    draft.capturedFacts?.complexity ? `العمق: ${draft.capturedFacts.complexity}` : undefined,
+    draft.capturedFacts?.constraints ? `القيد: ${draft.capturedFacts.constraints}` : undefined,
+  ].filter((value): value is string => Boolean(value)).join(' · ');
 
   useEffect(() => {
     onDraftChange?.(draft);
@@ -393,15 +429,17 @@ export function StartDiscoveryBody({
             aria-invalid={Boolean(errors.certainty)}
             tabIndex={errors.certainty ? -1 : undefined}
           >
-            {certaintyOptions.map((option) => {
+            {certaintyOptions.map((option, index) => {
               const selected = draft.certainty === option.value;
               return (
                 <button
                   type="button"
                   role="radio"
                   aria-checked={selected}
+                  tabIndex={selected || (!draft.certainty && index === 0) ? 0 : -1}
                   key={option.value}
                   className={selected ? 'is-selected' : ''}
+                  onKeyDown={handleRovingRadioKeyDown}
                   onClick={() => selectCertainty(option.value)}
                 >
                   <bdi>{option.marker}</bdi>
@@ -813,6 +851,9 @@ export function StartDiscoveryBody({
                 راجعه وعدّله بحرية
                 {draft.prefillSource?.label ? ` · ${draft.prefillSource.label}` : ''}.
               </span>
+              {carriedFactSummary ? (
+                <span data-carried-facts="true">محفوظ للمراجعة · {carriedFactSummary}</span>
+              ) : null}
             </p>
             {draft.prefillSource?.referenceId ? (
               <bdi>{draft.prefillSource.referenceId}</bdi>
