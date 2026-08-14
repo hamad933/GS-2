@@ -585,12 +585,14 @@ test('Solutions live weak semantic metadata selectors keep the governed floor', 
     await openRoute(page, '/solutions', '#gsdw-entry-title');
     await page.getByRole('button', { name: /ساعدني أكتشف ما أحتاجه/ }).click();
     await expectSemanticMetadataStyle(page.locator('.gsdw-answer-ledger small').first());
+    await expectSemanticMetadataStyle(page.locator('.gsdw-options button small').first());
     await expectNoHorizontalOverflow(page);
 
     await reachPortalRecommendation(page);
     await page.getByRole('button', { name: /تكوين الاتجاه/ }).click();
     await page.getByRole('button', { name: /تكاملات وهوية وصلاحيات متقدمة/ }).click();
     await page.getByRole('button', { name: /مقارنة اتجاه التكوين/ }).click();
+    await expectSemanticMetadataStyle(page.locator('.gsdw-matrix-head p').first());
 
     if (width === 390) {
       const matrixCells = page.locator(

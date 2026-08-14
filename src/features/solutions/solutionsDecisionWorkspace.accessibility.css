@@ -92,11 +92,13 @@
 .gsdw .gsdw-progress small,
 .gsdw .gsdw-answer-ledger > span,
 .gsdw .gsdw-answer-ledger button small,
+.gsdw .gsdw-options button small,
 .gsdw .gsdw-constraints-input > span small,
 .gsdw .gsdw-family-field button small,
 .gsdw .gsdw-family-context summary small,
 .gsdw .gsdw-reference-context p,
 .gsdw .gsdw-capability small,
+.gsdw .gsdw-matrix-head p,
 .gsdw .gsdw-dependencies label small,
 .gsdw .gsdw-summary-legend,
 .gsdw .gsdw-summary-legend span,
@@ -108,14 +110,17 @@
 }
 
 /* Preserve blue semantic distinctions with a contrast-safe source color. */
+.gsdw .gsdw-principle span,
 .gsdw .gsdw-answer-ledger button b,
 .gsdw .gsdw-panel-code,
+.gsdw .gsdw-budget-status small,
 .gsdw .gsdw-sheet-head span,
 .gsdw .gsdw-summary-capabilities small {
   color: #91a7e8;
 }
 
 /* Preserve gold semantic distinctions while guaranteeing normal-text contrast. */
+.gsdw .gsdw-mini-label,
 .gsdw .gsdw-comparison-head span,
 .gsdw .gsdw-comparison-row > span,
 .gsdw .gsdw-comparison-actions > span,
@@ -123,11 +128,43 @@
 .gsdw .gsdw-details-grid ul em,
 .gsdw .gsdw-evidence > strong,
 .gsdw .gsdw-decision-bar > div > span,
+.gsdw .gsdw-capability em,
 .gsdw .gsdw-matrix-labels span,
 .gsdw .gsdw-matrix-labels::before,
 .gsdw .gsdw-matrix-head small,
+.gsdw .gsdw-next-action small,
 .gsdw .gsdw-option-matrix > button > span:not(.gsdw-matrix-head)::before {
   color: #a98a62;
+}
+
+/* Preserve independently safe existing semantic colors explicitly in the W08-A contract. */
+.gsdw .gsdw-quick-context li {
+  color: #a69d93;
+}
+
+.gsdw .gsdw-unknown-panel li {
+  color: #a59b91;
+}
+
+.gsdw .gsdw-alternative-panel button {
+  color: #c5b8ab;
+}
+
+.gsdw .gsdw-option-matrix > button > span:not(.gsdw-matrix-head) {
+  color: #a39a91;
+}
+
+.gsdw .gsdw-budget-status strong {
+  color: #b8c2df;
+}
+
+.gsdw .gsdw-prepared {
+  color: #a8c4b7;
+}
+
+/* CORE remains blue even though capability classification metadata defaults to gold. */
+.gsdw .gsdw-capability em[data-classification='CORE'] {
+  color: #91a7e8;
 }
 
 @media (max-width: 860px) {
