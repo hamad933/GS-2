@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { recommendFromFacts } from '../../../src/data/solutions/finder';
 
 const WORKSPACE = '#solutions-decision-workspace';
 const EVIDENCE_DIR = resolve('tests/visual/solutions/evidence');
@@ -61,6 +62,50 @@ test.afterEach(async ({ page }) => {
   expect(runtimeErrors.get(page) ?? []).toEqual([]);
 });
 
+test('Finder keeps mostly-unknown evidence unresolved instead of picking a hidden winner', () => {
+  const recommendation = recommendFromFacts({
+    outcome: 'unknown',
+    activity: 'mixed',
+    audience: 'unknown',
+    complexity: 'unknown',
+    constraints: '',
+  });
+
+  expect(recommendation.resolution).toBe('insufficient');
+  expect(recommendation.recommendedId).toBeUndefined();
+  expect(recommendation.candidateIds).toEqual(['business', 'portals']);
+});
+
+test('Finder preserves a tied top result without order-based tie breaking', () => {
+  const recommendation = recommendFromFacts({
+    outcome: 'unknown',
+    activity: 'services',
+    audience: 'customers',
+    complexity: 'unknown',
+    constraints: 'لا توجد قيود إضافية معروفة الآن',
+  });
+
+  expect(recommendation.resolution).toBe('tied');
+  expect(recommendation.recommendedId).toBeUndefined();
+  expect(recommendation.candidateIds).toEqual(['business', 'booking']);
+});
+
+test('Finder keeps decisive cases deterministic', () => {
+  const facts = {
+    outcome: 'operate',
+    activity: 'operations',
+    audience: 'team',
+    complexity: 'integrations',
+    constraints: 'نظام داخلي قائم',
+  } as const;
+
+  const first = recommendFromFacts(facts);
+  const second = recommendFromFacts(facts);
+  expect(first.resolution).toBe('decisive');
+  expect(first.recommendedId).toBe('portals');
+  expect(second).toEqual(first);
+});
+
 test('keeps all three entry modes inside one continuous workspace', async ({ page }) => {
   await openWorkspace(page);
 
@@ -100,10 +145,27 @@ test('exposes all six established families and their contextual state', async ({
 
 test('Finder progresses one useful question at a time and explains its bounded recommendation', async ({ page }) => {
   await reachPortalRecommendation(page);
+  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-recommendation-resolution', 'decisive');
   await expect(page.getByText('اتجاه أولي قابل للمراجعة')).toBeVisible();
   await expect(page.getByText('عمق التشغيل: أنظمة أو تكاملات مهمة')).toBeVisible();
   await expect(page.getByText('المعلومات الناقصة لا تخفض «نسبة تطابق»')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'الحجوزات والخدمات' })).toBeVisible();
+});
+
+test('mostly-unknown Finder answers surface open directions and no configure action', async ({ page }) => {
+  await openWorkspace(page);
+  await page.getByRole('button', { name: /ساعدني أكتشف ما أحتاجه/ }).click();
+  await chooseFinderOption(page, 'لست متأكدًا بعد');
+  await chooseFinderOption(page, 'نشاط مختلط أو غير محسوم');
+  await chooseFinderOption(page, 'غير معروف بعد');
+  await chooseFinderOption(page, 'غير معروف بعد', true);
+
+  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-recommendation-resolution', 'insufficient');
+  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-family', 'unset');
+  await expect(page.getByRole('heading', { name: 'لا يوجد اتجاه منفرد يمكن تبريره بعد.' })).toBeVisible();
+  await expect(page.locator('[data-open-family="business"]')).toBeVisible();
+  await expect(page.locator('[data-open-family="portals"]')).toBeVisible();
+  await expect(page.getByRole('button', { name: /تكوين الاتجاه/ })).toHaveCount(0);
 });
 
 test('supports bounded comparison and preserves an alternative direction', async ({ page }) => {
@@ -124,7 +186,8 @@ test('configures contextual capabilities, option depth, budget, dependencies, an
   await expect(page.getByText('مرونة حسب القيمة', { exact: true })).toBeVisible();
   await expect(page.getByText('نطاق يحدده صاحب القرار بعد مراجعة الاعتمادات')).toBeVisible();
   await expect(page.locator('.gsdw-summary-row[data-kind="unknown"]')).toHaveCount(1);
-  await expect(page.getByText('REFERENCE_ONLY', { exact: true })).toBeVisible();
+  await expect(page.getByText('مرجع سياقي فقط', { exact: true })).toBeVisible();
+  await expect(page.getByText('REFERENCE_ONLY', { exact: true })).toHaveCount(0);
 });
 
 test('supports edit and revisit behavior without losing the current decision', async ({ page }) => {
@@ -137,6 +200,41 @@ test('supports edit and revisit behavior without losing the current decision', a
   await page.getByRole('button', { name: /تجهيز الانتقال إلى Discovery/ }).click();
   await expect(page.getByRole('status')).toContainText('لم يُرسل شيء بعد');
   await expect(page.locator('#fixture-transition')).toHaveAttribute('data-ready', 'true');
+});
+
+test('supports Arrow-key roving tabindex in Finder, configuration, and budget radio groups', async ({ page }) => {
+  await openWorkspace(page);
+  await page.getByRole('button', { name: /ساعدني أكتشف ما أحتاجه/ }).click();
+  const finderGroup = page.getByRole('radiogroup').first();
+  const finderRadios = finderGroup.getByRole('radio');
+  await expect(finderRadios.nth(0)).toHaveAttribute('tabindex', '0');
+  await expect(finderRadios.nth(1)).toHaveAttribute('tabindex', '-1');
+  await finderRadios.nth(0).focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(finderRadios.nth(1)).toBeFocused();
+  await expect(finderRadios.nth(1)).toHaveAttribute('aria-checked', 'true');
+  await expect(finderRadios.nth(1)).toHaveAttribute('tabindex', '0');
+  await expect(finderRadios.nth(0)).toHaveAttribute('tabindex', '-1');
+
+  await reachPortalRecommendation(page);
+  await page.getByRole('button', { name: /تكوين الاتجاه/ }).click();
+  await page.getByRole('button', { name: /مقارنة اتجاه التكوين/ }).click();
+  const configurationGroup = page.getByRole('radiogroup', { name: 'اختر اتجاه التكوين' });
+  let activeRadio = configurationGroup.locator('[role="radio"][tabindex="0"]');
+  await activeRadio.focus();
+  await page.keyboard.press('ArrowDown');
+  activeRadio = configurationGroup.locator('[role="radio"][tabindex="0"]');
+  await expect(activeRadio).toBeFocused();
+  await expect(activeRadio).toHaveAttribute('aria-checked', 'true');
+
+  await page.getByRole('button', { name: /إضافة القيود والميزانية/ }).click();
+  const budgetGroup = page.getByRole('radiogroup', { name: 'تفضيل الميزانية' });
+  activeRadio = budgetGroup.locator('[role="radio"][tabindex="0"]');
+  await activeRadio.focus();
+  await page.keyboard.press('ArrowDown');
+  activeRadio = budgetGroup.locator('[role="radio"][tabindex="0"]');
+  await expect(activeRadio).toBeFocused();
+  await expect(activeRadio).toHaveAttribute('aria-checked', 'true');
 });
 
 test('supports keyboard activation, visible focus, and RTL/LTR semantics', async ({ page }) => {
@@ -156,6 +254,57 @@ test('supports keyboard activation, visible focus, and RTL/LTR semantics', async
   const inheritedDirection = await page.locator('.gsdw-eyebrow').first().evaluate((element) => getComputedStyle(element).direction);
   expect(inheritedDirection).toBe('rtl');
   await expect(page.locator('[dir="ltr"]').first()).toBeVisible();
+});
+
+test('keeps semantic decision metadata readable and contrast-safe on desktop and mobile', async ({ page }) => {
+  for (const [width, height] of [[1440, 900], [390, 844]] as const) {
+    await page.setViewportSize({ width, height });
+    await reachSummary(page);
+    const selectors = [
+      '.gsdw-summary-row > div:first-child em',
+      '.gsdw-summary-row li > span',
+      '.gsdw-summary-capabilities small',
+      '.gsdw-evidence > strong',
+    ];
+
+    for (const selector of selectors) {
+      const locator = page.locator(selector).first();
+      await expect(locator).toBeVisible();
+      const metrics = await locator.evaluate((element) => {
+        const parseRgb = (value: string) => {
+          const parts = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
+          return parts.map((part) => part / 255);
+        };
+        const luminance = (rgb: number[]) => {
+          const linear = rgb.map((channel) =>
+            channel <= 0.04045
+              ? channel / 12.92
+              : ((channel + 0.055) / 1.055) ** 2.4,
+          );
+          return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+        };
+        const style = getComputedStyle(element);
+        let backgroundElement: Element | null = element;
+        let backgroundColor = 'rgb(7, 16, 21)';
+        while (backgroundElement) {
+          const candidate = getComputedStyle(backgroundElement).backgroundColor;
+          if (candidate && candidate !== 'rgba(0, 0, 0, 0)' && candidate !== 'transparent') {
+            backgroundColor = candidate;
+            break;
+          }
+          backgroundElement = backgroundElement.parentElement;
+        }
+        const foreground = luminance(parseRgb(style.color));
+        const background = luminance(parseRgb(backgroundColor));
+        return {
+          fontSize: Number.parseFloat(style.fontSize),
+          contrast: (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05),
+        };
+      });
+      expect(metrics.fontSize).toBeGreaterThanOrEqual(8);
+      expect(metrics.contrast).toBeGreaterThanOrEqual(4.5);
+    }
+  }
 });
 
 for (const width of [1440, 1024, 768, 430, 390]) {
