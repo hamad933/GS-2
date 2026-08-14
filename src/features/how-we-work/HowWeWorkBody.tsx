@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useId,
   useRef,
   useState,
@@ -21,6 +22,8 @@ export type HowWeWorkBodyProps = {
   initialStageId?: MethodStageId;
   className?: string;
 };
+
+const METHOD_HORIZONTAL_QUERY = '(max-width: 900px)';
 
 const pageCopy = {
   ar: {
@@ -160,12 +163,26 @@ export function HowWeWorkBody({
     ? initialStageId
     : 'discovery';
   const [activeId, setActiveId] = useState<MethodStageId>(initialStage);
+  const [stageOrientation, setStageOrientation] = useState<'vertical' | 'horizontal'>(() => (
+    window.matchMedia(METHOD_HORIZONTAL_QUERY).matches ? 'horizontal' : 'vertical'
+  ));
   const stageButtons = useRef<Array<HTMLButtonElement | null>>([]);
   const panelId = useId();
   const copy = pageCopy[locale];
   const direction = locale === 'ar' ? 'rtl' : 'ltr';
   const activeIndex = methodStages.findIndex((stage) => stage.id === activeId);
   const active = methodStages[activeIndex] ?? methodStages[0];
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(METHOD_HORIZONTAL_QUERY);
+    const updateOrientation = () => {
+      setStageOrientation(mediaQuery.matches ? 'horizontal' : 'vertical');
+    };
+
+    updateOrientation();
+    mediaQuery.addEventListener('change', updateOrientation);
+    return () => mediaQuery.removeEventListener('change', updateOrientation);
+  }, []);
 
   const selectStage = (stageId: MethodStageId) => setActiveId(stageId);
 
@@ -213,7 +230,7 @@ export function HowWeWorkBody({
             <span>GS / METHOD</span><i /><span>CONTROLLED PROGRESSION</span>
           </div>
 
-          <div className="method-stage-selector" role="tablist" aria-label={copy.stageSelector} aria-orientation="vertical">
+          <div className="method-stage-selector" role="tablist" aria-label={copy.stageSelector} aria-orientation={stageOrientation}>
             {methodStages.map((stage, index) => {
               const selected = stage.id === active.id;
               return (

@@ -35,8 +35,8 @@ export function InternalPageShell({
         </div>
         <div className="internal-page__coordinate" aria-hidden="true" dir="ltr">
           <span>GS</span>
-          <span>24.7136° N</span>
-          <span>46.6753° E</span>
+          <span>SYSTEM</span>
+          <span>REFERENCE</span>
         </div>
       </div>
     </section>
