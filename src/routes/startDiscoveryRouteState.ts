@@ -58,6 +58,10 @@ function readCapabilitySelections(
   if (!Array.isArray(value)) return undefined;
 
   const selections: DiscoveryCapabilitySelection[] = [];
+  const selectionsByName = new Map<
+    string,
+    Pick<DiscoveryCapabilitySelection, 'classification' | 'provenance'>
+  >();
   for (const entry of value) {
     if (!isRecord(entry) || typeof entry.name !== 'string' || !entry.name.trim()) {
       return undefined;
@@ -70,11 +74,23 @@ function readCapabilitySelections(
     ) {
       return undefined;
     }
-    selections.push({
-      name: entry.name,
-      classification: entry.classification as DiscoveryCapabilityClassification,
-      provenance: entry.provenance as DiscoveryCapabilityProvenance,
-    });
+
+    const name = entry.name.trim();
+    const classification = entry.classification as DiscoveryCapabilityClassification;
+    const provenance = entry.provenance as DiscoveryCapabilityProvenance;
+    const existing = selectionsByName.get(name);
+    if (existing) {
+      if (
+        existing.classification !== classification
+        || existing.provenance !== provenance
+      ) {
+        return undefined;
+      }
+      continue;
+    }
+
+    selectionsByName.set(name, { classification, provenance });
+    selections.push({ name, classification, provenance });
   }
 
   return selections;

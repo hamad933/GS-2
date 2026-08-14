@@ -39,7 +39,7 @@
 
 /*
  * Functional metadata carries decision, provenance, evidence, or classification
- * meaning. Keep that layer above the former 5–6px floor at every breakpoint.
+ * meaning. Keep that layer at a 10px semantic floor at every breakpoint.
  * The root prefix deliberately outranks the older breakpoint-specific selectors.
  */
 .gsdw .gsdw-progress small,
@@ -74,6 +74,7 @@
 .gsdw .gsdw-budget-status strong,
 .gsdw .gsdw-dependencies label small,
 .gsdw .gsdw-summary-legend,
+.gsdw .gsdw-summary-legend span,
 .gsdw .gsdw-sheet-head span,
 .gsdw .gsdw-sheet-head small,
 .gsdw .gsdw-summary-row > div:first-child em,
@@ -82,14 +83,15 @@
 .gsdw .gsdw-next-action small,
 .gsdw .gsdw-next-action p,
 .gsdw .gsdw-prepared {
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .gsdw .gsdw-matrix-labels::before {
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .gsdw .gsdw-panel-code,
+.gsdw .gsdw-summary-legend span,
 .gsdw .gsdw-summary-row > div:first-child em,
 .gsdw .gsdw-summary-row li > span,
 .gsdw .gsdw-summary-capabilities small,

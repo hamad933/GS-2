@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { createStartDiscoveryDraft } from '../../../src/features/start-discovery/discoveryModel';
+import { START_DISCOVERY_PREFILL_VERSION } from '../../../src/types/start-discovery';
 
 const lazyRouteChunks = [
   'SolutionsRoute-',
@@ -73,6 +75,37 @@ async function expectNoHorizontalOverflow(page: Page) {
     scrollWidth: document.documentElement.scrollWidth,
   }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+}
+
+async function chooseSolutionsFinderOption(page: Page, name: string, last = false) {
+  await page.getByRole('radio', { name: new RegExp(name) }).click();
+  await page.getByRole('button', { name: last ? /بناء الاتجاه/ : /السؤال التالي/ }).click();
+}
+
+async function reachPortalRecommendation(page: Page) {
+  await openRoute(page, '/solutions', '#gsdw-entry-title');
+  await page.getByRole('button', { name: /ساعدني أكتشف ما أحتاجه/ }).click();
+  await chooseSolutionsFinderOption(page, 'تنظيم عمل وطلبات داخلية');
+  await chooseSolutionsFinderOption(page, 'عمليات وفرق');
+  await chooseSolutionsFinderOption(page, 'فريق داخلي');
+  await page.getByRole('radio', { name: /أنظمة أو تكاملات مهمة/ }).click();
+  await page.getByPlaceholder(/نظام قائم/).fill('نظام داخلي قائم يحتاج تحققًا تقنيًا');
+  await page.getByRole('button', { name: /بناء الاتجاه/ }).click();
+  await expect(page.locator('#solutions-decision-workspace')).toHaveAttribute('data-family', 'portals');
+}
+
+async function reachSolutionsSummary(page: Page) {
+  await reachPortalRecommendation(page);
+  await page.getByRole('button', { name: /تكوين الاتجاه/ }).click();
+  await page.getByRole('button', { name: /تكاملات وهوية وصلاحيات متقدمة/ }).click();
+  await page.getByRole('button', { name: /مقارنة اتجاه التكوين/ }).click();
+  await page.getByRole('radio', { name: /ربط عدة مسارات مترابطة/ }).click();
+  await page.getByRole('button', { name: /إضافة القيود والميزانية/ }).click();
+  await page.getByRole('radio', { name: /مرونة حسب القيمة/ }).click();
+  await page.getByPlaceholder('اكتب النطاق أو القيد بصيغتك').fill('نطاق يحدده صاحب القرار بعد مراجعة الاعتمادات');
+  await page.getByText('عملية تشغيل قابلة للوصف', { exact: true }).click();
+  await page.getByRole('button', { name: /إنتاج ملخص القرار/ }).click();
+  await expect(page.locator('#solutions-decision-workspace')).toHaveAttribute('data-step', 'summary');
 }
 
 test('Home loads without requesting any non-Home route implementation chunk', async ({ page }) => {
@@ -212,6 +245,50 @@ test('a direct hash waits for lazy content, scrolls to its target, and keeps rou
   )).toBeLessThan(2);
 });
 
+test('capability prefill normalization deduplicates exact duplicates and omits contradictory same-name truths', () => {
+  const duplicateDraft = createStartDiscoveryDraft({
+    version: START_DISCOVERY_PREFILL_VERSION,
+    capabilitySelections: [
+      {
+        name: 'قدرة مشتركة',
+        classification: 'RECOMMENDED',
+        provenance: 'SYSTEM_SEEDED',
+      },
+      {
+        name: '  قدرة مشتركة  ',
+        classification: 'RECOMMENDED',
+        provenance: 'SYSTEM_SEEDED',
+      },
+    ],
+  });
+  expect(duplicateDraft.capabilitySelections).toEqual([
+    {
+      name: 'قدرة مشتركة',
+      classification: 'RECOMMENDED',
+      provenance: 'SYSTEM_SEEDED',
+    },
+  ]);
+
+  const contradictoryDraft = createStartDiscoveryDraft({
+    version: START_DISCOVERY_PREFILL_VERSION,
+    capabilitySelections: [
+      {
+        name: 'قدرة متعارضة',
+        classification: 'RECOMMENDED',
+        provenance: 'SYSTEM_SEEDED',
+      },
+      {
+        name: ' قدرة متعارضة ',
+        classification: 'CUSTOM',
+        provenance: 'USER_SELECTED',
+      },
+    ],
+  });
+  expect(contradictoryDraft.capabilitySelections).toEqual([]);
+  expect(contradictoryDraft.selectedCapabilities).toEqual([]);
+  expect(contradictoryDraft.optionalCapabilities).toEqual([]);
+});
+
 test('Start accepts valid W02/current prefill state and ignores malformed optional fields safely', async ({ page }) => {
   await navigateWithRouteState(page, {
     discoveryPrefill: {
@@ -267,6 +344,130 @@ test('Start accepts valid W02/current prefill state and ignores malformed option
   await expect(page.locator('#sd-objective')).toHaveValue('سياق صالح وحيد');
   await expect(page.getByText('قدرة سليمة', { exact: true })).toHaveCount(0);
   await expect(page.locator('[data-carried-facts="true"]')).toHaveCount(0);
+});
+
+test('Start rejects contradictory same-name capability provenance without choosing a truth', async ({ page }) => {
+  await navigateWithRouteState(page, {
+    discoveryPrefill: {
+      version: 1,
+      selectedOutcome: 'سياق صالح مع قدرة متعارضة',
+      capabilitySelections: [
+        {
+          name: 'قدرة متعارضة',
+          classification: 'RECOMMENDED',
+          provenance: 'SYSTEM_SEEDED',
+        },
+        {
+          name: ' قدرة متعارضة ',
+          classification: 'CUSTOM',
+          provenance: 'USER_SELECTED',
+        },
+      ],
+    },
+  }, 'contradictory-capability-prefill');
+
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
+  await expect(page.locator('#sd-objective')).toHaveValue('سياق صالح مع قدرة متعارضة');
+  await expect(page.getByText('قدرة متعارضة', { exact: true })).toHaveCount(0);
+});
+
+test('removing then re-adding a system recommendation records USER_SELECTED provenance', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await reachPortalRecommendation(page);
+  await page.getByRole('button', { name: /تكوين الاتجاه/ }).click();
+
+  const recommendedCapability = page
+    .locator('.gsdw-capability.is-selected:not(.is-locked)')
+    .filter({ hasText: /موصى/ })
+    .first();
+  await expect(recommendedCapability).toBeVisible();
+  await expect(recommendedCapability.locator('small')).toContainText('موصى');
+  const capabilityName = (await recommendedCapability.locator('strong').textContent())?.trim();
+  expect(capabilityName).toBeTruthy();
+
+  await recommendedCapability.click();
+  await expect(recommendedCapability).not.toHaveClass(/is-selected/);
+  await recommendedCapability.click();
+  await expect(recommendedCapability).toHaveClass(/is-selected/);
+
+  await page.getByRole('button', { name: /مقارنة اتجاه التكوين/ }).click();
+  await page.getByRole('radio', { name: /ربط عدة مسارات مترابطة/ }).click();
+  await page.getByRole('button', { name: /إضافة القيود والميزانية/ }).click();
+  await page.getByRole('radio', { name: /مرونة حسب القيمة/ }).click();
+  await page.getByText('عملية تشغيل قابلة للوصف', { exact: true }).click();
+  await page.getByRole('button', { name: /إنتاج ملخص القرار/ }).click();
+  await page.getByRole('button', { name: /تجهيز الانتقال إلى Discovery/ }).click();
+  await expectRouteReady(page, '/start', '#start-discovery-title');
+
+  const matchingSelections = await page.evaluate((selectedName) => {
+    const routeState = window.history.state;
+    const prefill = routeState?.usr?.discoveryPrefill ?? routeState?.discoveryPrefill;
+    if (!Array.isArray(prefill?.capabilitySelections)) return [];
+    return prefill.capabilitySelections.filter(
+      (selection: { name?: unknown }) => selection?.name === selectedName,
+    );
+  }, capabilityName);
+  expect(matchingSelections).toEqual([
+    {
+      name: capabilityName,
+      classification: 'RECOMMENDED',
+      provenance: 'USER_SELECTED',
+    },
+  ]);
+});
+
+test('Solutions semantic decision metadata keeps a 10px floor and normal-text contrast', async ({ page }) => {
+  for (const [width, height] of [[1440, 900], [390, 844]] as const) {
+    await page.setViewportSize({ width, height });
+    await reachSolutionsSummary(page);
+    const selectors = [
+      '.gsdw-summary-legend span',
+      '.gsdw-summary-row > div:first-child em',
+      '.gsdw-summary-row li > span',
+      '.gsdw-summary-capabilities small',
+      '.gsdw-evidence > strong',
+    ];
+
+    for (const selector of selectors) {
+      const locator = page.locator(selector).first();
+      await expect(locator).toBeVisible();
+      const metrics = await locator.evaluate((element) => {
+        const parseRgb = (value: string) => {
+          const parts = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
+          return parts.map((part) => part / 255);
+        };
+        const luminance = (rgb: number[]) => {
+          const linear = rgb.map((channel) =>
+            channel <= 0.04045
+              ? channel / 12.92
+              : ((channel + 0.055) / 1.055) ** 2.4,
+          );
+          return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+        };
+        const style = getComputedStyle(element);
+        let backgroundElement: Element | null = element;
+        let backgroundColor = 'rgb(7, 16, 21)';
+        while (backgroundElement) {
+          const candidate = getComputedStyle(backgroundElement).backgroundColor;
+          if (candidate && candidate !== 'rgba(0, 0, 0, 0)' && candidate !== 'transparent') {
+            backgroundColor = candidate;
+            break;
+          }
+          backgroundElement = backgroundElement.parentElement;
+        }
+        const foreground = luminance(parseRgb(style.color));
+        const background = luminance(parseRgb(backgroundColor));
+        return {
+          fontSize: Number.parseFloat(style.fontSize),
+          contrast: (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05),
+        };
+      });
+      expect(metrics.fontSize).toBeGreaterThanOrEqual(10);
+      expect(metrics.contrast).toBeGreaterThanOrEqual(4.5);
+    }
+
+    await expectNoHorizontalOverflow(page);
+  }
 });
 
 test('Start stays fully direct-entry functional when route state is absent or unusable', async ({ page }) => {

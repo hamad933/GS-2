@@ -91,19 +91,29 @@ function unique(values: readonly string[] | undefined) {
 function normalizeCapabilitySelections(
   selections: readonly DiscoveryCapabilitySelection[] | undefined,
 ): DiscoveryCapabilitySelection[] {
-  const result: DiscoveryCapabilitySelection[] = [];
-  const seen = new Set<string>();
+  const selectionsByName = new Map<string, DiscoveryCapabilitySelection>();
+  const contradictoryNames = new Set<string>();
 
   for (const selection of selections ?? []) {
     const name = selection.name.trim();
     if (!name) continue;
-    const key = `${selection.provenance}:${selection.classification}:${name}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push({ ...selection, name });
+    const normalized = { ...selection, name };
+    const existing = selectionsByName.get(name);
+    if (!existing) {
+      selectionsByName.set(name, normalized);
+      continue;
+    }
+    if (
+      existing.provenance !== normalized.provenance
+      || existing.classification !== normalized.classification
+    ) {
+      contradictoryNames.add(name);
+    }
   }
 
-  return result;
+  return [...selectionsByName.entries()]
+    .filter(([name]) => !contradictoryNames.has(name))
+    .map(([, selection]) => selection);
 }
 
 function normalizeCapturedFacts(
