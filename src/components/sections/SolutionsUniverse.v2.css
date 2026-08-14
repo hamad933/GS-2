@@ -909,3 +909,22 @@
     transition-duration: .01ms;
   }
 }
+
+@media (max-width: 520px) {
+  .s02-eyebrow,
+  .s02-intro,
+  .s02-selected-label,
+  .s02-family-detail > p,
+  .s02-segment-band span,
+  .s02-station-copy strong,
+  .s02-continuity-title span,
+  .s02-continuity-outcomes > span {
+    font-size: 10px;
+  }
+
+  .s02-actions a,
+  .s02-actions button {
+    min-height: 44px;
+    font-size: 11px;
+  }
+}
