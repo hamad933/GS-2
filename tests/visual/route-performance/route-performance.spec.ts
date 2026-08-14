@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { createStartDiscoveryDraft } from '../../../src/features/start-discovery/discoveryModel';
+import { readStartDiscoveryRouteState } from '../../../src/routes/startDiscoveryRouteState';
 import { START_DISCOVERY_PREFILL_VERSION } from '../../../src/types/start-discovery';
 
 const lazyRouteChunks = [
@@ -75,6 +76,50 @@ async function expectNoHorizontalOverflow(page: Page) {
     scrollWidth: document.documentElement.scrollWidth,
   }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+}
+
+async function expectSemanticMetadataStyle(locator: Locator, pseudoElement?: '::before') {
+  await expect(locator).toBeVisible();
+  const metrics = await locator.evaluate((element, pseudo) => {
+    const parseRgb = (value: string) => {
+      const parts = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
+      return parts.map((part) => part / 255);
+    };
+    const luminance = (rgb: number[]) => {
+      const linear = rgb.map((channel) =>
+        channel <= 0.04045
+          ? channel / 12.92
+          : ((channel + 0.055) / 1.055) ** 2.4,
+      );
+      return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    };
+    const style = getComputedStyle(element, pseudo ?? null);
+    let backgroundElement: Element | null = element;
+    let backgroundColor = 'rgb(7, 16, 21)';
+    while (backgroundElement) {
+      const candidate = getComputedStyle(backgroundElement).backgroundColor;
+      if (candidate && candidate !== 'rgba(0, 0, 0, 0)' && candidate !== 'transparent') {
+        backgroundColor = candidate;
+        break;
+      }
+      backgroundElement = backgroundElement.parentElement;
+    }
+    const foreground = luminance(parseRgb(style.color));
+    const background = luminance(parseRgb(backgroundColor));
+    return {
+      content: style.content,
+      fontSize: Number.parseFloat(style.fontSize),
+      contrast: (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05),
+    };
+  }, pseudoElement);
+
+  if (pseudoElement) {
+    expect(metrics.content).not.toBe('none');
+    expect(metrics.content).not.toBe('normal');
+    expect(metrics.content).not.toBe('""');
+  }
+  expect(metrics.fontSize).toBeGreaterThanOrEqual(10);
+  expect(metrics.contrast).toBeGreaterThanOrEqual(4.5);
 }
 
 async function chooseSolutionsFinderOption(page: Page, name: string, last = false) {
@@ -289,6 +334,93 @@ test('capability prefill normalization deduplicates exact duplicates and omits c
   expect(contradictoryDraft.optionalCapabilities).toEqual([]);
 });
 
+test('true legacy capability arrays remain compatible when the explicit channel is absent', () => {
+  const sanitized = readStartDiscoveryRouteState({
+    discoveryPrefill: {
+      version: START_DISCOVERY_PREFILL_VERSION,
+      selectedCapabilities: ['قدرة legacy مختارة'],
+      optionalCapabilities: ['قدرة legacy اختيارية'],
+    },
+  });
+
+  expect(sanitized).toBeDefined();
+  expect(Object.prototype.hasOwnProperty.call(sanitized, 'capabilitySelections')).toBe(false);
+  const draft = createStartDiscoveryDraft(sanitized);
+  expect(draft.selectedCapabilities).toEqual(['قدرة legacy مختارة']);
+  expect(draft.optionalCapabilities).toEqual(['قدرة legacy اختيارية']);
+});
+
+test('contradictory explicit capability truth cannot return through legacy selected capabilities', () => {
+  const sanitized = readStartDiscoveryRouteState({
+    discoveryPrefill: {
+      version: START_DISCOVERY_PREFILL_VERSION,
+      selectedCapabilities: ['قدرة متعارضة مختارة'],
+      capabilitySelections: [
+        {
+          name: 'قدرة متعارضة مختارة',
+          classification: 'RECOMMENDED',
+          provenance: 'SYSTEM_SEEDED',
+        },
+        {
+          name: ' قدرة متعارضة مختارة ',
+          classification: 'CUSTOM',
+          provenance: 'USER_SELECTED',
+        },
+      ],
+    },
+  });
+
+  expect(sanitized?.capabilitySelections).toEqual([]);
+  const draft = createStartDiscoveryDraft(sanitized);
+  expect(draft.capabilitySelections).toEqual([]);
+  expect(draft.selectedCapabilities).toEqual([]);
+  expect(draft.optionalCapabilities).toEqual([]);
+});
+
+test('contradictory explicit capability truth cannot return through legacy optional capabilities', () => {
+  const sanitized = readStartDiscoveryRouteState({
+    discoveryPrefill: {
+      version: START_DISCOVERY_PREFILL_VERSION,
+      optionalCapabilities: ['قدرة متعارضة اختيارية'],
+      capabilitySelections: [
+        {
+          name: 'قدرة متعارضة اختيارية',
+          classification: 'OPTIONAL',
+          provenance: 'SYSTEM_SEEDED',
+        },
+        {
+          name: ' قدرة متعارضة اختيارية ',
+          classification: 'RECOMMENDED',
+          provenance: 'USER_SELECTED',
+        },
+      ],
+    },
+  });
+
+  expect(sanitized?.capabilitySelections).toEqual([]);
+  const draft = createStartDiscoveryDraft(sanitized);
+  expect(draft.capabilitySelections).toEqual([]);
+  expect(draft.selectedCapabilities).toEqual([]);
+  expect(draft.optionalCapabilities).toEqual([]);
+});
+
+test('an explicit empty capability channel suppresses legacy capability fallback', () => {
+  const sanitized = readStartDiscoveryRouteState({
+    discoveryPrefill: {
+      version: START_DISCOVERY_PREFILL_VERSION,
+      selectedCapabilities: ['قدرة قديمة مختارة'],
+      optionalCapabilities: ['قدرة قديمة اختيارية'],
+      capabilitySelections: [],
+    },
+  });
+
+  expect(sanitized?.capabilitySelections).toEqual([]);
+  const draft = createStartDiscoveryDraft(sanitized);
+  expect(draft.capabilitySelections).toEqual([]);
+  expect(draft.selectedCapabilities).toEqual([]);
+  expect(draft.optionalCapabilities).toEqual([]);
+});
+
 test('Start accepts valid W02/current prefill state and ignores malformed optional fields safely', async ({ page }) => {
   await navigateWithRouteState(page, {
     discoveryPrefill: {
@@ -351,6 +483,8 @@ test('Start rejects contradictory same-name capability provenance without choosi
     discoveryPrefill: {
       version: 1,
       selectedOutcome: 'سياق صالح مع قدرة متعارضة',
+      selectedCapabilities: ['قدرة متعارضة'],
+      optionalCapabilities: ['قدرة متعارضة'],
       capabilitySelections: [
         {
           name: 'قدرة متعارضة',
@@ -384,6 +518,7 @@ test('removing then re-adding a system recommendation records USER_SELECTED prov
   await expect(recommendedCapability.locator('small')).toContainText('موصى');
   const capabilityName = (await recommendedCapability.locator('strong').textContent())?.trim();
   expect(capabilityName).toBeTruthy();
+  if (!capabilityName) throw new Error('Expected a recommended capability name.');
 
   await recommendedCapability.click();
   await expect(recommendedCapability).not.toHaveClass(/is-selected/);
@@ -399,21 +534,22 @@ test('removing then re-adding a system recommendation records USER_SELECTED prov
   await page.getByRole('button', { name: /تجهيز الانتقال إلى Discovery/ }).click();
   await expectRouteReady(page, '/start', '#start-discovery-title');
 
-  const matchingSelections = await page.evaluate((selectedName) => {
-    const routeState = window.history.state;
-    const prefill = routeState?.usr?.discoveryPrefill ?? routeState?.discoveryPrefill;
-    if (!Array.isArray(prefill?.capabilitySelections)) return [];
-    return prefill.capabilitySelections.filter(
-      (selection: { name?: unknown }) => selection?.name === selectedName,
-    );
-  }, capabilityName);
-  expect(matchingSelections).toEqual([
+  const routeState = await page.evaluate(() => {
+    const currentState = window.history.state;
+    return currentState?.usr ?? currentState;
+  });
+  const sanitizedPrefill = readStartDiscoveryRouteState(routeState);
+  expect(sanitizedPrefill).toBeDefined();
+  const draft = createStartDiscoveryDraft(sanitizedPrefill);
+  expect(draft.capabilitySelections.filter((selection) => selection.name === capabilityName)).toEqual([
     {
       name: capabilityName,
       classification: 'RECOMMENDED',
       provenance: 'USER_SELECTED',
     },
   ]);
+  expect(draft.selectedCapabilities).toContain(capabilityName);
+  expect(draft.optionalCapabilities).not.toContain(capabilityName);
 });
 
 test('Solutions semantic decision metadata keeps a 10px floor and normal-text contrast', async ({ page }) => {
@@ -422,6 +558,7 @@ test('Solutions semantic decision metadata keeps a 10px floor and normal-text co
     await reachSolutionsSummary(page);
     const selectors = [
       '.gsdw-summary-legend span',
+      '.gsdw-sheet-head small',
       '.gsdw-summary-row > div:first-child em',
       '.gsdw-summary-row li > span',
       '.gsdw-summary-capabilities small',
@@ -429,43 +566,56 @@ test('Solutions semantic decision metadata keeps a 10px floor and normal-text co
     ];
 
     for (const selector of selectors) {
-      const locator = page.locator(selector).first();
-      await expect(locator).toBeVisible();
-      const metrics = await locator.evaluate((element) => {
-        const parseRgb = (value: string) => {
-          const parts = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
-          return parts.map((part) => part / 255);
-        };
-        const luminance = (rgb: number[]) => {
-          const linear = rgb.map((channel) =>
-            channel <= 0.04045
-              ? channel / 12.92
-              : ((channel + 0.055) / 1.055) ** 2.4,
-          );
-          return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
-        };
-        const style = getComputedStyle(element);
-        let backgroundElement: Element | null = element;
-        let backgroundColor = 'rgb(7, 16, 21)';
-        while (backgroundElement) {
-          const candidate = getComputedStyle(backgroundElement).backgroundColor;
-          if (candidate && candidate !== 'rgba(0, 0, 0, 0)' && candidate !== 'transparent') {
-            backgroundColor = candidate;
-            break;
-          }
-          backgroundElement = backgroundElement.parentElement;
-        }
-        const foreground = luminance(parseRgb(style.color));
-        const background = luminance(parseRgb(backgroundColor));
-        return {
-          fontSize: Number.parseFloat(style.fontSize),
-          contrast: (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05),
-        };
-      });
-      expect(metrics.fontSize).toBeGreaterThanOrEqual(10);
-      expect(metrics.contrast).toBeGreaterThanOrEqual(4.5);
+      await expectSemanticMetadataStyle(page.locator(selector).first());
     }
 
+    await expectNoHorizontalOverflow(page);
+  }
+});
+
+test('Solutions live weak semantic metadata selectors keep the governed floor', async ({ page }) => {
+  for (const [width, height] of [[1440, 900], [390, 844]] as const) {
+    await page.setViewportSize({ width, height });
+    await openRoute(page, '/solutions', '#gsdw-entry-title');
+    await page.getByRole('button', { name: /ساعدني أكتشف ما أحتاجه/ }).click();
+    await expectSemanticMetadataStyle(page.locator('.gsdw-answer-ledger small').first());
+    await expectNoHorizontalOverflow(page);
+
+    await reachPortalRecommendation(page);
+    await page.getByRole('button', { name: /تكوين الاتجاه/ }).click();
+    await page.getByRole('button', { name: /تكاملات وهوية وصلاحيات متقدمة/ }).click();
+    await page.getByRole('button', { name: /مقارنة اتجاه التكوين/ }).click();
+
+    if (width === 390) {
+      const matrixCells = page.locator(
+        '.gsdw-option-matrix > button > span:not(.gsdw-matrix-head)',
+      );
+      expect(await matrixCells.count()).toBeGreaterThan(0);
+      for (let index = 0; index < await matrixCells.count(); index += 1) {
+        const cell = matrixCells.nth(index);
+        await expectSemanticMetadataStyle(cell, '::before');
+        const geometry = await cell.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth,
+            clientHeight: element.clientHeight,
+            scrollHeight: element.scrollHeight,
+            overflowX: style.overflowX,
+            overflowY: style.overflowY,
+          };
+        });
+        expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+        expect(geometry.scrollHeight).toBeLessThanOrEqual(geometry.clientHeight + 1);
+        expect(['hidden', 'clip']).not.toContain(geometry.overflowX);
+        expect(['hidden', 'clip']).not.toContain(geometry.overflowY);
+      }
+      await expectNoHorizontalOverflow(page);
+    }
+
+    await page.getByRole('radio', { name: /ربط عدة مسارات مترابطة/ }).click();
+    await page.getByRole('button', { name: /إضافة القيود والميزانية/ }).click();
+    await expectSemanticMetadataStyle(page.locator('.gsdw-dependencies small').first());
     await expectNoHorizontalOverflow(page);
   }
 });
