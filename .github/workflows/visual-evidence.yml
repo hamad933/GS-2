@@ -1,41 +1,30 @@
-name: Visual Evidence
+name: Controller W05 Integrated Evidence
 
 on:
   workflow_dispatch:
   pull_request:
     branches:
-      - main
-      - codex/implement-living-system-hero-s01
-      - codex/implement-visual-reconstruction-for-homepage
       - controller/gs-home-w05-v2-visual-authority
     types: [opened, synchronize, reopened]
-    paths:
-      - 'src/**'
-      - 'index.html'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'playwright.config.ts'
-      - 'tests/visual/**'
-      - '.github/workflows/visual-evidence.yml'
 
 permissions:
   contents: read
 
+env:
+  W05_APPLICATION_SHA: b1728cef8af0b31a89e16ea945b178edae49fd53
+
 jobs:
   capture:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Check out exact tested commit
+      - name: Check out exact W05 application commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ env.W05_APPLICATION_SHA }}
 
-      - name: Verify checked out commit
+      - name: Verify exact application commit
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+        run: test "$(git rev-parse HEAD)" = "$W05_APPLICATION_SHA"
 
       - name: Set up Node 20
         uses: actions/setup-node@v4
@@ -58,42 +47,35 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Capture visual evidence
-        run: npx playwright test tests/visual/hero.visual.spec.ts --project=chromium --workers=1
+      - name: Run complete committed Playwright suite and capture W05 evidence
+        env:
+          W05_EVIDENCE_DIR: controller-w05-evidence
+        run: npx playwright test --project=chromium --workers=1
 
-      - name: Verify screenshot files
+      - name: Verify integrated evidence matrix
         shell: bash
         run: |
-          for file in \
-            desktop-w05-v2-a-hero-k01.png \
-            desktop-w05-v2-a-hero-k02.png \
-            desktop-w05-v2-a-hero-k03.png \
-            desktop-w05-v2-a-hero-k04.png \
-            desktop-w05-r3-home-full.png \
-            desktop-w05-r3-hero-need.png \
-            desktop-w05-r3-hero-direction.png \
-            desktop-w05-r3-hero-build.png \
-            desktop-w05-r3-hero-launch.png \
-            desktop-w05-r3-solutions-default.png \
-            desktop-w05-r3-solutions-active.png \
-            desktop-w05-r3-project-rp01.png \
-            desktop-w05-r3-project-rp02.png \
-            desktop-w05-r3-anatomy-active.png \
-            desktop-w05-r3-gateway.png \
-            tablet-w05-r3-home-full.png \
-            mobile-w05-r3-home-full.png \
-            mobile-w05-r3-hero-build.png \
-            mobile-w05-r3-solutions-active.png \
-            mobile-w05-r3-project.png \
-            mobile-w05-r3-anatomy.png \
-            mobile-w05-r3-gateway.png; do
-            test -s "visual-evidence/$file"
+          test -d controller-w05-evidence
+          count="$(find controller-w05-evidence -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')"
+          test "$count" = "40"
+          for width in 1440 1024 768 430 390; do
+            for slug in home solutions-entry reference-projects how-we-work start-direct 404; do
+              test -s "controller-w05-evidence/w05-${width}-${slug}.png"
+            done
           done
+          for width in 1440 390; do
+            test -s "controller-w05-evidence/w05-${width}-solutions-recommendation.png"
+            test -s "controller-w05-evidence/w05-${width}-solutions-configuration.png"
+            test -s "controller-w05-evidence/w05-${width}-solutions-decision-summary.png"
+            test -s "controller-w05-evidence/w05-${width}-start-solutions-prefill.png"
+          done
+          test -s "controller-w05-evidence/w05-390-mobile-navigation.png"
+          test -s "controller-w05-evidence/w05-390-reference-projects-rp04-boundary.png"
 
-      - name: Upload visual evidence
+      - name: Upload W05 integrated evidence
         uses: actions/upload-artifact@v4
         with:
-          name: gs-home-w05-v2-a-reference-only-${{ github.event.pull_request.head.sha || github.sha }}
-          path: visual-evidence
+          name: gs-pages-w05-controller-reference-only-${{ env.W05_APPLICATION_SHA }}
+          path: controller-w05-evidence
           if-no-files-found: error
           retention-days: 7
