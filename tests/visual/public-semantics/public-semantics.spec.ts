@@ -172,28 +172,50 @@ test('keeps the Solutions to Start handoff truthful and capability provenance ex
 
   await expect(page).toHaveURL(/\/start$/);
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
-  await expect(page.getByLabel('الهدف الرئيسي بصياغتك')).toHaveValue('');
-  const carriedFacts = page.locator('[data-carried-facts="true"]');
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-major-stage-count', '3');
+  const carriedFacts = page.locator('[data-testid="carried-context"]');
   await expect(carriedFacts).toContainText('النتيجة: تنظيم عمل وطلبات داخلية');
   await expect(carriedFacts).toContainText('النشاط: عمليات وفرق');
   await expect(carriedFacts).toContainText('الجمهور: فريق داخلي');
   await expect(carriedFacts).toContainText('العمق: أنظمة أو تكاملات مهمة');
   await expect(carriedFacts).toContainText('القيد: نظام داخلي قائم يحتاج تحققًا تقنيًا');
+  await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('الأنظمة التشغيلية والبوابات');
+  await expect(page.locator('[data-testid="user-selection"]')).toContainText('لم تعتمد اتجاهًا بعد.');
+  await expect(page.getByLabel('ما الذي تريد تغييره؟')).toHaveCount(0);
 
-  await page.getByLabel('الهدف الرئيسي بصياغتك').fill('تنظيم بوابة تشغيلية موحدة');
-  await page.getByLabel('المشكلة الحالية').fill('الطلبات موزعة وتحتاج حالة تشغيل مشتركة.');
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await expect(page.getByLabel('الحل أو العائلة المقترحة')).toHaveValue('الأنظمة التشغيلية والبوابات');
-  await expect(page.getByLabel('قدرات حُسمت مبدئيًا')).toHaveValue(/تكاملات وهوية وصلاحيات متقدمة/);
-  await expect(page.getByLabel('قدرات حُسمت مبدئيًا')).not.toHaveValue(/نمذجة الطلب والحالة/);
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await expect(page.getByLabel('تبعيات معروفة')).toHaveValue(/عملية تشغيل قابلة للوصف/);
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await expect(page.locator('[data-carried-prefill="true"]')).toContainText('قيد مالي يحدده صاحب القرار');
-  await page.getByRole('button', { name: 'مراجعة الملخص' }).click();
-  await expect(page.locator('[data-summary-status="known"]')).toContainText('تنظيم عمل وطلبات داخلية');
-  await expect(page.locator('[data-summary-status="known"]')).toContainText('عمليات وفرق');
-  await expect(page.locator('[data-summary-status="preferred"]')).toContainText('نمذجة الطلب والحالة — أساسي من النظام');
+  const carriedState = await page.evaluate(() => {
+    const state = window.history.state as {
+      usr?: {
+        discoveryPrefill?: {
+          solutionFamilyId?: string;
+          decisionOrigin?: string;
+          recommendationResolution?: string;
+          capabilitySelections?: Array<{
+            name: string;
+            classification: string;
+            provenance: string;
+          }>;
+        };
+      };
+    } | null;
+    return state?.usr?.discoveryPrefill;
+  });
+  expect(carriedState?.solutionFamilyId).toBe('portals');
+  expect(carriedState?.decisionOrigin).toBe('SYSTEM_FINDER');
+  expect(carriedState?.recommendationResolution).toBe('decisive');
+  expect(carriedState?.capabilitySelections?.some((selection) => (
+    selection.name === 'تكاملات وهوية وصلاحيات متقدمة'
+      && selection.classification === 'CUSTOM'
+      && selection.provenance === 'USER_SELECTED'
+  ))).toBe(true);
+  expect(carriedState?.capabilitySelections?.some((selection) => (
+    selection.name === 'نمذجة الطلب والحالة'
+      && selection.classification === 'CORE'
+      && selection.provenance === 'SYSTEM_SEEDED'
+  ))).toBe(true);
+
+  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
   await expect(page.locator('.start-discovery').getByText('REFERENCE_ONLY', { exact: true })).toHaveCount(0);
 });
 

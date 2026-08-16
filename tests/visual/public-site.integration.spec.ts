@@ -257,7 +257,18 @@ test('Solutions Decision Summary carries fact context and decision metadata to S
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
   await expectSkipLinkParked(page);
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-certainty', 'configured');
-  await expect(page.getByText('ملخص قرار الحلول')).toBeVisible();
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-major-stage-count', '3');
+  await expect(page.locator('[data-testid="carried-context"]')).toContainText(
+    'النتيجة: تنظيم عمل وطلبات داخلية',
+  );
+  await expect(page.locator('[data-testid="carried-context"]')).toContainText('النشاط: عمليات وفرق');
+  await expect(page.locator('[data-testid="system-recommendation"]')).toContainText(
+    'الأنظمة التشغيلية والبوابات',
+  );
+  await expect(page.locator('[data-testid="user-selection"]')).toContainText(
+    'لم تعتمد اتجاهًا بعد.',
+  );
+  await expect(page.getByLabel('ما الذي تريد تغييره؟')).toHaveCount(0);
 
   const carriedContext = await page.evaluate(() => {
     const state = window.history.state as {
@@ -266,6 +277,7 @@ test('Solutions Decision Summary carries fact context and decision metadata to S
           solutionFamilyId?: string;
           decisionOrigin?: string;
           recommendationResolution?: string;
+          capabilitySelections?: Array<{ name: string; provenance: string }>;
         };
       };
     } | null;
@@ -274,65 +286,36 @@ test('Solutions Decision Summary carries fact context and decision metadata to S
   expect(carriedContext?.solutionFamilyId).toBe('portals');
   expect(carriedContext?.decisionOrigin).toBe('SYSTEM_FINDER');
   expect(carriedContext?.recommendationResolution).toBe('decisive');
+  expect(
+    carriedContext?.capabilitySelections?.some(
+      (item) => item.name === 'تكاملات وهوية وصلاحيات متقدمة' && item.provenance === 'USER_SELECTED',
+    ),
+  ).toBe(true);
 
-  const objective = page.getByLabel('الهدف الرئيسي بصياغتك');
-  await expect(objective).toHaveValue('');
-  await expect(page.locator('[data-carried-facts="true"]')).toContainText(
-    'النتيجة: تنظيم عمل وطلبات داخلية',
-  );
-  await expect(page.getByLabel('المشكلة الحالية')).toHaveValue('');
-
-  await objective.fill('تنظيم تدفق الطلبات بصياغة المستخدم');
-  await page.getByLabel('المشكلة الحالية').fill('الطلبات الحالية موزعة وتحتاج تعريفًا مشتركًا.');
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await expect(page.getByLabel('الحل أو العائلة المقترحة')).toHaveValue(
-    'الأنظمة التشغيلية والبوابات',
-  );
-  await expect(page.getByLabel('قدرات حُسمت مبدئيًا')).toHaveValue(/نمذجة الطلب والحالة/);
-  await expect(page.locator('[data-carried-prefill="true"]')).toContainText(
-    'ربط عدة مسارات مترابطة',
-  );
-
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await expect(page.getByLabel('تبعيات معروفة')).toHaveValue(/عملية تشغيل قابلة للوصف/);
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await expect(page.locator('[data-carried-prefill="true"]')).toContainText('مرونة حسب القيمة');
-  await expect(page.locator('[data-carried-prefill="true"]')).toContainText(
-    'نطاق يحدده صاحب القرار بعد مراجعة الاعتمادات',
-  );
-  await expect(page.getByLabel('أسئلة أو مجهولات نحتاج لاكتشافها')).toHaveValue(
-    /اعتماد غير محسوم/,
-  );
-
-  await page.getByRole('button', { name: 'مراجعة الملخص' }).click();
-  await expect(page.getByText(/RP02 — نظام تشغيل يوضّح العمل/)).toBeVisible();
-  await expect(page.getByText(/حالة السياق: سياق مرجعي للاستئناس فقط/)).toBeVisible();
-  await expect(page.getByText('عائلة أوصى بها Finder من المدخلات المتاحة')).toBeVisible();
-  await expect(page.getByText('REFERENCE_ONLY', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('portals', { exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'تثبيت نسخة المراجعة' }).click();
-  await expect(page.getByText('تم تثبيت نسخة المراجعة محليًا.')).toBeVisible();
-  await expect(page.getByText('تم إرسال مشروعك')).toHaveCount(0);
+  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
 });
 
 test('Start direct entry needs no prefill and remains progressively functional', async ({ page }) => {
   await openRoute(page, '/start', '#start-discovery-title');
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'false');
-  await expect(page.getByText('تم حمل سياق سابق إلى هذه الصفحة.')).toHaveCount(0);
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-major-stage-count', '3');
 
-  const certainty = page.getByRole('radio', { name: /لا أعرف ماذا أحتاج/ });
-  await certainty.focus();
-  await page.keyboard.press('Space');
-  await expect(certainty).toHaveAttribute('aria-checked', 'true');
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await page.getByRole('button', { name: 'تحسين عملية تشغيلية' }).click();
-  await page.getByLabel('المشكلة الحالية').fill('الطلبات موزعة ولا تظهر حالتها بوضوح.');
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await page.getByRole('button', { name: 'مراجعة الملخص' }).click();
-  await expect(page.getByRole('heading', { name: 'ملخص الاكتشاف الأولي' })).toBeVisible();
-  await page.getByRole('button', { name: 'تثبيت نسخة المراجعة' }).click();
-  await expect(page.getByText('تم تثبيت نسخة المراجعة محليًا.')).toBeVisible();
+  const entry = page.getByRole('button', { name: /ساعدني على اكتشاف ما أحتاج/ });
+  await entry.focus();
+  await page.keyboard.press('Enter');
+  await page.getByLabel('ما الذي تريد تغييره؟').fill('أريد تنظيم الحجز والمواعيد للعملاء.');
+  await page.getByLabel('من سيستخدم هذا الحل؟').fill('العملاء وفريق الخدمة');
+  await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('حجز أوضح بخطوات أقل');
+  await page.getByRole('button', { name: /ابنِ اتجاهًا أوليًا/ }).click();
+  await expect(page.locator('[data-testid="system-recommendation"]')).toContainText(
+    'الحجوزات والخدمات',
+  );
+  await expect(page.locator('[data-testid="user-selection"]')).toContainText(
+    'لم تعتمد اتجاهًا بعد.',
+  );
+  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
 });
 
 test('Reference Projects exposes all four focus states and no fabricated route', async ({ page }) => {
@@ -394,11 +377,10 @@ test('integrated Arabic and English runs preserve deliberate direction', async (
   await expect(page.locator('.scope-architecture small').first()).toHaveCSS('direction', 'ltr');
 
   await openRoute(page, '/start', '#start-discovery-title');
-  await page.getByRole('radio', { name: /لدي اتجاه عام/ }).click();
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  const objective = page.getByLabel('الهدف الرئيسي بصياغتك');
-  await objective.fill('Improve service intake');
-  await expect(objective).toHaveCSS('direction', 'ltr');
+  await page.getByRole('button', { name: /أعرف تقريبًا نوع الحل/ }).click();
+  const need = page.getByLabel('ما الذي تريد تغييره؟');
+  await need.fill('Improve service intake');
+  await expect(need).toHaveCSS('direction', 'ltr');
 });
 
 for (const width of [1440, 1024, 768, 430, 390]) {

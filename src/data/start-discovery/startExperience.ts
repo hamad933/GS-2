@@ -19,7 +19,7 @@ export const START_ENTRY_INTENTS: ReadonlyArray<{
   {
     id: 'discover',
     label: 'ساعدني على اكتشاف ما أحتاج',
-    description: 'ابدأ من المشكلة والنتيجة التي تريد الوصول إليها.',
+    description: 'لا أعرف ماذا أحتاج بعد؛ ابدأ من المشكلة والنتيجة التي تريد الوصول إليها.',
   },
   {
     id: 'direction',

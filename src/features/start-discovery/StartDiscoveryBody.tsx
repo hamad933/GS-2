@@ -132,15 +132,16 @@ function AssetSlot({ asset, alt, decorative = false }: { asset?: FamilyVisualAss
 }
 
 function StageRail({ current, furthest, onChange }: { current: StartStageId; furthest: StartStageId; onChange: (stage: StartStageId) => void }) {
+  const currentIndex = START_MAJOR_STAGES.findIndex((stage) => stage.id === current);
   const furthestIndex = START_MAJOR_STAGES.findIndex((stage) => stage.id === furthest);
   return (
     <nav className="sfp-stage-rail" aria-label="مراحل البدء">
       <ol>
         {START_MAJOR_STAGES.map((stage, index) => (
-          <li key={stage.id} data-stage-state={stage.id === current ? 'current' : index < START_MAJOR_STAGES.findIndex((item) => item.id === current) ? 'complete' : 'future'}>
+          <li key={stage.id} data-stage-state={stage.id === current ? 'current' : index < currentIndex ? 'complete' : 'future'}>
             <button type="button" disabled={index > furthestIndex} aria-current={stage.id === current ? 'step' : undefined} onClick={() => onChange(stage.id)}>
               <bdi>{stage.number}</bdi><span>{stage.label}</span>
-              {index < START_MAJOR_STAGES.findIndex((item) => item.id === current) ? <Check aria-hidden="true" /> : null}
+              {index < currentIndex ? <Check aria-hidden="true" /> : null}
             </button>
           </li>
         ))}
@@ -300,13 +301,14 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
     onLocalComplete?.(buildDiscoverySummary(draft), draft);
   };
 
-  const carriedFacts = [
+  const carriedFactValues = [
     draft.capturedFacts?.outcome && `النتيجة: ${draft.capturedFacts.outcome}`,
     draft.capturedFacts?.activity && `النشاط: ${draft.capturedFacts.activity}`,
     draft.capturedFacts?.audience && `الجمهور: ${draft.capturedFacts.audience}`,
     draft.capturedFacts?.complexity && `العمق: ${draft.capturedFacts.complexity}`,
     draft.capturedFacts?.constraints && `القيد: ${draft.capturedFacts.constraints}`,
-  ].filter(Boolean).join(' · ');
+  ].filter(Boolean) as string[];
+  const carriedFacts = carriedFactValues.join(' · ');
 
   const discover = (
     <section className="sfp-stage sfp-discover" aria-labelledby="start-discovery-title">
@@ -315,11 +317,11 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
         <h1 id="start-discovery-title" ref={headingRef} tabIndex={-1}>ابدأ بما تريد تغييره، لا باسم منتج جاهز.</h1>
         <p>قدّم فقط ما يكفي لنكوّن اتجاهًا مفيدًا، ثم اعتمده أنت أو غيّره.</p>
       </header>
-      {prefill && carriedFacts ? <div className="sfp-carried" data-testid="carried-context"><strong>ما نعرفه من قرارك السابق</strong><p>{carriedFacts}</p></div> : null}
+      {prefill && carriedFacts ? <div className="sfp-carried" data-testid="carried-context" data-carried-facts={carriedFactValues.length > 1 ? 'true' : undefined}><strong>ما نعرفه من قرارك السابق</strong><p>{carriedFacts}</p></div> : null}
       {local.discoverStep === 0 ? (
-        <div className="sfp-entry-intents">
+        <div className="sfp-entry-intents" role="radiogroup" aria-label="نقطة الدخول إلى الاكتشاف">
           <h2>كيف تفضّل أن تبدأ؟</h2>
-          {START_ENTRY_INTENTS.map((intent) => <button key={intent.id} type="button" onClick={() => setLocal((current) => ({ ...current, intent: intent.id, discoverStep: 1 }))}><strong>{intent.label}</strong><small>{intent.description}</small><ArrowLeft aria-hidden="true" /></button>)}
+          {START_ENTRY_INTENTS.map((intent) => <button key={intent.id} type="button" role="radio" aria-checked={local.intent === intent.id} onKeyDown={(event) => { if (event.key === ' ') { event.preventDefault(); setLocal((current) => ({ ...current, intent: intent.id })); } }} onClick={() => setLocal((current) => ({ ...current, intent: intent.id, discoverStep: 1 }))}><strong>{intent.label}</strong><small>{intent.description}</small>{local.intent === intent.id ? <Check aria-hidden="true" /> : <ArrowLeft aria-hidden="true" />}</button>)}
         </div>
       ) : null}
       {local.discoverStep === 1 ? (
@@ -382,7 +384,8 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
   );
 
   return (
-    <div className={`start-discovery sfp-start ${className}`.trim()} dir="rtl" data-stage={local.stage} data-major-stage-count="3" data-prefilled={prefill ? 'true' : 'false'} data-certainty={prefill ? 'configured' : 'exploring'} data-recommended-family={local.recommended} data-selected-family={local.selected ?? ''} data-family-code={`FAM-${familyCode}`}>
+    <div className={`start-discovery sfp-start ${className}`.trim()} dir="rtl" data-stage={local.stage} data-major-stage-count="3" data-prefilled={prefill ? 'true' : 'false'} data-certainty={prefill ? 'configured' : local.intent ? 'exploring' : 'unselected'} data-recommended-family={local.recommended} data-selected-family={local.selected ?? ''} data-family-code={`FAM-${familyCode}`}>
+      <input type="hidden" id="sd-objective" readOnly value={draft.objective || draft.capturedFacts?.outcome || draft.currentProblem} />
       <div className="sfp-shell"><StageRail current={local.stage} furthest={local.furthest} onChange={setStage} />{local.stage === 'discover' ? discover : null}{local.stage === 'build' ? build : null}{local.stage === 'review' ? review : null}</div>
     </div>
   );
