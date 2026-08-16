@@ -56,12 +56,17 @@ interface LocalState {
 }
 
 interface StoredState {
+  fingerprint: string;
   local: LocalState;
   draft: StartDiscoveryDraft;
 }
 
 function unique(values: readonly string[]) {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+function prefillFingerprint(prefill?: StartDiscoveryPrefill) {
+  return JSON.stringify(prefill ?? null);
 }
 
 function familyFromPrefill(prefill?: StartDiscoveryPrefill): StartFamilyId | undefined {
@@ -73,11 +78,12 @@ function userAlreadySelected(prefill?: StartDiscoveryPrefill) {
   return Boolean(prefill?.decisionOrigin && prefill.decisionOrigin !== 'SYSTEM_FINDER');
 }
 
-function readStored(): StoredState | undefined {
+function readStored(prefill?: StartDiscoveryPrefill): StoredState | undefined {
   if (typeof window === 'undefined') return undefined;
   try {
     const parsed = JSON.parse(window.sessionStorage.getItem(SESSION_KEY) ?? 'null') as StoredState | null;
-    if (!parsed || !START_MAJOR_STAGES.some((stage) => stage.id === parsed.local?.stage)) return undefined;
+    if (!parsed || parsed.fingerprint !== prefillFingerprint(prefill)) return undefined;
+    if (!START_MAJOR_STAGES.some((stage) => stage.id === parsed.local?.stage)) return undefined;
     if (!isStartFamilyId(parsed.local.recommended)) return undefined;
     if (parsed.local.selected && !isStartFamilyId(parsed.local.selected)) return undefined;
     return parsed;
@@ -87,10 +93,8 @@ function readStored(): StoredState | undefined {
 }
 
 function initialLocal(prefill?: StartDiscoveryPrefill): LocalState {
-  if (!prefill) {
-    const stored = readStored();
-    if (stored) return stored.local;
-  }
+  const stored = readStored(prefill);
+  if (stored) return stored.local;
   const family = familyFromPrefill(prefill) ?? 'business';
   return {
     stage: 'discover',
@@ -105,10 +109,8 @@ function initialLocal(prefill?: StartDiscoveryPrefill): LocalState {
 }
 
 function initialDraft(prefill?: StartDiscoveryPrefill, initialCertainty?: StartDiscoveryBodyProps['initialCertainty']) {
-  if (!prefill) {
-    const stored = readStored();
-    if (stored?.draft) return stored.draft;
-  }
+  const stored = readStored(prefill);
+  if (stored?.draft) return stored.draft;
   return createStartDiscoveryDraft(prefill, initialCertainty);
 }
 
@@ -242,8 +244,12 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
 
   useEffect(() => { onDraftChange?.(draft); }, [draft, onDraftChange]);
   useEffect(() => {
-    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify({ local, draft } satisfies StoredState));
-  }, [local, draft]);
+    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+      fingerprint: prefillFingerprint(prefill),
+      local,
+      draft,
+    } satisfies StoredState));
+  }, [draft, local, prefill]);
   useEffect(() => { window.requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true })); }, [local.stage]);
 
   const patchDraft = (patch: Partial<StartDiscoveryDraft>) => setDraft((current) => ({ ...current, ...patch }));
