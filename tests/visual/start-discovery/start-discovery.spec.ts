@@ -21,7 +21,7 @@ async function openStart(page: Page, query = '') {
 
 async function directRecommendation(page: Page, problem = 'أريد تنظيم الحجز والمواعيد للعملاء') {
   await openStart(page);
-  await page.getByRole('button', { name: /ساعدني على اكتشاف ما أحتاج/ }).click();
+  await page.getByRole('radio', { name: /ساعدني على اكتشاف ما أحتاج/ }).click();
   await page.getByLabel('ما الذي تريد تغييره؟').fill(problem);
   await page.getByLabel('من سيستخدم هذا الحل؟').fill('العملاء وفريق الخدمة');
   await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('رحلة أوضح بخطوات أقل');
@@ -104,7 +104,7 @@ test('direct entry exposes exactly three major stages and three entrances withou
   await expect(page.locator('.sfp-stage-rail')).toContainText('كوّن حلّك');
   await expect(page.locator('.sfp-stage-rail')).toContainText('راجع وابدأ');
   for (const label of ['ساعدني على اكتشاف ما أحتاج', 'أعرف تقريبًا نوع الحل', 'أريد أن أبدأ من مثال']) {
-    await expect(page.getByRole('button', { name: new RegExp(label) })).toBeVisible();
+    await expect(page.getByRole('radio', { name: new RegExp(label) })).toBeVisible();
   }
 });
 
