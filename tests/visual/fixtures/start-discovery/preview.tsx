@@ -66,6 +66,13 @@ if (root) {
   ReactDOM.createRoot(root).render(
     <StartDiscoveryBody
       prefill={prefill}
+      onDraftChange={(draft) => {
+        root.dataset.draftRecommendedFamily = draft.recommendedFamily;
+        root.dataset.draftSelectedFamily = draft.solutionFamilyId;
+        root.dataset.draftDecisionOrigin = draft.decisionOrigin ?? '';
+        root.dataset.draftRecommendedExperience = draft.recommendedConfigurationPreference ?? '';
+        root.dataset.draftSelectedExperience = draft.configurationPreference;
+      }}
       onLocalComplete={(_summary, draft) => {
         root.dataset.completed = 'true';
         root.dataset.completedFamily = draft.solutionFamilyId;

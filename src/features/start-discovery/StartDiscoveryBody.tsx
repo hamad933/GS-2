@@ -1,27 +1,29 @@
-import { ArrowLeft, Check, Eye, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Eye, X } from 'lucide-react';
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
   type KeyboardEvent,
-  type ReactNode,
 } from 'react';
 import {
   PROVISIONAL_START_PRICING,
   START_ENTRY_INTENTS,
   START_MAJOR_STAGES,
+  assessStartRecommendation,
   formatBudgetBand,
   getDecisionConsequence,
+  getFamilyBuildSteps,
   getFamilyDecisions,
-  getFamilyJourney,
+  getFamilyJourneyModel,
+  getRecommendedExperience,
   getStartFamily,
   isStartFamilyId,
-  recommendStartFamily,
   startConfigurationDirections,
   startFamilies,
   type StartDecisionAnswer,
   type StartEntryIntent,
+  type StartExperienceId,
   type StartFamilyId,
   type StartStageId,
 } from '../../data/start-discovery/startExperience';
@@ -47,18 +49,31 @@ interface LocalState {
   stage: StartStageId;
   furthest: StartStageId;
   discoverStep: 0 | 1 | 2;
+  contextStep: number;
   intent?: StartEntryIntent;
-  recommended: StartFamilyId;
+  recommended?: StartFamilyId;
+  recommendationReasons: string[];
+  candidateIds: StartFamilyId[];
   selected?: StartFamilyId;
-  decisionIndex: number;
+  previewFamily: StartFamilyId;
+  buildStepIndex: number;
+  furthestBuildStep: number;
   answers: Answers;
-  experience: string;
+  recommendedExperience: StartExperienceId;
+  selectedExperience?: StartExperienceId;
 }
 
 interface StoredState {
   fingerprint: string;
-  local: LocalState;
+  local: Partial<LocalState> & { decisionIndex?: number; experience?: StartExperienceId };
   draft: StartDiscoveryDraft;
+}
+
+interface RadioOption<Value extends string> {
+  value: Value;
+  label: string;
+  description: string;
+  eyebrow?: string;
 }
 
 function unique(values: readonly string[]) {
@@ -69,23 +84,57 @@ function prefillFingerprint(prefill?: StartDiscoveryPrefill) {
   return JSON.stringify(prefill ?? null);
 }
 
-function familyFromPrefill(prefill?: StartDiscoveryPrefill): StartFamilyId | undefined {
-  if (isStartFamilyId(prefill?.solutionFamilyId)) return prefill.solutionFamilyId;
-  return startFamilies.find((family) => family.title === prefill?.recommendedFamily)?.id;
+function recommendationFromPrefill(prefill?: StartDiscoveryPrefill): StartFamilyId | undefined {
+  const titleMatch = startFamilies.find((family) => family.title === prefill?.recommendedFamily)?.id;
+  if (titleMatch) return titleMatch;
+  if (prefill?.decisionOrigin === 'SYSTEM_FINDER' && isStartFamilyId(prefill.solutionFamilyId)) {
+    return prefill.solutionFamilyId;
+  }
+  return undefined;
 }
 
-function userAlreadySelected(prefill?: StartDiscoveryPrefill) {
-  return Boolean(prefill?.decisionOrigin && prefill.decisionOrigin !== 'SYSTEM_FINDER');
+function selectionFromPrefill(prefill?: StartDiscoveryPrefill): StartFamilyId | undefined {
+  if (prefill?.decisionOrigin === 'SYSTEM_FINDER') return undefined;
+  return isStartFamilyId(prefill?.solutionFamilyId) ? prefill.solutionFamilyId : undefined;
 }
 
-function readStored(prefill?: StartDiscoveryPrefill): StoredState | undefined {
+function experienceFromPrefill(prefill: StartDiscoveryPrefill | undefined, familyId: StartFamilyId) {
+  return startConfigurationDirections.find(
+    (direction) => direction.title === prefill?.configurationPreference,
+  )?.id ?? getRecommendedExperience(familyId);
+}
+
+function normalizeStored(prefill?: StartDiscoveryPrefill): StoredState | undefined {
   if (typeof window === 'undefined') return undefined;
   try {
     const parsed = JSON.parse(window.sessionStorage.getItem(SESSION_KEY) ?? 'null') as StoredState | null;
     if (!parsed || parsed.fingerprint !== prefillFingerprint(prefill)) return undefined;
     if (!START_MAJOR_STAGES.some((stage) => stage.id === parsed.local?.stage)) return undefined;
-    if (!isStartFamilyId(parsed.local.recommended)) return undefined;
-    if (parsed.local.selected && !isStartFamilyId(parsed.local.selected)) return undefined;
+    const fallbackFamily = selectionFromPrefill(prefill) ?? recommendationFromPrefill(prefill) ?? 'business';
+    const recommended = isStartFamilyId(parsed.local.recommended) ? parsed.local.recommended : recommendationFromPrefill(prefill);
+    const selected = isStartFamilyId(parsed.local.selected) ? parsed.local.selected : selectionFromPrefill(prefill);
+    const previewFamily = isStartFamilyId(parsed.local.previewFamily) ? parsed.local.previewFamily : selected ?? recommended ?? fallbackFamily;
+    const stage = parsed.local.stage ?? 'discover';
+    const storedFurthest = parsed.local.furthest;
+    const furthest: StartStageId = storedFurthest && START_MAJOR_STAGES.some((item) => item.id === storedFurthest) ? storedFurthest : stage;
+    parsed.local = {
+      stage,
+      furthest,
+      discoverStep: parsed.local.discoverStep === 1 || parsed.local.discoverStep === 2 ? parsed.local.discoverStep : 0,
+      contextStep: Number.isInteger(parsed.local.contextStep) ? Math.max(0, parsed.local.contextStep ?? 0) : 0,
+      intent: parsed.local.intent,
+      recommended,
+      recommendationReasons: parsed.local.recommendationReasons ?? (recommended ? [getStartFamily(recommended).problem] : []),
+      candidateIds: (parsed.local.candidateIds ?? []).filter(isStartFamilyId),
+      selected,
+      previewFamily,
+      buildStepIndex: parsed.local.buildStepIndex ?? parsed.local.decisionIndex ?? 0,
+      furthestBuildStep: parsed.local.furthestBuildStep ?? parsed.local.decisionIndex ?? 0,
+      answers: parsed.local.answers ?? {},
+      // Old `experience` state was an implicit default, so it remains a recommendation only.
+      recommendedExperience: parsed.local.recommendedExperience ?? parsed.local.experience ?? experienceFromPrefill(prefill, previewFamily),
+      selectedExperience: parsed.local.selectedExperience,
+    };
     return parsed;
   } catch {
     return undefined;
@@ -93,44 +142,128 @@ function readStored(prefill?: StartDiscoveryPrefill): StoredState | undefined {
 }
 
 function initialLocal(prefill?: StartDiscoveryPrefill): LocalState {
-  const stored = readStored(prefill);
-  if (stored) return stored.local;
-  const family = familyFromPrefill(prefill) ?? 'business';
+  const stored = normalizeStored(prefill);
+  if (stored) return stored.local as LocalState;
+  const recommended = recommendationFromPrefill(prefill);
+  const selected = selectionFromPrefill(prefill);
+  const previewFamily = selected ?? recommended ?? 'business';
   return {
     stage: 'discover',
     furthest: 'discover',
     discoverStep: prefill ? 2 : 0,
-    recommended: family,
-    selected: prefill && userAlreadySelected(prefill) ? family : undefined,
-    decisionIndex: 0,
+    contextStep: 0,
+    recommended,
+    recommendationReasons: recommended ? [getStartFamily(recommended).problem] : [],
+    candidateIds: [],
+    selected,
+    previewFamily,
+    buildStepIndex: 0,
+    furthestBuildStep: 0,
     answers: {},
-    experience: 'focused',
+    recommendedExperience: experienceFromPrefill(prefill, previewFamily),
   };
 }
 
 function initialDraft(prefill?: StartDiscoveryPrefill, initialCertainty?: StartDiscoveryBodyProps['initialCertainty']) {
-  const stored = readStored(prefill);
+  const stored = normalizeStored(prefill);
   if (stored?.draft) return stored.draft;
   return createStartDiscoveryDraft(prefill, initialCertainty);
 }
 
-function AssetSlot({ asset, alt, decorative = false }: { asset?: FamilyVisualAsset; alt: string; decorative?: boolean }) {
+function AssetSlot({ asset, alt, decorative = false, className = '' }: { asset?: FamilyVisualAsset; alt: string; decorative?: boolean; className?: string }) {
   if (!asset) return null;
   if (!asset.runtimeUrl) {
     return (
       <div
-        className="sfp-asset-slot"
+        className={`sfp-asset-slot ${className}`.trim()}
         data-asset-id={asset.id}
-        data-asset-status={asset.status === 'UNRESOLVED' ? 'unresolved' : 'approved-unbound'}
+        data-asset-status="unresolved"
         aria-hidden={decorative || undefined}
         role={decorative ? undefined : 'img'}
-        aria-label={decorative ? undefined : `${alt} — الأصل البصري بانتظار الربط التشغيلي.`}
+        aria-label={decorative ? undefined : `${alt} — المثال البصري لهذا السياق لم يُعتمد بعد.`}
       >
-        <span aria-hidden="true">{asset.status === 'UNRESOLVED' ? '◇' : 'GS'}</span>
+        <span aria-hidden="true">المثال البصري غير معتمد بعد</span>
       </div>
     );
   }
-  return <img src={asset.runtimeUrl} alt={decorative ? '' : alt} aria-hidden={decorative || undefined} data-asset-id={asset.id} />;
+  return (
+    <img
+      className={className || undefined}
+      src={asset.runtimeUrl}
+      alt={decorative ? '' : alt}
+      aria-hidden={decorative || undefined}
+      data-asset-id={asset.id}
+      data-asset-status="approved-bound"
+    />
+  );
+}
+
+function AccessibleRadioGroup<Value extends string>({
+  label,
+  value,
+  fallbackValue,
+  options,
+  onChange,
+  className = '',
+}: {
+  label: string;
+  value?: Value;
+  fallbackValue?: Value;
+  options: readonly RadioOption<Value>[];
+  onChange: (value: Value) => void;
+  className?: string;
+}) {
+  const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const selectedIndex = options.findIndex((option) => option.value === value);
+  const fallbackIndex = Math.max(0, options.findIndex((option) => option.value === fallbackValue));
+  const tabbableIndex = selectedIndex >= 0 ? selectedIndex : fallbackIndex;
+
+  const move = (index: number) => {
+    const next = options[index];
+    if (!next) return;
+    onChange(next.value);
+    window.requestAnimationFrame(() => refs.current[index]?.focus());
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex: number | undefined;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') nextIndex = (index + 1) % options.length;
+    if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') nextIndex = (index - 1 + options.length) % options.length;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = options.length - 1;
+    if (event.key === ' ' || event.key === 'Enter') nextIndex = index;
+    if (nextIndex === undefined) return;
+    event.preventDefault();
+    move(nextIndex);
+  };
+
+  return (
+    <div className={`sfp-radio-group ${className}`.trim()} role="radiogroup" aria-label={label}>
+      {options.map((option, index) => {
+        const selected = option.value === value;
+        return (
+          <button
+            key={option.value}
+            ref={(node) => { refs.current[index] = node; }}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            tabIndex={index === tabbableIndex ? 0 : -1}
+            className={selected ? 'is-selected' : ''}
+            onKeyDown={(event) => handleKeyDown(event, index)}
+            onClick={() => onChange(option.value)}
+          >
+            <i aria-hidden="true">{selected ? <Check /> : null}</i>
+            <span>
+              {option.eyebrow ? <small>{option.eyebrow}</small> : null}
+              <strong>{option.label}</strong>
+              <em>{option.description}</em>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function StageRail({ current, furthest, onChange }: { current: StartStageId; furthest: StartStageId; onChange: (stage: StartStageId) => void }) {
@@ -152,13 +285,13 @@ function StageRail({ current, furthest, onChange }: { current: StartStageId; fur
   );
 }
 
-function Pulse({ goal, recommended, selected, budget, reviewNeeds }: { goal: string; recommended: StartFamilyId; selected?: StartFamilyId; budget: string; reviewNeeds?: readonly string[] }) {
+function Pulse({ goal, recommended, selected, budget, reviewNeeds }: { goal: string; recommended?: StartFamilyId; selected?: StartFamilyId; budget: string; reviewNeeds?: readonly string[] }) {
   return (
     <aside className="sfp-pulse" data-testid="project-pulse" aria-labelledby="sfp-pulse-title">
       <span>الحالة الحالية</span><h2 id="sfp-pulse-title">مشروعك الآن</h2>
       <dl>
         {goal ? <div><dt>الهدف</dt><dd>{goal}</dd></div> : null}
-        <div><dt>الاتجاه المقترح</dt><dd>{getStartFamily(recommended).title}</dd></div>
+        <div><dt>الاتجاه المقترح</dt><dd>{recommended ? getStartFamily(recommended).title : 'لم ننسب توصية بعد.'}</dd></div>
         <div><dt>اختيارك</dt><dd>{selected ? getStartFamily(selected).title : 'لم تعتمد اتجاهًا بعد.'}</dd></div>
         <div><dt>الميزانية التقريبية</dt><dd><bdi dir="ltr">USD {budget}</bdi></dd></div>
         {reviewNeeds?.length ? <div><dt>يحتاج مراجعة</dt><dd>{reviewNeeds.slice(0, 2).join('، ')}</dd></div> : null}
@@ -167,8 +300,46 @@ function Pulse({ goal, recommended, selected, budget, reviewNeeds }: { goal: str
   );
 }
 
-function RadioGroup({ label, children }: { label: string; children: ReactNode }) {
-  return <div className="sfp-radio-group" role="radiogroup" aria-label={label}>{children}</div>;
+function FamilyFocusBrowser({ familyId, mode, onPreview, onAdopt }: { familyId: StartFamilyId; mode: 'direction' | 'example'; onPreview: (familyId: StartFamilyId) => void; onAdopt: (familyId: StartFamilyId) => void }) {
+  const family = getStartFamily(familyId);
+  const familyIndex = startFamilies.findIndex((item) => item.id === familyId);
+  const previous = startFamilies[(familyIndex - 1 + startFamilies.length) % startFamilies.length];
+  const next = startFamilies[(familyIndex + 1) % startFamilies.length];
+  return (
+    <section className="sfp-family-focus" data-testid={`${mode}-entry-browser`} aria-labelledby="sfp-family-focus-title">
+      <div className="sfp-family-focus-tabs" aria-label="استكشف عائلات الحلول">
+        {startFamilies.map((item) => (
+          <button key={item.id} type="button" aria-pressed={item.id === familyId} onClick={() => onPreview(item.id)}>
+            <bdi>{item.number}</bdi><span>{item.title}</span>
+          </button>
+        ))}
+      </div>
+      <div className="sfp-family-focus-hero">
+        <AssetSlot asset={getFamilyVisualAsset(getFamilyAssetId(familyId, 'MASTER'))} alt={`مشهد عائلة ${family.title}`} />
+        <div>
+          <span>{mode === 'example' ? 'ابدأ من مشهد معتمد' : 'حدّد النوع الأقرب'}</span>
+          <h2 id="sfp-family-focus-title">{family.title}</h2>
+          <p>{family.problem}</p>
+          <ul>{family.fits.slice(0, 2).map((fit) => <li key={fit}>{fit}</li>)}</ul>
+        </div>
+      </div>
+      {mode === 'example' ? (
+        <div className="sfp-direction-scenes" aria-label={`أمثلة بصرية لاتجاه ${family.title}`}>
+          {(['DIR-01', 'DIR-02', 'DIR-03'] as const).map((role, index) => (
+            <figure key={role}>
+              <AssetSlot asset={getFamilyVisualAsset(getFamilyAssetId(familyId, role))} alt={`شكل بصري ${index + 1} لعائلة ${family.title}`} />
+              <figcaption>اتجاه بصري {index + 1} · مثال للاستكشاف وليس قالبًا نهائيًا</figcaption>
+            </figure>
+          ))}
+        </div>
+      ) : null}
+      <div className="sfp-family-focus-actions">
+        <button type="button" className="sfp-tertiary" onClick={() => onPreview(previous.id)}><ArrowRight aria-hidden="true" /> {previous.title}</button>
+        <button type="button" className="sfp-primary" onClick={() => onAdopt(familyId)}>اعتمد {family.title} كنقطة بداية <ArrowLeft aria-hidden="true" /></button>
+        <button type="button" className="sfp-tertiary" onClick={() => onPreview(next.id)}>{next.title} <ArrowLeft aria-hidden="true" /></button>
+      </div>
+    </section>
+  );
 }
 
 function Drawer({ open, asset, familyTitle, onClose, trigger }: { open: boolean; asset?: FamilyVisualAsset; familyTitle: string; onClose: () => void; trigger: React.RefObject<HTMLButtonElement | null> }) {
@@ -176,12 +347,13 @@ function Drawer({ open, asset, familyTitle, onClose, trigger }: { open: boolean;
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!open) return;
+    const triggerNode = trigger.current;
     close.current?.focus();
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previous;
-      trigger.current?.focus();
+      triggerNode?.focus();
     };
   }, [open, trigger]);
   if (!open) return null;
@@ -198,17 +370,27 @@ function Drawer({ open, asset, familyTitle, onClose, trigger }: { open: boolean;
     <div className="sfp-drawer-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div ref={panel} className="sfp-drawer" role="dialog" aria-modal="true" aria-labelledby="sfp-drawer-title" onKeyDown={trap}>
         <button ref={close} type="button" className="sfp-drawer-close" onClick={onClose} aria-label="إغلاق المثال"><X /></button>
-        <span className="sfp-eyebrow">مثال سياقي</span><h2 id="sfp-drawer-title">كيف يمكن أن يبدو جزء من {familyTitle}؟</h2>
+        <span className="sfp-eyebrow">مثال سياقي</span><h2 id="sfp-drawer-title">كيف يمكن أن يبدو هذا الجزء من {familyTitle}؟</h2>
         <AssetSlot asset={asset} alt={`مثال سياقي لعائلة ${familyTitle}`} />
         <div className="sfp-drawer-copy">
-          <p><strong>ما الذي يعرضه؟</strong> يوضح اتجاهًا بصريًا وسياق استخدام مرتبطًا بالقرار الحالي.</p>
+          <p><strong>ما الذي يعرضه؟</strong> يوضح سياق استخدام مرتبطًا بلحظة الرحلة والقرار الحالي.</p>
           <p><strong>ما الذي لا يعرضه؟</strong> ليس تصميمًا نهائيًا ولا يثبت كل الوظائف أو التكاملات.</p>
-          {asset?.status === 'UNRESOLVED' ? <p data-asset-note="pending">المثال البصري لهذا السياق لم يُعتمد بعد.</p> : null}
-          {asset?.status === 'APPROVED_UNBOUND' ? <p data-asset-note="unbound">الأصل البصري المعتمد بانتظار الربط التشغيلي.</p> : null}
+          {asset?.status === 'UNRESOLVED' ? <p data-asset-note="pending">المثال البصري لهذا السياق لم يُعتمد بعد، لذلك أبقينا الحالة صريحة بلا بديل مصطنع.</p> : null}
         </div>
       </div>
     </div>
   );
+}
+
+function understoodNeed(draft: StartDiscoveryDraft) {
+  const outcome = draft.objective || draft.capturedFacts?.outcome;
+  const change = draft.currentProblem || draft.capturedFacts?.activity;
+  const users = draft.intendedUsers || draft.capturedFacts?.audience;
+  if (outcome && users) return `${outcome}، لمصلحة ${users}.`;
+  if (outcome) return `${outcome}.`;
+  if (change && users) return `${change}، مع تجربة أوضح لـ ${users}.`;
+  if (change) return `${change}.`;
+  return 'الوصول إلى اتجاه عملي من السياق الذي حملته معك.';
 }
 
 export function StartDiscoveryBody({ prefill, initialCertainty, className = '', onDraftChange, onLocalComplete }: StartDiscoveryBodyProps) {
@@ -219,10 +401,14 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
   const headingRef = useRef<HTMLHeadingElement>(null);
   const exampleTrigger = useRef<HTMLButtonElement>(null);
 
-  const activeFamilyId = local.selected ?? local.recommended;
+  const activeFamilyId = local.selected ?? local.recommended ?? local.previewFamily;
   const activeFamily = getStartFamily(activeFamilyId);
+  const recommendedFamily = local.recommended ? getStartFamily(local.recommended) : undefined;
+  const journey = useMemo(() => getFamilyJourneyModel(activeFamilyId), [activeFamilyId]);
+  const buildSteps = useMemo(() => getFamilyBuildSteps(activeFamilyId), [activeFamilyId]);
   const decisions = useMemo(() => getFamilyDecisions(activeFamilyId), [activeFamilyId]);
-  const currentDecision = decisions[Math.min(local.decisionIndex, Math.max(0, decisions.length - 1))];
+  const currentStep = buildSteps[Math.min(local.buildStepIndex, Math.max(0, buildSteps.length - 1))];
+  const currentDecision = currentStep?.decision;
   const currentAnswer = currentDecision ? local.answers[currentDecision.id] : undefined;
   const currentConsequence = currentDecision && currentAnswer ? getDecisionConsequence(activeFamilyId, currentDecision, currentAnswer) : undefined;
   const materialEffect = decisions.some((decision) => {
@@ -230,17 +416,18 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
     return answer ? getDecisionConsequence(activeFamilyId, decision, answer).material : false;
   });
   const budgetBand = formatBudgetBand(materialEffect);
-  const journey = getFamilyJourney(activeFamilyId);
-  const experienceDirection = startConfigurationDirections.find((item) => item.id === local.experience) ?? startConfigurationDirections[0];
+  const recommendedExperienceDirection = startConfigurationDirections.find((item) => item.id === local.recommendedExperience) ?? startConfigurationDirections[0];
+  const selectedExperienceDirection = startConfigurationDirections.find((item) => item.id === local.selectedExperience);
   const reviewNeeds = unique([
     ...draft.unknowns,
     ...decisions.filter((decision) => local.answers[decision.id] === 'unknown').map((decision) => decision.capabilityName),
     ...decisions.filter((decision) => local.answers[decision.id] === 'yes' && getDecisionConsequence(activeFamilyId, decision, 'yes').material).map((decision) => `تحقق ${decision.capabilityName}`),
+    ...(!local.selectedExperience ? ['اعتماد شكل التجربة أو تغييره'] : []),
   ]).slice(0, 3);
   const goal = draft.objective || draft.capturedFacts?.outcome || draft.currentProblem;
   const familyCode = String(startFamilies.findIndex((family) => family.id === activeFamilyId) + 1).padStart(2, '0');
   const masterAsset = getFamilyVisualAsset(getFamilyAssetId(activeFamilyId, 'MASTER'));
-  const contextAsset = getFamilyVisualAsset(getFamilyAssetId(activeFamilyId, 'CTX-01'));
+  const contextAsset = getFamilyVisualAsset(getFamilyAssetId(activeFamilyId, currentStep?.evidenceRole ?? 'CTX-01'));
 
   useEffect(() => { onDraftChange?.(draft); }, [draft, onDraftChange]);
   useEffect(() => {
@@ -258,23 +445,73 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
     setLocal((current) => ({ ...current, stage, furthest: order.indexOf(stage) > order.indexOf(current.furthest) ? stage : current.furthest }));
   };
 
-  const buildRecommendation = () => {
-    const family = recommendStartFamily(`${draft.currentProblem} ${draft.objective} ${draft.intendedUsers}`);
-    setLocal((current) => ({ ...current, recommended: family, discoverStep: 2 }));
-    patchDraft({ recommendedFamily: getStartFamily(family).title, solutionFamilyId: family });
-  };
-
-  const chooseFamily = (familyId: StartFamilyId) => {
+  const chooseFamily = (familyId: StartFamilyId, origin: StartDiscoveryDraft['decisionOrigin'] = 'USER_DIRECT') => {
     const family = getStartFamily(familyId);
     const inherited = draft.capabilitySelections.filter((selection) => family.capabilities.some((capability) => capability.name === selection.name));
-    setLocal((current) => ({ ...current, selected: familyId, decisionIndex: 0, answers: {} }));
+    const recommendedExperience = getRecommendedExperience(familyId);
+    setLocal((current) => ({
+      ...current,
+      selected: familyId,
+      previewFamily: familyId,
+      buildStepIndex: 0,
+      furthestBuildStep: 0,
+      answers: {},
+      recommendedExperience,
+      selectedExperience: undefined,
+    }));
     patchDraft({
       solutionFamilyId: familyId,
-      recommendedFamily: family.title,
-      decisionOrigin: 'USER_DIRECT',
+      decisionOrigin: origin,
       selectedCapabilities: inherited.filter((selection) => selection.provenance === 'USER_SELECTED').map((selection) => selection.name),
       capabilitySelections: inherited,
+      recommendedConfigurationPreference: startConfigurationDirections.find((direction) => direction.id === recommendedExperience)?.title,
+      configurationPreference: '',
     });
+  };
+
+  const buildRecommendation = () => {
+    const assessment = assessStartRecommendation({
+      currentProblem: draft.currentProblem,
+      objective: draft.objective,
+      intendedUsers: draft.intendedUsers,
+    });
+    if (assessment.resolution === 'decisive' && assessment.recommendedId) {
+      const recommendedId = assessment.recommendedId;
+      const family = getStartFamily(recommendedId);
+      setLocal((current) => ({
+        ...current,
+        recommended: recommendedId,
+        previewFamily: current.selected ?? recommendedId,
+        recommendationReasons: [...assessment.reasons],
+        candidateIds: [],
+        discoverStep: 2,
+      }));
+      patchDraft({
+        recommendedFamily: family.title,
+        // Recommendation is not customer adoption.
+        solutionFamilyId: draft.solutionFamilyId,
+        decisionOrigin: draft.solutionFamilyId ? draft.decisionOrigin : 'SYSTEM_FINDER',
+        recommendationResolution: 'decisive',
+      });
+      return;
+    }
+    setLocal((current) => ({
+      ...current,
+      recommended: undefined,
+      recommendationReasons: [...assessment.reasons],
+      candidateIds: [...assessment.candidateIds],
+      discoverStep: 2,
+    }));
+    patchDraft({
+      recommendedFamily: '',
+      recommendationResolution: 'insufficient',
+      decisionOrigin: draft.solutionFamilyId ? draft.decisionOrigin : 'SYSTEM_FINDER',
+    });
+  };
+
+  const adoptEntryFamily = (familyId: StartFamilyId) => {
+    chooseFamily(familyId);
+    setLocal((current) => ({ ...current, contextStep: 1 }));
   };
 
   const selectAnswer = (answer: StartDecisionAnswer) => {
@@ -295,8 +532,12 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
 
   const nextBuild = () => {
     if (currentDecision && !currentAnswer) return;
-    if (local.decisionIndex < decisions.length - 1) {
-      setLocal((current) => ({ ...current, decisionIndex: current.decisionIndex + 1 }));
+    if (local.buildStepIndex < buildSteps.length - 1) {
+      setLocal((current) => ({
+        ...current,
+        buildStepIndex: current.buildStepIndex + 1,
+        furthestBuildStep: Math.max(current.furthestBuildStep, current.buildStepIndex + 1),
+      }));
       return;
     }
     setStage('review');
@@ -314,42 +555,88 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
     draft.capturedFacts?.complexity && `العمق: ${draft.capturedFacts.complexity}`,
     draft.capturedFacts?.constraints && `القيد: ${draft.capturedFacts.constraints}`,
   ].filter(Boolean) as string[];
-  const carriedFacts = carriedFactValues.join(' · ');
+
+  const entryOptions: RadioOption<StartEntryIntent>[] = START_ENTRY_INTENTS.map((intent) => ({
+    value: intent.id,
+    label: intent.label,
+    description: intent.description,
+  }));
+
+  const directNeedJourney = local.intent === 'discover' ? (
+    <div className="sfp-progressive-need" data-testid="discover-need-flow" data-question={local.contextStep + 1}>
+      <div className="sfp-question-progress" aria-label="تقدم أسئلة الاكتشاف"><span data-current={local.contextStep === 0}>التغيير</span><span data-current={local.contextStep === 1}>المستخدمون</span><span data-current={local.contextStep === 2}>النتيجة</span><span data-current={local.contextStep === 3}>السياق</span></div>
+      {local.contextStep === 0 ? <label>ما الذي تريد تغييره؟<textarea dir="auto" value={draft.currentProblem} onChange={(event) => patchDraft({ currentProblem: event.target.value })} placeholder="مثال: أريد جعل حجز الخدمة أوضح وأسهل." /></label> : null}
+      {local.contextStep === 1 ? <label>من سيستخدم هذا الحل؟<input dir="auto" value={draft.intendedUsers} onChange={(event) => patchDraft({ intendedUsers: event.target.value })} placeholder="العملاء، فريق الخدمة، أو أطراف أخرى" /></label> : null}
+      {local.contextStep === 2 ? <label>ما النتيجة التي تريد الوصول إليها؟<textarea dir="auto" value={draft.objective} onChange={(event) => patchDraft({ objective: event.target.value })} placeholder="صف النتيجة التي تهمك بجملة قصيرة." /></label> : null}
+      {local.contextStep === 3 ? <label>ما السياق التشغيلي الذي يجب أن نعرفه؟<textarea dir="auto" value={draft.domain} onChange={(event) => patchDraft({ domain: event.target.value })} placeholder="خدمة بمواعيد، فريق داخلي، محتوى متجدد..." /></label> : null}
+      <div className="sfp-flow-actions">
+        {local.contextStep > 0 ? <button type="button" className="sfp-secondary" onClick={() => setLocal((current) => ({ ...current, contextStep: current.contextStep - 1 }))}>السابق</button> : null}
+        {local.contextStep < 3 ? <button type="button" className="sfp-primary" disabled={local.contextStep === 0 ? !draft.currentProblem.trim() : local.contextStep === 1 ? !draft.intendedUsers.trim() : !draft.objective.trim()} onClick={() => setLocal((current) => ({ ...current, contextStep: current.contextStep + 1 }))}>تابع <ArrowLeft /></button> : <button type="button" className="sfp-primary" onClick={buildRecommendation}>ابنِ اتجاهًا أوليًا <ArrowLeft /></button>}
+      </div>
+    </div>
+  ) : null;
+
+  const guidedEntry = local.intent === 'direction' || local.intent === 'example' ? (
+    local.contextStep === 0 ? (
+      <FamilyFocusBrowser
+        familyId={local.previewFamily}
+        mode={local.intent}
+        onPreview={(familyId) => setLocal((current) => ({ ...current, previewFamily: familyId }))}
+        onAdopt={adoptEntryFamily}
+      />
+    ) : (
+      <div className="sfp-entry-confirmation" data-testid={`${local.intent}-entry-confirmation`}>
+        <span>اختيارك المبكر: {getStartFamily(local.selected ?? local.previewFamily).title}</span>
+        <h2>{local.intent === 'example' ? 'ما الذي تريد أن يحققه المشروع، بعيدًا عن شكل المثال؟' : 'ما النتيجة التي يجب أن يؤكدها هذا الاتجاه؟'}</h2>
+        <label>النتيجة المطلوبة<textarea dir="auto" value={draft.objective} onChange={(event) => patchDraft({ objective: event.target.value })} placeholder="اكتب النتيجة بجملة قصيرة." /></label>
+        <label>المستخدمون الرئيسيون<input dir="auto" value={draft.intendedUsers} onChange={(event) => patchDraft({ intendedUsers: event.target.value })} placeholder="من سيعتمد على الحل؟" /></label>
+        <div className="sfp-flow-actions"><button type="button" className="sfp-secondary" onClick={() => setLocal((current) => ({ ...current, contextStep: 0 }))}>غيّر نقطة البداية</button><button type="button" className="sfp-primary" disabled={!draft.objective.trim()} onClick={buildRecommendation}>راجع الاتجاه <ArrowLeft /></button></div>
+      </div>
+    )
+  ) : null;
 
   const discover = (
     <section className="sfp-stage sfp-discover" aria-labelledby="start-discovery-title">
       <header className="sfp-stage-heading">
         <p className="sfp-eyebrow">المرحلة 01 · اكتشف ما يناسبك</p>
-        <h1 id="start-discovery-title" ref={headingRef} tabIndex={-1}>ابدأ بما تريد تغييره، لا باسم منتج جاهز.</h1>
-        <p>قدّم فقط ما يكفي لنكوّن اتجاهًا مفيدًا، ثم اعتمده أنت أو غيّره.</p>
+        <h1 id="start-discovery-title" ref={headingRef} tabIndex={-1} data-route-focus>ابدأ بما تريد تغييره، لا باسم منتج جاهز.</h1>
+        <p>اختر مدخلًا واحدًا؛ ستبقى داخل مرحلة الاكتشاف نفسها حتى تتضح نقطة البداية.</p>
       </header>
-      {prefill && carriedFacts ? <div className="sfp-carried" data-testid="carried-context" data-carried-facts={carriedFactValues.length > 1 ? 'true' : undefined}><strong>ما نعرفه من قرارك السابق</strong><p>{carriedFacts}</p></div> : null}
+      {prefill && carriedFactValues.length ? <div className="sfp-carried" data-testid="carried-context" data-carried-facts={carriedFactValues.length > 1 ? 'true' : undefined}><strong>ما نعرفه من قرارك السابق</strong><p>{carriedFactValues.join(' · ')}</p></div> : null}
       {local.discoverStep === 0 ? (
-        <div className="sfp-entry-intents" role="radiogroup" aria-label="نقطة الدخول إلى الاكتشاف">
+        <div className="sfp-entry-intents">
           <h2>كيف تفضّل أن تبدأ؟</h2>
-          {START_ENTRY_INTENTS.map((intent) => <button key={intent.id} type="button" role="radio" aria-checked={local.intent === intent.id} onKeyDown={(event) => { if (event.key === ' ') { event.preventDefault(); setLocal((current) => ({ ...current, intent: intent.id })); } }} onClick={() => setLocal((current) => ({ ...current, intent: intent.id, discoverStep: 1 }))}><strong>{intent.label}</strong><small>{intent.description}</small>{local.intent === intent.id ? <Check aria-hidden="true" /> : <ArrowLeft aria-hidden="true" />}</button>)}
-          <div className="sfp-entry-footer"><button type="button" className="sfp-primary" disabled={!local.intent} onClick={() => setLocal((current) => ({ ...current, discoverStep: 1 }))}>متابعة <ArrowLeft aria-hidden="true" /></button></div>
+          <AccessibleRadioGroup label="نقطة الدخول إلى الاكتشاف" value={local.intent} options={entryOptions} onChange={(intent) => setLocal((current) => ({ ...current, intent }))} />
+          <div className="sfp-entry-footer"><button type="button" className="sfp-primary" disabled={!local.intent} onClick={() => setLocal((current) => ({ ...current, discoverStep: 1, contextStep: 0 }))}>ابدأ بهذا المدخل <ArrowLeft aria-hidden="true" /></button></div>
         </div>
       ) : null}
-      {local.discoverStep === 1 ? (
-        <div className="sfp-discovery-fields">
-          <label>ما الذي تريد تغييره؟<textarea dir="auto" value={draft.currentProblem} onChange={(event) => patchDraft({ currentProblem: event.target.value })} placeholder="مثال: أريد جعل حجز الخدمة أوضح وأسهل." /></label>
-          <label>من سيستخدم هذا الحل؟<input dir="auto" value={draft.intendedUsers} onChange={(event) => patchDraft({ intendedUsers: event.target.value })} placeholder="العملاء، فريق الخدمة، أو أطراف أخرى" /></label>
-          <label>ما النتيجة التي تريد الوصول إليها؟<textarea dir="auto" value={draft.objective} onChange={(event) => patchDraft({ objective: event.target.value })} placeholder="صف النتيجة التي تهمك بجملة قصيرة." /></label>
-          <button type="button" className="sfp-primary" disabled={!draft.currentProblem.trim()} onClick={buildRecommendation}>ابنِ اتجاهًا أوليًا <ArrowLeft /></button>
-        </div>
-      ) : null}
+      {local.discoverStep === 1 ? <div className="sfp-discovery-fields">{directNeedJourney}{guidedEntry}</div> : null}
       {local.discoverStep === 2 ? (
         <div className="sfp-recommendation-grid">
           <main>
-            <div className="sfp-recommendation" data-testid="system-recommendation">
-              <span>ما نوصي به</span><h2>{getStartFamily(local.recommended).title}</h2><p>نعتقد أن هذا الاتجاه يناسب ما نعرفه الآن؛ التوصية ليست اختيارًا نيابةً عنك.</p>
-              <AssetSlot asset={getFamilyVisualAsset(getFamilyAssetId(local.recommended, 'MASTER'))} alt={`مشهد عائلة ${getStartFamily(local.recommended).title}`} />
-            </div>
+            <section className="sfp-understood" data-testid="understood-need"><span>ما فهمناه</span><h2>فهمنا أنك تريد...</h2><p>{understoodNeed(draft)}</p></section>
+            {recommendedFamily ? (
+              <div className="sfp-recommendation" data-testid="system-recommendation">
+                <span>ما نوصي به</span><h2>{recommendedFamily.title}</h2>
+                <div className="sfp-recommendation-copy"><strong>لماذا يناسبك؟</strong>{local.recommendationReasons.map((reason) => <p key={reason}>{reason}</p>)}</div>
+                <AssetSlot asset={getFamilyVisualAsset(getFamilyAssetId(recommendedFamily.id, 'MASTER'))} alt={`مشهد عائلة ${recommendedFamily.title}`} />
+              </div>
+            ) : (
+              <section className="sfp-candidate-choice" data-testid="bounded-candidate-choice">
+                <span>نحتاج تمييزًا واحدًا</span><h2>أي نوع تغيير أقرب إلى أولويتك؟</h2><p>{local.recommendationReasons[0]}</p>
+                <AccessibleRadioGroup
+                  label="اتجاهات محتملة تحتاج اختيارك"
+                  value={local.selected}
+                  options={local.candidateIds.map((familyId) => ({ value: familyId, label: getStartFamily(familyId).title, description: getStartFamily(familyId).cue }))}
+                  onChange={(familyId) => chooseFamily(familyId, 'USER_OPEN_DIRECTION')}
+                />
+              </section>
+            )}
             <div className="sfp-user-selection" data-testid="user-selection"><span>اختيارك</span><strong>{local.selected ? getStartFamily(local.selected).title : 'لم تعتمد اتجاهًا بعد.'}</strong></div>
             <div className="sfp-budget"><span>{PROVISIONAL_START_PRICING.label}</span><strong><bdi dir="ltr">USD {formatBudgetBand(false)}</bdi></strong><small>{PROVISIONAL_START_PRICING.disclaimer}</small></div>
-            <button type="button" className="sfp-primary" onClick={() => { chooseFamily(local.selected ?? local.recommended); setStage('build'); }}>اختر هذا الاتجاه <ArrowLeft /></button>
-            <details className="sfp-family-explorer"><summary>قارن أو اختر اتجاهًا آخر</summary><div>{startFamilies.map((family) => <button key={family.id} type="button" aria-pressed={local.selected === family.id} onClick={() => chooseFamily(family.id)}><bdi>{family.number}</bdi><span><strong>{family.title}</strong><small>{family.cue}</small></span>{local.selected === family.id ? <Check /> : null}</button>)}</div></details>
+            <button type="button" className="sfp-primary" disabled={!local.selected && !local.recommended} onClick={() => { if (!local.selected && local.recommended) chooseFamily(local.recommended); setStage('build'); }}>{local.selected ? 'تابع مع اختيارك' : 'اختر هذا الاتجاه'} <ArrowLeft /></button>
+            {recommendedFamily ? <details className="sfp-direction-explorer"><summary>شاهد ثلاثة أشكال ممكنة لهذا الاتجاه</summary><div>{(['DIR-01', 'DIR-02', 'DIR-03'] as const).map((role, index) => <figure key={role}><AssetSlot asset={getFamilyVisualAsset(getFamilyAssetId(recommendedFamily.id, role))} alt={`شكل ${index + 1} لاتجاه ${recommendedFamily.title}`} /><figcaption>شكل {index + 1} · للاستكشاف</figcaption></figure>)}</div></details> : null}
+            <details className="sfp-family-explorer"><summary>قارن أو اختر اتجاهًا آخر</summary><div>{startFamilies.map((family) => <button key={family.id} type="button" aria-pressed={local.selected === family.id} onClick={() => chooseFamily(family.id, 'USER_ALTERNATIVE')}><bdi>{family.number}</bdi><span><strong>{family.title}</strong><small>{family.cue}</small></span>{local.selected === family.id ? <Check /> : null}</button>)}</div></details>
           </main>
           <Pulse goal={goal} recommended={local.recommended} selected={local.selected} budget={formatBudgetBand(false)} />
         </div>
@@ -359,16 +646,21 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
 
   const build = (
     <section className="sfp-stage sfp-build" aria-labelledby="start-build-title">
-      <header className="sfp-stage-heading"><p className="sfp-eyebrow">المرحلة 02 · كوّن حلّك</p><h1 id="start-build-title" ref={headingRef} tabIndex={-1}>قرار واحد واضح في كل مرة.</h1><p>{activeFamily.title}</p></header>
+      <header className="sfp-stage-heading"><p className="sfp-eyebrow">المرحلة 02 · كوّن حلّك</p><h1 id="start-build-title" ref={headingRef} tabIndex={-1}>قرار واحد واضح في كل مرة.</h1><p>{activeFamily.title} · {currentStep?.body}</p></header>
       <div className="sfp-build-layout">
         <main>
-          <nav className="sfp-journey" aria-label="لحظات رحلة الحل">{journey.map((moment, index) => <span key={moment} data-current={index === Math.min(local.decisionIndex, journey.length - 1) ? 'true' : undefined}><bdi>{String(index + 1).padStart(2, '0')}</bdi>{moment}</span>)}</nav>
-          {currentDecision ? <article className="sfp-decision"><span>القرار الحالي</span><h2>{currentDecision.question}</h2><RadioGroup label={currentDecision.question}>{currentDecision.answers.map((answer) => { const selected = currentAnswer === answer.id; return <button key={answer.id} type="button" role="radio" aria-checked={selected} className={selected ? 'is-selected' : ''} onClick={() => selectAnswer(answer.id)}><i aria-hidden="true">{selected ? <Check /> : null}</i><span><strong>{answer.label}</strong><small>{answer.detail}</small></span></button>; })}</RadioGroup></article> : null}
+          <nav className="sfp-journey" aria-label="لحظات رحلة الحل">{journey.map((moment, index) => { const firstStep = buildSteps.findIndex((step) => step.momentId === moment.id); const current = currentStep?.momentId === moment.id; return <button key={moment.id} type="button" disabled={firstStep > local.furthestBuildStep} data-current={current ? 'true' : undefined} data-complete={firstStep < local.buildStepIndex ? 'true' : undefined} onClick={() => setLocal((state) => ({ ...state, buildStepIndex: firstStep }))}><bdi>{String(index + 1).padStart(2, '0')}</bdi><span>{moment.label}</span>{firstStep < local.buildStepIndex ? <Check aria-hidden="true" /> : null}</button>; })}</nav>
+          {currentStep?.kind === 'information' ? <article className="sfp-moment-brief" data-testid="journey-information"><span>لحظة في الرحلة</span><h2>{currentStep.title}</h2><p>{currentStep.body}</p><ul>{activeFamily.capabilities.filter((capability) => capability.classification === 'CORE').map((capability) => <li key={capability.name}><strong>{capability.name}</strong><small>{capability.description}</small></li>)}</ul></article> : null}
+          {currentDecision ? <article className="sfp-decision" data-moment-id={currentDecision.momentId}><span>القرار الحالي</span><h2>{currentDecision.question}</h2><AccessibleRadioGroup label={currentDecision.question} value={currentAnswer} options={currentDecision.answers.map((answer) => ({ value: answer.id, label: answer.label, description: answer.detail }))} onChange={selectAnswer} /></article> : null}
           {currentConsequence ? <section className="sfp-consequence" data-testid="decision-consequence" aria-labelledby="sfp-consequence-title"><span>الأثر الفوري</span><h2 id="sfp-consequence-title">ماذا يتغير؟</h2><div><article><strong>للعميل</strong><p>{currentConsequence.customer}</p></article><article><strong>في الحل</strong><p>{currentConsequence.solution}</p></article><article><strong>في المشروع</strong><p>{currentConsequence.project}</p></article></div></section> : null}
-          <section className="sfp-experience" aria-labelledby="sfp-experience-title"><span>اتجاه التجربة</span><h2 id="sfp-experience-title">كيف تريد أن يستخدم العميل الحل؟</h2><RadioGroup label="اتجاه تجربة العميل">{startConfigurationDirections.map((direction, index) => <button key={direction.id} type="button" role="radio" aria-checked={local.experience === direction.id} className={local.experience === direction.id ? 'is-selected' : ''} onClick={() => { setLocal((current) => ({ ...current, experience: direction.id })); patchDraft({ configurationPreference: direction.title }); }}><span><small>{index === 0 ? 'موصى به' : 'بديل'}</small><strong>{direction.shortLabel}</strong><em>{direction.description}</em></span></button>)}</RadioGroup></section>
-          <div className="sfp-build-actions"><button ref={exampleTrigger} type="button" className="sfp-example" onClick={() => setDrawerOpen(true)}><Eye /> شاهد مثالًا</button><button type="button" className="sfp-primary" disabled={Boolean(currentDecision && !currentAnswer)} onClick={nextBuild}>{local.decisionIndex < decisions.length - 1 ? 'تابع إلى القرار التالي' : 'احفظ التكوين وتابع'} <ArrowLeft /></button></div>
+          <section className="sfp-experience" aria-labelledby="sfp-experience-title" data-recommended-experience={local.recommendedExperience} data-selected-experience={local.selectedExperience ?? ''}>
+            <span>شكل التجربة</span><h2 id="sfp-experience-title">اقتراح واحد، والاعتماد قرارك.</h2>
+            <div className="sfp-experience-truth"><p><strong>نقترح:</strong> {recommendedExperienceDirection.shortLabel}</p><p><strong>اعتمدت:</strong> {selectedExperienceDirection?.shortLabel ?? 'لم تعتمد شكلًا بعد.'}</p></div>
+            <AccessibleRadioGroup label="شكل تجربة العميل" value={local.selectedExperience} fallbackValue={local.recommendedExperience} options={startConfigurationDirections.map((direction) => ({ value: direction.id, label: direction.shortLabel, description: direction.description, eyebrow: direction.id === local.recommendedExperience ? 'موصى به للمراجعة' : 'بديل' }))} onChange={(experience) => { setLocal((current) => ({ ...current, selectedExperience: experience })); patchDraft({ configurationPreference: startConfigurationDirections.find((direction) => direction.id === experience)?.title ?? '' }); }} />
+          </section>
+          <div className="sfp-build-actions"><button ref={exampleTrigger} type="button" className="sfp-example" onClick={() => setDrawerOpen(true)}><Eye /> شاهد مثالًا مرتبطًا بهذه اللحظة</button><button type="button" className="sfp-primary" disabled={Boolean(currentDecision && !currentAnswer)} onClick={nextBuild}>{local.buildStepIndex < buildSteps.length - 1 ? 'تابع في الرحلة' : 'احفظ التكوين وتابع'} <ArrowLeft /></button></div>
         </main>
-        <Pulse goal={goal} recommended={local.recommended} selected={activeFamilyId} budget={budgetBand} reviewNeeds={reviewNeeds} />
+        <Pulse goal={goal} recommended={local.recommended} selected={local.selected} budget={budgetBand} reviewNeeds={reviewNeeds} />
       </div>
       <Drawer open={drawerOpen} asset={contextAsset} familyTitle={activeFamily.title} onClose={() => setDrawerOpen(false)} trigger={exampleTrigger} />
     </section>
@@ -379,19 +671,20 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
     ...draft.capabilitySelections.filter((selection) => selection.provenance === 'USER_SELECTED').map((selection) => selection.name),
   ]);
   const externalNeeds = decisions.filter((decision) => local.answers[decision.id] === 'yes' && getDecisionConsequence(activeFamilyId, decision, 'yes').material).map((decision) => decision.capabilityName);
+  const experienceReviewLabel = selectedExperienceDirection ? selectedExperienceDirection.shortLabel : `مقترح للمراجعة: ${recommendedExperienceDirection.shortLabel}`;
 
   const review = (
     <section className="sfp-stage sfp-review" aria-labelledby="start-review-title">
       <header className="sfp-stage-heading"><p className="sfp-eyebrow">المرحلة 03 · راجع وابدأ</p><h1 id="start-review-title" ref={headingRef} tabIndex={-1}>مشروعك أصبح واضحًا بما يكفي للبدء</h1><p>راجع ما حددته، وما بقي للمراجعة، ثم ابدأ المشروع بهذا المخطط.</p></header>
       <div className="sfp-review-layout">
-        <main className="sfp-blueprint" data-testid="project-blueprint" aria-labelledby="sfp-blueprint-title"><div className="sfp-blueprint-head"><div><span>مخطط مشروعك</span><h2 id="sfp-blueprint-title">{activeFamily.title}</h2></div><AssetSlot asset={masterAsset} alt={`مشهد داعم لعائلة ${activeFamily.title}`} /></div><div className="sfp-blueprint-flow">{journey.map((moment, index) => <details key={moment} open={index < 3}><summary><bdi>{String(index + 1).padStart(2, '0')}</bdi><strong>{moment}</strong></summary><p>{activeFamily.operatingLoop[index % activeFamily.operatingLoop.length]}</p>{index === 0 ? <small>اتجاه التجربة: {experienceDirection.shortLabel}</small> : null}{index === 1 ? <small>النطاق: {selectedCapabilityNames.join('، ')}</small> : null}{index === journey.length - 1 && externalNeeds.length ? <small>خدمات خارجية تحتاج مراجعة: {externalNeeds.join('، ')}</small> : null}</details>)}</div></main>
-        <aside className="sfp-project-summary" data-testid="project-summary" aria-labelledby="sfp-summary-title"><span>ملخص واحد للمشروع</span><h2 id="sfp-summary-title">ما الذي سنبدأ منه؟</h2><dl><div><dt>الحل المختار</dt><dd>{activeFamily.title}</dd></div><div><dt>اتجاه التجربة</dt><dd>{experienceDirection.shortLabel}</dd></div><div><dt>النطاق</dt><dd>{selectedCapabilityNames.join('، ')}</dd></div><div><dt>الميزانية التقريبية</dt><dd><bdi dir="ltr">USD {budgetBand}</bdi><small>{PROVISIONAL_START_PRICING.disclaimer}</small></dd></div>{externalNeeds.length ? <div><dt>خدمات خارجية</dt><dd>{externalNeeds.join('، ')}</dd></div> : null}</dl>{reviewNeeds.length ? <section className="sfp-review-needs"><h3>ما الذي سنراجعه معك؟</h3><ul>{reviewNeeds.map((item) => <li key={item}>{item}</li>)}</ul></section> : null}<section className="sfp-ready"><Check aria-hidden="true" /><div><h3>يمكنك المتابعة</h3><p>مشروعك واضح بما يكفي للبدء، وهناك بعض التفاصيل التي سنراجعها معك قبل تثبيت النطاق النهائي.</p></div></section><div className="sfp-final-actions"><button type="button" className="sfp-primary" onClick={complete}>ابدأ المشروع بهذا المخطط <ArrowLeft /></button><button type="button" className="sfp-secondary" onClick={() => setStage('build')}>عدّل مشروعك</button><p>المعلومات التي أدخلتها ستنتقل إلى موجز المشروع لاحقًا، ولن تحتاج إلى إدخالها من جديد.</p>{completed ? <p role="status">تم تجهيز المخطط محليًا للخطوة التالية.</p> : null}</div></aside>
+        <main className="sfp-blueprint" data-testid="project-blueprint" aria-labelledby="sfp-blueprint-title"><div className="sfp-blueprint-head"><div><span>مخطط مشروعك</span><h2 id="sfp-blueprint-title">{activeFamily.title}</h2><p>{understoodNeed(draft)}</p></div><AssetSlot asset={masterAsset} alt={`مشهد داعم لعائلة ${activeFamily.title}`} /></div><div className="sfp-blueprint-flow">{journey.map((moment, index) => { const momentDecisions = decisions.filter((decision) => decision.momentId === moment.id); return <details key={moment.id} open={index < 3}><summary><bdi>{String(index + 1).padStart(2, '0')}</bdi><strong>{moment.label}</strong></summary><p>{moment.description}</p>{momentDecisions.map((decision) => <small key={decision.id}>{decision.capabilityName}: {local.answers[decision.id] === 'yes' ? 'ضمن التكوين' : local.answers[decision.id] === 'no' ? 'ليس الآن' : 'يحتاج مراجعة'}</small>)}{index === 0 ? <small data-experience-state={selectedExperienceDirection ? 'adopted' : 'recommended-only'}>شكل التجربة: {experienceReviewLabel}</small> : null}{index === journey.length - 1 && externalNeeds.length ? <small>خدمات خارجية تحتاج مراجعة: {externalNeeds.join('، ')}</small> : null}</details>; })}</div></main>
+        <aside className="sfp-project-summary" data-testid="project-summary" aria-labelledby="sfp-summary-title"><span>ملخص واحد للمشروع</span><h2 id="sfp-summary-title">ما الذي سنبدأ منه؟</h2><dl>{local.recommended ? <div><dt>اتجاه اقترحته GS</dt><dd>{getStartFamily(local.recommended).title}</dd></div> : null}<div><dt>الحل الذي اعتمدته</dt><dd>{activeFamily.title}</dd></div><div><dt>شكل التجربة</dt><dd data-experience-state={selectedExperienceDirection ? 'adopted' : 'recommended-only'}>{experienceReviewLabel}</dd></div><div><dt>النطاق</dt><dd>{selectedCapabilityNames.join('، ')}</dd></div><div><dt>الميزانية التقريبية</dt><dd><bdi dir="ltr">USD {budgetBand}</bdi><small>{PROVISIONAL_START_PRICING.disclaimer}</small></dd></div>{externalNeeds.length ? <div><dt>خدمات خارجية</dt><dd>{externalNeeds.join('، ')}</dd></div> : null}</dl>{reviewNeeds.length ? <section className="sfp-review-needs"><h3>ما الذي سنراجعه معك؟</h3><ul>{reviewNeeds.map((item) => <li key={item}>{item}</li>)}</ul></section> : null}<section className="sfp-ready"><Check aria-hidden="true" /><div><h3>يمكنك المتابعة</h3><p>مشروعك واضح بما يكفي للبدء، وهناك بعض التفاصيل التي سنراجعها معك قبل تثبيت النطاق النهائي.</p></div></section><div className="sfp-final-actions"><button type="button" className="sfp-primary" onClick={complete}>ابدأ المشروع بهذا المخطط <ArrowLeft /></button><button type="button" className="sfp-secondary" onClick={() => setStage('build')}>عدّل مشروعك</button><p>المعلومات التي أدخلتها ستنتقل إلى موجز المشروع لاحقًا، ولن تحتاج إلى إدخالها من جديد.</p>{completed ? <p role="status">تم تجهيز المخطط محليًا للخطوة التالية.</p> : null}</div></aside>
       </div>
     </section>
   );
 
   return (
-    <div className={`start-discovery sfp-start ${className}`.trim()} dir="rtl" data-stage={local.stage} data-major-stage-count="3" data-prefilled={prefill ? 'true' : 'false'} data-certainty={prefill ? 'configured' : local.intent ? 'exploring' : 'unselected'} data-recommended-family={local.recommended} data-selected-family={local.selected ?? ''} data-family-code={`FAM-${familyCode}`}>
+    <div className={`start-discovery sfp-start ${className}`.trim()} dir="rtl" data-stage={local.stage} data-major-stage-count="3" data-prefilled={prefill ? 'true' : 'false'} data-certainty={prefill ? 'configured' : local.intent ? 'exploring' : 'unselected'} data-recommended-family={local.recommended ?? ''} data-selected-family={local.selected ?? ''} data-family-code={`FAM-${familyCode}`}>
       <input type="hidden" id="sd-objective" readOnly value={draft.objective || draft.capturedFacts?.outcome || draft.currentProblem} />
       <div className="sfp-shell"><StageRail current={local.stage} furthest={local.furthest} onChange={setStage} />{local.stage === 'discover' ? discover : null}{local.stage === 'build' ? build : null}{local.stage === 'review' ? review : null}</div>
     </div>

@@ -28,6 +28,7 @@ const emptyDraft: StartDiscoveryDraft = {
   optionalCapabilities: [],
   uncertainCapabilities: [],
   capabilitySelections: [],
+  recommendedConfigurationPreference: '',
   configurationPreference: '',
   existingSystems: '',
   integrations: '',
@@ -129,20 +130,20 @@ function normalizeCapturedFacts(
   return Object.keys(result).length ? result : undefined;
 }
 
-function familyContextLabel(draft: StartDiscoveryDraft) {
+function decisionOriginLabel(draft: StartDiscoveryDraft) {
   switch (draft.decisionOrigin) {
     case 'SYSTEM_FINDER':
-      return 'عائلة أوصى بها Finder من المدخلات المتاحة';
+      return 'توصية من النظام؛ لم يعتمدها العميل بعد';
     case 'USER_DIRECT':
-      return 'عائلة اخترتها مباشرة في مساحة الحلول';
+      return 'اختيار مباشر من العميل';
     case 'USER_COMPARE':
-      return 'عائلة اخترتها بعد المقارنة';
+      return 'اختيار العميل بعد المقارنة';
     case 'USER_OPEN_DIRECTION':
-      return 'عائلة اخترتها من اتجاهات بقيت مفتوحة';
+      return 'اختيار العميل من اتجاهات مفتوحة';
     case 'USER_ALTERNATIVE':
-      return 'عائلة بديلة اخترتها بعد المراجعة';
+      return 'اختيار العميل لاتجاه بديل';
     default:
-      return 'عائلة محمولة من السياق';
+      return undefined;
   }
 }
 
@@ -182,6 +183,7 @@ export function createStartDiscoveryDraft(
   const carriedUserSelections = capabilitySelections.filter(
     (selection) => selection.provenance === 'USER_SELECTED',
   );
+  const recommendationOnly = prefill.decisionOrigin === 'SYSTEM_FINDER';
 
   return {
     ...emptyDraft,
@@ -189,7 +191,7 @@ export function createStartDiscoveryDraft(
     objective: prefill.selectedOutcome?.trim() ?? '',
     currentProblem: prefill.selectedProblem?.trim() ?? '',
     recommendedFamily: prefill.recommendedFamily?.trim() ?? '',
-    solutionFamilyId: prefill.solutionFamilyId?.trim() ?? '',
+    solutionFamilyId: recommendationOnly ? '' : prefill.solutionFamilyId?.trim() ?? '',
     decisionOrigin: prefill.decisionOrigin,
     recommendationResolution: prefill.recommendationResolution,
     selectedCapabilities: hasExplicitProvenance
@@ -208,7 +210,8 @@ export function createStartDiscoveryDraft(
       : unique(prefill.optionalCapabilities),
     capabilitySelections,
     capturedFacts: normalizeCapturedFacts(prefill.capturedFacts),
-    configurationPreference: prefill.configurationPreference?.trim() ?? '',
+    recommendedConfigurationPreference: prefill.configurationPreference?.trim() ?? '',
+    configurationPreference: '',
     budgetPreference: prefill.budgetPreference?.trim() ?? '',
     dependencies: unique(prefill.knownDependencies),
     unknowns: unique(prefill.unknowns),
@@ -279,6 +282,7 @@ export function buildDiscoverySummary(
         `${selection.name} — ${capabilityClassificationLabels[selection.classification]}`,
     );
   const carriedDecisionResolution = decisionResolutionContext(draft);
+  const carriedDecisionOrigin = decisionOriginLabel(draft);
 
   return {
     title: draft.objective || 'ملخص تعريف المشروع',
@@ -304,11 +308,14 @@ export function buildDiscoverySummary(
         item('قدرات اخترتها أنت', draft.selectedCapabilities),
       ]),
       group('preferred', [
-        item(familyContextLabel(draft), values(draft.recommendedFamily)),
+        item('الاتجاه الذي اقترحته GS', values(draft.recommendedFamily)),
+        item('العائلة التي اعتمدها العميل', values(draft.solutionFamilyId)),
+        item('مصدر القرار', values(carriedDecisionOrigin)),
         item('سياق حسم الاتجاه', values(carriedDecisionResolution)),
         item('قدرات أدرجها النظام مبدئيًا', systemSeededCapabilities),
         item('قدرات اختيارية اخترتها أنت', draft.optionalCapabilities),
-        item('تفضيل التكوين', values(draft.configurationPreference)),
+        item('شكل التجربة المقترح', values(draft.recommendedConfigurationPreference)),
+        item('شكل التجربة الذي اعتمده العميل', values(draft.configurationPreference)),
         item('تفضيل الميزانية', values(draft.budgetPreference)),
         item('تفضيل التوقيت', values(draft.timingPreference)),
         item('قيود مفضلة للمراعاة', values(draft.constraints)),

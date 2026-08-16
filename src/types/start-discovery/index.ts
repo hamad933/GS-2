@@ -109,6 +109,9 @@ export interface StartDiscoveryDraft {
   uncertainCapabilities: string[];
   capabilitySelections: DiscoveryCapabilitySelection[];
   capturedFacts?: DiscoveryCapturedFacts;
+  /** System-carried experience direction; it is not customer adoption. */
+  recommendedConfigurationPreference?: string;
+  /** Customer-adopted experience direction only. */
   configurationPreference: string;
   existingSystems: string;
   integrations: string;

@@ -245,9 +245,13 @@ test('Start direct entry needs no prefill and remains progressively functional',
   const entry = page.getByRole('radio', { name: /ساعدني على اكتشاف ما أحتاج/ });
   await entry.focus();
   await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
   await page.getByLabel('ما الذي تريد تغييره؟').fill('أريد تنظيم الحجز والمواعيد للعملاء.');
+  await page.getByRole('button', { name: /^تابع/ }).click();
   await page.getByLabel('من سيستخدم هذا الحل؟').fill('العملاء وفريق الخدمة');
+  await page.getByRole('button', { name: /^تابع/ }).click();
   await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('حجز أوضح بخطوات أقل');
+  await page.getByRole('button', { name: /^تابع/ }).click();
   await page.getByRole('button', { name: /ابنِ اتجاهًا أوليًا/ }).click();
   await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('الحجوزات والخدمات');
   await expect(page.locator('[data-testid="user-selection"]')).toContainText('لم تعتمد اتجاهًا بعد.');
@@ -302,7 +306,9 @@ test('integrated Arabic and English runs preserve deliberate direction', async (
   await expect(page.locator('.scope-architecture small').first()).toHaveCSS('direction', 'ltr');
   await openRoute(page, '/start', '#start-discovery-title');
   await page.getByRole('radio', { name: /أعرف تقريبًا نوع الحل/ }).click();
-  const need = page.getByLabel('ما الذي تريد تغييره؟');
+  await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+  await page.getByRole('button', { name: /اعتمد مواقع الأعمال والخدمات كنقطة بداية/ }).click();
+  const need = page.getByLabel('النتيجة المطلوبة');
   await need.fill('Improve service intake');
   await expect(need).toHaveCSS('direction', 'ltr');
 });

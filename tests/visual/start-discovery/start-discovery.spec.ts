@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { familyVisualAssets } from '../../../src/data/visual/familyVisualAssets';
 import { createStartDiscoveryDraft } from '../../../src/features/start-discovery/discoveryModel';
 import { readStartDiscoveryRouteState } from '../../../src/routes/startDiscoveryRouteState';
 import { START_DISCOVERY_PREFILL_VERSION } from '../../../src/types/start-discovery';
@@ -19,12 +20,21 @@ async function openStart(page: Page, query = '') {
   await expect(page.locator('#start-discovery-title')).toBeFocused();
 }
 
+async function chooseDiscoverEntrance(page: Page, label: RegExp) {
+  await page.getByRole('radio', { name: label }).click();
+  await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+}
+
 async function directRecommendation(page: Page, problem = 'أريد تنظيم الحجز والمواعيد للعملاء') {
   await openStart(page);
-  await page.getByRole('radio', { name: /ساعدني على اكتشاف ما أحتاج/ }).click();
+  await chooseDiscoverEntrance(page, /ساعدني على اكتشاف ما أحتاج/);
   await page.getByLabel('ما الذي تريد تغييره؟').fill(problem);
+  await page.getByRole('button', { name: /^تابع/ }).click();
   await page.getByLabel('من سيستخدم هذا الحل؟').fill('العملاء وفريق الخدمة');
-  await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('رحلة أوضح بخطوات أقل');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('رحلة حجز أوضح بخطوات أقل');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('ما السياق التشغيلي الذي يجب أن نعرفه؟').fill('خدمة بمواعيد يديرها فريق داخلي');
   await page.getByRole('button', { name: /ابنِ اتجاهًا أوليًا/ }).click();
 }
 
@@ -34,12 +44,22 @@ async function enterBookingBuild(page: Page) {
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
 }
 
-async function reachReview(page: Page) {
+async function reachFirstBookingDecision(page: Page) {
   await enterBookingBuild(page);
-  await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
-  await page.getByRole('button', { name: /تابع إلى القرار التالي/ }).click();
-  await page.getByRole('radio', { name: /نعم، أضفها/ }).click();
-  await page.getByRole('button', { name: /احفظ التكوين وتابع/ }).click();
+  await expect(page.locator('[data-testid="journey-information"]')).toBeVisible();
+  await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
+  await expect(page.getByRole('heading', { name: 'هل تريد تحصيل مبلغ عند الحجز؟' })).toBeVisible();
+}
+
+async function finishBuild(page: Page, adoptExperience = true) {
+  if (adoptExperience) {
+    await page.locator('.sfp-experience [role="radio"]').first().click();
+  }
+  while ((await page.locator('.start-discovery').getAttribute('data-stage')) === 'build') {
+    const decision = page.locator('.sfp-decision [role="radio"]').first();
+    if (await decision.count()) await decision.click();
+    await page.getByRole('button', { name: /تابع في الرحلة|احفظ التكوين وتابع/ }).click();
+  }
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'review');
 }
 
@@ -53,22 +73,31 @@ async function expectNoHorizontalOverflow(page: Page) {
 
 test.beforeAll(async () => { await mkdir(evidenceDirectory, { recursive: true }); });
 
-test('v1 prefill and N12 explicit channel presence remain preserved', () => {
+test('v1 prefill remains compatible while SYSTEM_FINDER identity stays recommendation-only', () => {
   expect(START_DISCOVERY_PREFILL_VERSION).toBe(1);
-  const absent = readStartDiscoveryRouteState({
+  const userChoice = readStartDiscoveryRouteState({
     discoveryPrefill: {
       version: 1,
+      recommendedFamily: 'الحجوزات والخدمات',
       solutionFamilyId: 'booking',
       decisionOrigin: 'USER_DIRECT',
       recommendationResolution: 'decisive',
       selectedCapabilities: ['قدرة قديمة مختارة'],
     },
   });
-  expect(absent?.solutionFamilyId).toBe('booking');
-  expect(absent?.decisionOrigin).toBe('USER_DIRECT');
-  expect(absent?.recommendationResolution).toBe('decisive');
-  expect(Object.prototype.hasOwnProperty.call(absent ?? {}, 'capabilitySelections')).toBe(false);
-  expect(createStartDiscoveryDraft(absent).selectedCapabilities).toEqual(['قدرة قديمة مختارة']);
+  expect(createStartDiscoveryDraft(userChoice).solutionFamilyId).toBe('booking');
+
+  const finderRecommendation = createStartDiscoveryDraft({
+    version: 1,
+    recommendedFamily: 'الحجوزات والخدمات',
+    solutionFamilyId: 'booking',
+    decisionOrigin: 'SYSTEM_FINDER',
+    configurationPreference: 'تركيز على المسار الأساسي',
+  });
+  expect(finderRecommendation.recommendedFamily).toBe('الحجوزات والخدمات');
+  expect(finderRecommendation.solutionFamilyId).toBe('');
+  expect(finderRecommendation.recommendedConfigurationPreference).toBe('تركيز على المسار الأساسي');
+  expect(finderRecommendation.configurationPreference).toBe('');
 
   const presentEmpty = readStartDiscoveryRouteState({
     discoveryPrefill: {
@@ -79,160 +108,205 @@ test('v1 prefill and N12 explicit channel presence remain preserved', () => {
     },
   });
   expect(presentEmpty?.capabilitySelections).toEqual([]);
-  const emptyDraft = createStartDiscoveryDraft(presentEmpty);
-  expect(emptyDraft.selectedCapabilities).toEqual([]);
-  expect(emptyDraft.optionalCapabilities).toEqual([]);
-
-  const contradictory = readStartDiscoveryRouteState({
-    discoveryPrefill: {
-      version: 1,
-      capabilitySelections: [
-        { name: 'قدرة متعارضة', classification: 'RECOMMENDED', provenance: 'SYSTEM_SEEDED' },
-        { name: ' قدرة متعارضة ', classification: 'CUSTOM', provenance: 'USER_SELECTED' },
-      ],
-    },
-  });
-  expect(contradictory?.capabilitySelections).toEqual([]);
-  expect(createStartDiscoveryDraft(contradictory).selectedCapabilities).toEqual([]);
+  expect(createStartDiscoveryDraft(presentEmpty).selectedCapabilities).toEqual([]);
 });
 
-test('direct entry exposes exactly three major stages and three entrances without creating extra stages', async ({ page }) => {
+test('the registry binds exactly 32 approved WebPs and leaves exactly four contextual IDs unresolved', () => {
+  const assets = Object.values(familyVisualAssets);
+  const bound = assets.filter((asset) => asset.status === 'APPROVED_BOUND');
+  const unresolved = assets.filter((asset) => asset.status === 'UNRESOLVED');
+  expect(bound).toHaveLength(32);
+  expect(bound.every((asset) => asset.runtimeUrl && asset.canonicalPath?.endsWith('.webp'))).toBe(true);
+  expect(unresolved.map((asset) => asset.id).sort()).toEqual([
+    'FAM-05-CTX-01',
+    'FAM-05-CTX-02',
+    'FAM-06-CTX-01',
+    'FAM-06-CTX-02',
+  ]);
+});
+
+test('direct entry exposes exactly three major stages and three keyboard-complete entrances', async ({ page }) => {
   await openStart(page);
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-major-stage-count', '3');
   await expect(page.locator('.sfp-stage-rail li')).toHaveCount(3);
-  await expect(page.locator('.sfp-stage-rail')).toContainText('اكتشف ما يناسبك');
-  await expect(page.locator('.sfp-stage-rail')).toContainText('كوّن حلّك');
-  await expect(page.locator('.sfp-stage-rail')).toContainText('راجع وابدأ');
-  for (const label of ['ساعدني على اكتشاف ما أحتاج', 'أعرف تقريبًا نوع الحل', 'أريد أن أبدأ من مثال']) {
-    await expect(page.getByRole('radio', { name: new RegExp(label) })).toBeVisible();
-  }
+  const entries = page.locator('.sfp-entry-intents [role="radio"]');
+  await expect(entries).toHaveCount(3);
+  await expect(entries.nth(0)).toHaveAttribute('tabindex', '0');
+  await expect(entries.nth(1)).toHaveAttribute('tabindex', '-1');
+  await entries.nth(0).focus();
+  await page.keyboard.press('End');
+  await expect(entries.nth(2)).toBeFocused();
+  await expect(entries.nth(2)).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('Home');
+  await expect(entries.nth(0)).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(entries.nth(1)).toBeFocused();
+  await expect(entries.nth(1)).toHaveAttribute('aria-checked', 'true');
 });
 
-test('Discover is progressive, keeps recommendation separate from selection, and exposes six canonical families', async ({ page }) => {
+test('the three entrances provide distinct useful routes inside the same Discover stage', async ({ page }) => {
+  await openStart(page);
+  await chooseDiscoverEntrance(page, /ساعدني على اكتشاف ما أحتاج/);
+  await expect(page.locator('[data-testid="discover-need-flow"]')).toBeVisible();
+  await expect(page.getByLabel('ما الذي تريد تغييره؟')).toBeVisible();
+
+  await openStart(page);
+  await chooseDiscoverEntrance(page, /أعرف تقريبًا نوع الحل/);
+  await expect(page.locator('[data-testid="direction-entry-browser"]')).toBeVisible();
+  await page.locator('.sfp-family-focus-tabs').getByRole('button', { name: /الحجوزات والخدمات/ }).click();
+  await page.getByRole('button', { name: /اعتمد الحجوزات والخدمات كنقطة بداية/ }).click();
+  await expect(page.locator('[data-testid="direction-entry-confirmation"]')).toContainText('اختيارك المبكر: الحجوزات والخدمات');
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-selected-family', 'booking');
+
+  await openStart(page);
+  await chooseDiscoverEntrance(page, /أريد أن أبدأ من مثال/);
+  const exampleBrowser = page.locator('[data-testid="example-entry-browser"]');
+  await expect(exampleBrowser.locator('img[data-asset-status="approved-bound"]')).toHaveCount(4);
+  await expect(exampleBrowser.locator('[data-asset-id$="DIR-01"]')).toBeVisible();
+});
+
+test('Discover explains what was understood and keeps recommendation separate from explicit selection', async ({ page }) => {
   await directRecommendation(page);
-  await expect(page.getByLabel('ما الذي تريد تغييره؟')).toHaveCount(0);
+  await expect(page.locator('[data-testid="understood-need"]')).toContainText('فهمنا أنك تريد');
   await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('الحجوزات والخدمات');
+  await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('لماذا يناسبك؟');
+  await expect(page.locator('[data-testid="system-recommendation"] img[data-asset-id="FAM-03-MSC-01"]')).toHaveAttribute('data-asset-status', 'approved-bound');
   await expect(page.locator('[data-testid="user-selection"]')).toContainText('لم تعتمد اتجاهًا بعد.');
-  await expect(page.getByText('تقدير أولي للميزانية')).toBeVisible();
-  await expect(page.getByText(/10,000–25,000/)).toBeVisible();
-  await expect(page.getByText(/ليس عرض سعر نهائيًا/)).toBeVisible();
-  await expect(page.locator('[data-testid="project-pulse"]')).toHaveCount(1);
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-recommended-family', 'الحجوزات والخدمات');
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-selected-family', '');
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-decision-origin', 'SYSTEM_FINDER');
 
   await page.getByText('قارن أو اختر اتجاهًا آخر').click();
-  for (const title of [
-    'مواقع الأعمال والخدمات',
-    'التجارة الرقمية وتجارب العلامات',
-    'الحجوزات والخدمات',
-    'العقارات والأصول',
-    'الأنظمة التشغيلية والبوابات',
-    'التعليم والمعرفة والمحتوى',
-  ]) {
-    await expect(page.getByRole('button', { name: new RegExp(title) })).toBeVisible();
-  }
   await page.getByRole('button', { name: /العقارات والأصول/ }).click();
   await expect(page.locator('[data-testid="user-selection"]')).toContainText('العقارات والأصول');
   await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('الحجوزات والخدمات');
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-recommended-family', 'الحجوزات والخدمات');
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-selected-family', 'assets');
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-decision-origin', 'USER_ALTERNATIVE');
 });
 
-test('valid Solutions v1 context is visibly carried without asking known truth again', async ({ page }) => {
+test('weak input does not silently default to business and instead asks a bounded discriminator', async ({ page }) => {
+  await openStart(page);
+  await chooseDiscoverEntrance(page, /ساعدني على اكتشاف ما أحتاج/);
+  await page.getByLabel('ما الذي تريد تغييره؟').fill('أريد تحسين الوضع الحالي');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('من سيستخدم هذا الحل؟').fill('أشخاص مختلفون');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('نتيجة أوضح');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByRole('button', { name: /ابنِ اتجاهًا أوليًا/ }).click();
+  await expect(page.locator('[data-testid="system-recommendation"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="bounded-candidate-choice"] [role="radio"]')).toHaveCount(3);
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-recommended-family', '');
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-selected-family', '');
+});
+
+test('valid Solutions v1 recommendation context is visible but is not reinterpreted as adoption', async ({ page }) => {
   await openStart(page, '?prefill=booking');
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
   await expect(page.locator('[data-testid="carried-context"]')).toContainText('جعل الحجز أوضح للعميل والفريق');
-  await expect(page.locator('[data-testid="carried-context"]')).toContainText('خدمة تعتمد على المواعيد');
-  await expect(page.getByLabel('ما الذي تريد تغييره؟')).toHaveCount(0);
   await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('الحجوزات والخدمات');
   await expect(page.locator('[data-testid="user-selection"]')).toContainText('لم تعتمد اتجاهًا بعد.');
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-selected-family', '');
 });
 
-test('Build presents one dominant decision, family journey, semantic selection and material consequence', async ({ page }) => {
-  await enterBookingBuild(page);
-  await expect(page.locator('.sfp-journey')).toContainText('قبل الحجز');
-  await expect(page.locator('.sfp-journey')).toContainText('الحجز');
-  await expect(page.locator('.sfp-journey')).toContainText('قبل الموعد');
-  await expect(page.locator('.sfp-journey')).toContainText('تقديم الخدمة');
-  await expect(page.locator('.sfp-journey')).toContainText('بعد الخدمة');
-  await expect(page.getByRole('heading', { name: 'هل تريد تحصيل مبلغ عند الحجز؟' })).toBeVisible();
+test('Build journey is state-driven, keeps Booking five moments, and maps three real decisions', async ({ page }) => {
+  await reachFirstBookingDecision(page);
+  const journey = page.locator('.sfp-journey > button');
+  await expect(journey).toHaveCount(5);
+  for (const label of ['قبل الحجز', 'الحجز', 'قبل الموعد', 'تقديم الخدمة', 'بعد الخدمة']) {
+    await expect(page.locator('.sfp-journey')).toContainText(label);
+  }
+  await expect(page.locator('.sfp-decision')).toHaveAttribute('data-moment-id', 'booking-moment-2');
   await expect(page.locator('.sfp-decision h2')).toHaveCount(1);
-
-  const answer = page.getByRole('radio', { name: /نعم، دفع أو عربون/ });
-  await answer.focus();
-  await page.keyboard.press('Space');
-  await expect(answer).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByRole('heading', { name: 'ماذا يتغير؟' })).toBeVisible();
+  await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
   await expect(page.locator('[data-testid="decision-consequence"]')).toContainText('في المشروع');
   await expect(page.getByText(/12,000–25,000/)).toBeVisible();
-  await expect(page.locator('[data-testid="project-pulse"]')).toHaveCount(1);
+  await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
+  await expect(page.locator('.sfp-decision')).toHaveAttribute('data-moment-id', 'booking-moment-3');
+  await expect(page.getByRole('heading', { name: /إشعارات الحالة/ })).toBeVisible();
 });
 
-test('a prior Build decision can be revised without creating a new stage', async ({ page }) => {
-  await enterBookingBuild(page);
-  const yes = page.getByRole('radio', { name: /نعم، دفع أو عربون/ });
-  const no = page.getByRole('radio', { name: /لا، بدون دفع الآن/ });
-  await yes.click();
-  await expect(yes).toHaveAttribute('aria-checked', 'true');
-  await no.click();
-  await expect(no).toHaveAttribute('aria-checked', 'true');
-  await expect(yes).toHaveAttribute('aria-checked', 'false');
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-major-stage-count', '3');
+test('Build and experience radio groups implement roving tabindex and arrow/Home/End activation', async ({ page }) => {
+  await reachFirstBookingDecision(page);
+  const answers = page.locator('.sfp-decision [role="radio"]');
+  await expect(answers.nth(0)).toHaveAttribute('tabindex', '0');
+  await answers.nth(0).focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(answers.nth(1)).toBeFocused();
+  await expect(answers.nth(1)).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('End');
+  await expect(answers.nth(2)).toBeFocused();
+  await expect(answers.nth(2)).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('Home');
+  await expect(answers.nth(0)).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(answers.nth(0)).toHaveAttribute('aria-checked', 'true');
+
+  const experiences = page.locator('.sfp-experience [role="radio"]');
+  await expect(experiences).toHaveCount(3);
+  await expect(experiences.nth(0)).toHaveAttribute('tabindex', '0');
+  await expect(experiences.nth(0)).toHaveAttribute('aria-checked', 'false');
+  await experiences.nth(0).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(experiences.nth(1)).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-selected-experience', /ربط عدة مسارات مترابطة/);
 });
 
-test('contextual example traps focus, preserves decision state, and restores focus on close', async ({ page }) => {
-  await enterBookingBuild(page);
+test('approved contextual evidence is a bound image and the drawer restores focus without losing state', async ({ page }) => {
+  await reachFirstBookingDecision(page);
   await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
-  const trigger = page.getByRole('button', { name: /شاهد مثالًا/ });
+  const trigger = page.getByRole('button', { name: /شاهد مثالًا مرتبطًا/ });
   await trigger.click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
-  await expect(dialog.locator('[data-asset-id="FAM-03-CTX-01"]')).toHaveAttribute('data-asset-status', 'approved-unbound');
-  await expect(dialog.locator('img')).toHaveCount(0);
-  await expect(dialog).toContainText('الأصل البصري المعتمد بانتظار الربط التشغيلي');
-  await page.keyboard.press('Tab');
-  await page.keyboard.press('Shift+Tab');
+  await expect(dialog.locator('img[data-asset-id="FAM-03-CTX-01"]')).toHaveAttribute('data-asset-status', 'approved-bound');
   await page.keyboard.press('Escape');
-  await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await expect(page.getByRole('radio', { name: /نعم، دفع أو عربون/ })).toHaveAttribute('aria-checked', 'true');
 });
 
-test('pending FAM-05 contextual slot stays semantic and does not fabricate product art', async ({ page }) => {
+test('FAM-05 contextual evidence stays governed unresolved without a fabricated image', async ({ page }) => {
   await openStart(page, '?prefill=portals');
-  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
-  const firstAnswer = page.locator('.sfp-decision [role="radio"]').first();
-  await firstAnswer.click();
-  await page.getByRole('button', { name: /شاهد مثالًا/ }).click();
+  await page.getByRole('button', { name: /تابع مع اختيارك/ }).click();
+  await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
+  await page.getByRole('button', { name: /شاهد مثالًا مرتبطًا/ }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.locator('[data-asset-id="FAM-05-CTX-01"]')).toHaveAttribute('data-asset-status', 'unresolved');
   await expect(dialog.locator('img')).toHaveCount(0);
-  await expect(dialog).toContainText('المثال البصري لهذا السياق لم يُعتمد بعد');
+  await expect(dialog).toContainText('لم يُعتمد بعد');
 });
 
-test('Review carries choices into a customer-readable blueprint and exact start actions', async ({ page }) => {
-  await reachReview(page);
-  await expect(page.locator('[data-testid="project-blueprint"]')).toContainText('الحجوزات والخدمات');
-  await expect(page.locator('[data-testid="project-blueprint"]')).toContainText('ربط التقويم أو الدفع');
-  await expect(page.locator('[data-testid="project-summary"]')).toHaveCount(1);
-  await expect(page.locator('[data-testid="project-pulse"]')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'يمكنك المتابعة' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'ابدأ المشروع بهذا المخطط' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'عدّل مشروعك' })).toBeVisible();
-  await expect(page.getByText(/لن تحتاج إلى إدخالها من جديد/)).toBeVisible();
-  await expect(page.locator('.sfp-review-needs li')).toHaveCount(2);
-
-  await page.getByRole('button', { name: 'عدّل مشروعك' }).click();
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
-  await page.getByRole('button', { name: /احفظ التكوين وتابع/ }).click();
-  await expect(page.locator('[data-testid="project-blueprint"]')).toContainText('ربط التقويم أو الدفع');
+test('Review preserves recommendation, customer adoption, experience truth, and final local handoff', async ({ page }) => {
+  await directRecommendation(page);
+  await page.getByText('قارن أو اختر اتجاهًا آخر').click();
+  await page.getByRole('button', { name: /العقارات والأصول/ }).click();
+  await page.getByRole('button', { name: /تابع مع اختيارك/ }).click();
+  await finishBuild(page, false);
+  const summary = page.locator('[data-testid="project-summary"]');
+  await expect(summary).toContainText('اتجاه اقترحته GS');
+  await expect(summary).toContainText('الحجوزات والخدمات');
+  await expect(summary).toContainText('الحل الذي اعتمدته');
+  await expect(summary).toContainText('العقارات والأصول');
+  await expect(summary.locator('[data-experience-state="recommended-only"]')).toContainText('مقترح للمراجعة');
+  await expect(page.locator('#root')).toHaveAttribute('data-draft-selected-experience', '');
   await page.getByRole('button', { name: 'ابدأ المشروع بهذا المخطط' }).click();
-  await expect(page.locator('#root')).toHaveAttribute('data-completed-family', 'booking');
+  await expect(page.locator('#root')).toHaveAttribute('data-completed-family', 'assets');
   await expect(page.getByRole('status')).toContainText('تم تجهيز المخطط محليًا');
 });
 
-test('session state survives a route-equivalent reload without silently losing the project', async ({ page }) => {
-  await enterBookingBuild(page);
-  await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
+test('session restoration retains separate recommendation, selection, decisions, and experience adoption', async ({ page }) => {
+  await directRecommendation(page);
+  await page.getByText('قارن أو اختر اتجاهًا آخر').click();
+  await page.getByRole('button', { name: /العقارات والأصول/ }).click();
+  await page.getByRole('button', { name: /تابع مع اختيارك/ }).click();
+  await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
+  await page.locator('.sfp-decision [role="radio"]').first().click();
+  await page.locator('.sfp-experience [role="radio"]').nth(1).click();
   await page.reload();
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
-  await expect(page.getByRole('radio', { name: /نعم، دفع أو عربون/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-recommended-family', 'booking');
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-selected-family', 'assets');
+  await expect(page.locator('.sfp-decision [role="radio"]').first()).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.sfp-experience [role="radio"]').nth(1)).toHaveAttribute('aria-checked', 'true');
 });
 
 for (const width of [1440, 1024, 768, 430, 390]) {
@@ -244,28 +318,47 @@ for (const width of [1440, 1024, 768, 430, 390]) {
   });
 }
 
-for (const [width, height] of [[1440, 900], [768, 1024], [390, 844]] as const) {
-  test(`captures frozen START Discover Build Review evidence at ${width}px`, async ({ page }) => {
+for (const [width, height] of [[1440, 900], [1024, 900], [768, 1024], [430, 932], [390, 844]] as const) {
+  test(`captures final START Discover Build Review evidence at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await directRecommendation(page);
     await page.screenshot({ path: resolve(evidenceDirectory, `discover-${width}.png`), fullPage: true, animations: 'disabled' });
     await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+    await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
     await page.locator('.sfp-decision [role="radio"]').first().click();
+    await page.locator('.sfp-experience [role="radio"]').first().click();
     await page.screenshot({ path: resolve(evidenceDirectory, `build-${width}.png`), fullPage: true, animations: 'disabled' });
-    while ((await page.locator('.start-discovery').getAttribute('data-stage')) === 'build') {
-      const button = page.getByRole('button', { name: /تابع إلى القرار التالي|احفظ التكوين وتابع/ });
-      if (await button.isDisabled()) await page.locator('.sfp-decision [role="radio"]').first().click();
-      await button.click();
-    }
+    await finishBuild(page);
     await page.screenshot({ path: resolve(evidenceDirectory, `review-${width}.png`), fullPage: true, animations: 'disabled' });
   });
 }
 
-test('captures unresolved FAM-05 contextual asset behavior', async ({ page }) => {
+test('captures the required truth and contextual evidence states', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await openStart(page, '?prefill=portals');
-  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+  await directRecommendation(page);
+  await page.getByText('قارن أو اختر اتجاهًا آخر').click();
+  await page.getByRole('button', { name: /العقارات والأصول/ }).click();
+  await page.screenshot({ path: resolve(evidenceDirectory, 'recommendation-vs-user-selection.png'), fullPage: true, animations: 'disabled' });
+  await page.getByRole('button', { name: /تابع مع اختيارك/ }).click();
+  await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
   await page.locator('.sfp-decision [role="radio"]').first().click();
-  await page.getByRole('button', { name: /شاهد مثالًا/ }).click();
+  await page.screenshot({ path: resolve(evidenceDirectory, 'alternate-family-material-consequence.png'), fullPage: true, animations: 'disabled' });
+
+  await openStart(page, '?prefill=booking');
+  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+  await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
+  await page.getByRole('button', { name: /شاهد مثالًا مرتبطًا/ }).click();
+  await page.screenshot({ path: resolve(evidenceDirectory, 'approved-context-example.png'), fullPage: true, animations: 'disabled' });
+
+  await openStart(page, '?prefill=portals');
+  await page.getByRole('button', { name: /تابع مع اختيارك/ }).click();
+  await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
+  await page.getByRole('button', { name: /شاهد مثالًا مرتبطًا/ }).click();
   await page.screenshot({ path: resolve(evidenceDirectory, 'fam-05-unresolved-context.png'), fullPage: true, animations: 'disabled' });
+
+  await openStart(page, '?prefill=booking');
+  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+  await page.screenshot({ path: resolve(evidenceDirectory, 'experience-recommendation-only.png'), fullPage: true, animations: 'disabled' });
+  await page.locator('.sfp-experience [role="radio"]').nth(1).click();
+  await page.screenshot({ path: resolve(evidenceDirectory, 'experience-recommendation-and-adoption.png'), fullPage: true, animations: 'disabled' });
 });

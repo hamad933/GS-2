@@ -1,6 +1,6 @@
 export type FamilyAssetFamily = 'FAM-01' | 'FAM-02' | 'FAM-03' | 'FAM-04' | 'FAM-05' | 'FAM-06';
 export type FamilyAssetRole = 'MASTER' | 'DIRECTION' | 'CONTEXTUAL_CUSTOMER' | 'CONTEXTUAL_OPERATIONS';
-export type FamilyAssetStatus = 'APPROVED_UNBOUND' | 'UNRESOLVED';
+export type FamilyAssetStatus = 'APPROVED_BOUND' | 'UNRESOLVED';
 
 export interface FamilyVisualAsset {
   id: string;
@@ -11,7 +11,42 @@ export interface FamilyVisualAsset {
   canonicalPath: string | null;
 }
 
-const approved = (id: string, family: FamilyAssetFamily, role: FamilyAssetRole, canonicalPath: string): FamilyVisualAsset => ({ id, family, role, status: 'APPROVED_UNBOUND', runtimeUrl: null, canonicalPath });
+const runtimeAssets: Record<string, string> = {
+  'FAM-01-MSC-01': new URL('../../assets/gs-public-v1/families/FAM-01/MASTER/FAM-01-MSC-01.webp', import.meta.url).href,
+  'FAM-01-DIR-01': new URL('../../assets/gs-public-v1/families/FAM-01/DIRECTIONS/FAM-01-DIR-01.webp', import.meta.url).href,
+  'FAM-01-DIR-02': new URL('../../assets/gs-public-v1/families/FAM-01/DIRECTIONS/FAM-01-DIR-02.webp', import.meta.url).href,
+  'FAM-01-DIR-03': new URL('../../assets/gs-public-v1/families/FAM-01/DIRECTIONS/FAM-01-DIR-03.webp', import.meta.url).href,
+  'FAM-01-CTX-01': new URL('../../assets/gs-public-v1/families/FAM-01/CONTEXTUAL/FAM-01-CTX-01.webp', import.meta.url).href,
+  'FAM-01-CTX-02': new URL('../../assets/gs-public-v1/families/FAM-01/CONTEXTUAL/FAM-01-CTX-02.webp', import.meta.url).href,
+  'FAM-02-MSC-01': new URL('../../assets/gs-public-v1/families/FAM-02/MASTER/FAM-02-MSC-01.webp', import.meta.url).href,
+  'FAM-02-DIR-01': new URL('../../assets/gs-public-v1/families/FAM-02/DIRECTIONS/FAM-02-DIR-01.webp', import.meta.url).href,
+  'FAM-02-DIR-02': new URL('../../assets/gs-public-v1/families/FAM-02/DIRECTIONS/FAM-02-DIR-02.webp', import.meta.url).href,
+  'FAM-02-DIR-03': new URL('../../assets/gs-public-v1/families/FAM-02/DIRECTIONS/FAM-02-DIR-03.webp', import.meta.url).href,
+  'FAM-02-CTX-01': new URL('../../assets/gs-public-v1/families/FAM-02/CONTEXTUAL/FAM-02-CTX-01.webp', import.meta.url).href,
+  'FAM-02-CTX-02': new URL('../../assets/gs-public-v1/families/FAM-02/CONTEXTUAL/FAM-02-CTX-02.webp', import.meta.url).href,
+  'FAM-03-MSC-01': new URL('../../assets/gs-public-v1/families/FAM-03/MASTER/FAM-03-MSC-01.webp', import.meta.url).href,
+  'FAM-03-DIR-01': new URL('../../assets/gs-public-v1/families/FAM-03/DIRECTIONS/FAM-03-DIR-01.webp', import.meta.url).href,
+  'FAM-03-DIR-02': new URL('../../assets/gs-public-v1/families/FAM-03/DIRECTIONS/FAM-03-DIR-02.webp', import.meta.url).href,
+  'FAM-03-DIR-03': new URL('../../assets/gs-public-v1/families/FAM-03/DIRECTIONS/FAM-03-DIR-03.webp', import.meta.url).href,
+  'FAM-03-CTX-01': new URL('../../assets/gs-public-v1/families/FAM-03/CONTEXTUAL/FAM-03-CTX-01.webp', import.meta.url).href,
+  'FAM-03-CTX-02': new URL('../../assets/gs-public-v1/families/FAM-03/CONTEXTUAL/FAM-03-CTX-02.webp', import.meta.url).href,
+  'FAM-04-MSC-01': new URL('../../assets/gs-public-v1/families/FAM-04/MASTER/FAM-04-MSC-01.webp', import.meta.url).href,
+  'FAM-04-DIR-01': new URL('../../assets/gs-public-v1/families/FAM-04/DIRECTIONS/FAM-04-DIR-01.webp', import.meta.url).href,
+  'FAM-04-DIR-02': new URL('../../assets/gs-public-v1/families/FAM-04/DIRECTIONS/FAM-04-DIR-02.webp', import.meta.url).href,
+  'FAM-04-DIR-03': new URL('../../assets/gs-public-v1/families/FAM-04/DIRECTIONS/FAM-04-DIR-03.webp', import.meta.url).href,
+  'FAM-04-CTX-01': new URL('../../assets/gs-public-v1/families/FAM-04/CONTEXTUAL/FAM-04-CTX-01.webp', import.meta.url).href,
+  'FAM-04-CTX-02': new URL('../../assets/gs-public-v1/families/FAM-04/CONTEXTUAL/FAM-04-CTX-02.webp', import.meta.url).href,
+  'FAM-05-MSC-01': new URL('../../assets/gs-public-v1/families/FAM-05/MASTER/FAM-05-MSC-01.webp', import.meta.url).href,
+  'FAM-05-DIR-01': new URL('../../assets/gs-public-v1/families/FAM-05/DIRECTIONS/FAM-05-DIR-01.webp', import.meta.url).href,
+  'FAM-05-DIR-02': new URL('../../assets/gs-public-v1/families/FAM-05/DIRECTIONS/FAM-05-DIR-02.webp', import.meta.url).href,
+  'FAM-05-DIR-03': new URL('../../assets/gs-public-v1/families/FAM-05/DIRECTIONS/FAM-05-DIR-03.webp', import.meta.url).href,
+  'FAM-06-MSC-01': new URL('../../assets/gs-public-v1/families/FAM-06/MASTER/FAM-06-MSC-01.webp', import.meta.url).href,
+  'FAM-06-DIR-01': new URL('../../assets/gs-public-v1/families/FAM-06/DIRECTIONS/FAM-06-DIR-01.webp', import.meta.url).href,
+  'FAM-06-DIR-02': new URL('../../assets/gs-public-v1/families/FAM-06/DIRECTIONS/FAM-06-DIR-02.webp', import.meta.url).href,
+  'FAM-06-DIR-03': new URL('../../assets/gs-public-v1/families/FAM-06/DIRECTIONS/FAM-06-DIR-03.webp', import.meta.url).href,
+};
+
+const approved = (id: string, family: FamilyAssetFamily, role: FamilyAssetRole, canonicalPath: string): FamilyVisualAsset => ({ id, family, role, status: 'APPROVED_BOUND', runtimeUrl: runtimeAssets[id], canonicalPath });
 const unresolved = (id: string, family: FamilyAssetFamily, role: FamilyAssetRole): FamilyVisualAsset => ({ id, family, role, status: 'UNRESOLVED', runtimeUrl: null, canonicalPath: null });
 
 export const familyVisualAssets: Record<string, FamilyVisualAsset> = {
