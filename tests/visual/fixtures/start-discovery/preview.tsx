@@ -3,40 +3,74 @@ import '../../../../src/index.css';
 import {
   START_DISCOVERY_PREFILL_VERSION,
   StartDiscoveryBody,
-  type DiscoveryCertainty,
   type StartDiscoveryPrefill,
 } from '../../../../src/features/start-discovery';
 
-const previewPrefill: StartDiscoveryPrefill = {
+const bookingPrefill: StartDiscoveryPrefill = {
   version: START_DISCOVERY_PREFILL_VERSION,
   source: {
     adapter: 'solutions-decision-workspace',
-    label: 'مساحة قرار الحلول',
-    referenceId: 'SDW-DEMO-04',
+    label: 'ملخص قرار الحلول',
+    referenceId: 'START-W01-BOOKING',
   },
-  selectedProblem: 'تتوزع طلبات الخدمة بين قنوات متعددة ولا تظهر حالتها بوضوح.',
-  selectedOutcome: 'توحيد رحلة الطلب ومتابعة حالته من نقطة واحدة.',
+  recommendedFamily: 'الحجوزات والخدمات',
+  solutionFamilyId: 'booking',
+  decisionOrigin: 'SYSTEM_FINDER',
+  recommendationResolution: 'decisive',
+  capabilitySelections: [
+    {
+      name: 'كتالوج الخدمات',
+      classification: 'CORE',
+      provenance: 'SYSTEM_SEEDED',
+    },
+  ],
+  capturedFacts: {
+    outcome: 'جعل الحجز أوضح للعميل والفريق',
+    activity: 'خدمة تعتمد على المواعيد',
+    audience: 'عملاء وفريق خدمة',
+  },
+  budgetPreference: 'النطاق الذي ذكره المستخدم: مرن حسب القيمة',
+  knownDependencies: ['قواعد إتاحة واضحة'],
+  unknowns: ['سياسة الإلغاء النهائية'],
+};
+
+const portalsPrefill: StartDiscoveryPrefill = {
+  version: START_DISCOVERY_PREFILL_VERSION,
+  source: {
+    adapter: 'solutions-decision-workspace',
+    label: 'ملخص قرار الحلول',
+    referenceId: 'START-W01-PORTALS',
+  },
   recommendedFamily: 'الأنظمة التشغيلية والبوابات',
-  selectedCapabilities: ['استقبال الطلبات', 'متابعة الحالة'],
-  optionalCapabilities: ['تقارير تشغيلية'],
-  configurationPreference: 'أفضل نقطة بداية محدودة',
-  budgetPreference: 'أحتاج تصورًا للنطاق قبل مناقشة الميزانية',
-  knownDependencies: ['مراجعة مصدر بيانات الطلبات الحالي'],
-  unknowns: ['آلية ترحيل السجلات القديمة'],
-  relevantReferenceContext:
-    'سياق مرجعي توضيحي من مساحة الحلول؛ لا يمثل وعدًا أو تطبيقًا مدمجًا.',
+  solutionFamilyId: 'portals',
+  decisionOrigin: 'USER_DIRECT',
+  recommendationResolution: 'decisive',
+  capabilitySelections: [],
+  capturedFacts: {
+    outcome: 'جمع الطلبات والحالات في مسار واحد',
+    activity: 'عمليات وفرق',
+    audience: 'فريق داخلي',
+  },
 };
 
 const parameters = new URLSearchParams(window.location.search);
-const usePrefill = parameters.get('prefill') === '1';
-const certainty = parameters.get('certainty') as DiscoveryCertainty | null;
+const prefillMode = parameters.get('prefill');
+const prefill = prefillMode === 'booking'
+  ? bookingPrefill
+  : prefillMode === 'portals'
+    ? portalsPrefill
+    : undefined;
 
 const root = document.getElementById('root');
 if (root) {
   ReactDOM.createRoot(root).render(
     <StartDiscoveryBody
-      prefill={usePrefill ? previewPrefill : undefined}
-      initialCertainty={certainty ?? undefined}
+      prefill={prefill}
+      onLocalComplete={(_summary, draft) => {
+        root.dataset.completed = 'true';
+        root.dataset.completedFamily = draft.solutionFamilyId;
+        root.dataset.completedCapabilities = draft.selectedCapabilities.join('|');
+      }}
     />,
   );
 }

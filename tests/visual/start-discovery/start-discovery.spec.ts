@@ -1,451 +1,270 @@
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import {
-  buildDiscoverySummary,
-  createStartDiscoveryDraft,
-  formatDiscoverySummary,
-  getDiscoverySteps,
-} from '../../../src/features/start-discovery/discoveryModel';
-import { mapSolutionsDecisionToDiscovery } from '../../../src/integration/solutionsToDiscovery';
+import { createStartDiscoveryDraft } from '../../../src/features/start-discovery/discoveryModel';
+import { readStartDiscoveryRouteState } from '../../../src/routes/startDiscoveryRouteState';
 import { START_DISCOVERY_PREFILL_VERSION } from '../../../src/types/start-discovery';
-import type { DecisionSnapshot } from '../../../src/types/solutions';
 
 const previewPath = './';
 const evidenceDirectory = resolve(
-  process.env.START_DISCOVERY_EVIDENCE_DIR ??
-    'test-results/start-discovery-evidence',
+  process.env.START_DISCOVERY_EVIDENCE_DIR ?? 'test-results/visual-evidence/gs-final-public-w01-start',
 );
 
-const certaintyCases = [
-  {
-    label: 'لا أعرف ماذا أحتاج',
-    value: 'exploring',
-    steps: [
-      'نقطة البداية',
-      'بوصلة المشروع',
-      'الاستخدام والنتيجة',
-      'تفضيلات وحدود',
-      'ملخص الاكتشاف',
-    ],
-  },
-  {
-    label: 'لدي اتجاه عام',
-    value: 'direction',
-    steps: [
-      'نقطة البداية',
-      'بوصلة المشروع',
-      'الاستخدام والنتيجة',
-      'شكل الحل',
-      'تفضيلات وحدود',
-      'ملخص الاكتشاف',
-    ],
-  },
-  {
-    label: 'اخترت حلًا أو إعدادًا مبدئيًا',
-    value: 'configured',
-    steps: [
-      'نقطة البداية',
-      'بوصلة المشروع',
-      'شكل الحل',
-      'الواقع المحيط',
-      'تفضيلات وحدود',
-      'ملخص الاكتشاف',
-    ],
-  },
-  {
-    label: 'أعرف معظم متطلباتي',
-    value: 'detailed',
-    steps: [
-      'نقطة البداية',
-      'بوصلة المشروع',
-      'الاستخدام والنتيجة',
-      'شكل الحل',
-      'الواقع المحيط',
-      'تفضيلات وحدود',
-      'ملخص الاكتشاف',
-    ],
-  },
-] as const;
-
-async function openDiscovery(page: Page, query = '') {
+async function openStart(page: Page, query = '') {
+  await page.addInitScript(() => window.sessionStorage.removeItem('gs-start-frozen-product-v1'));
   await page.goto(`${previewPath}${query}`);
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator('.start-discovery')).toBeVisible();
+  await expect(page.locator('#start-discovery-title')).toBeFocused();
 }
 
-async function chooseCertainty(page: Page, label: string) {
-  await page.getByRole('radio', { name: new RegExp(label) }).click();
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await expect(page.locator('.start-discovery')).toHaveAttribute(
-    'data-step',
-    'foundation',
-  );
+async function directRecommendation(page: Page, problem = 'أريد تنظيم الحجز والمواعيد للعملاء') {
+  await openStart(page);
+  await page.getByRole('button', { name: /ساعدني على اكتشاف ما أحتاج/ }).click();
+  await page.getByLabel('ما الذي تريد تغييره؟').fill(problem);
+  await page.getByLabel('من سيستخدم هذا الحل؟').fill('العملاء وفريق الخدمة');
+  await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('رحلة أوضح بخطوات أقل');
+  await page.getByRole('button', { name: /ابنِ اتجاهًا أوليًا/ }).click();
 }
 
-async function completeFoundation(page: Page, problem = 'الطلبات موزعة ولا تظهر حالتها بوضوح.') {
-  await page.getByRole('button', { name: 'تحسين عملية تشغيلية' }).click();
-  await page.getByLabel('المشكلة الحالية').fill(problem);
-  await page.getByRole('button', { name: 'متابعة' }).click();
+async function enterBookingBuild(page: Page) {
+  await openStart(page, '?prefill=booking');
+  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
 }
 
-async function reachSummary(page: Page) {
-  while ((await page.locator('.start-discovery').getAttribute('data-step')) !== 'summary') {
-    const step = await page.locator('.start-discovery').getAttribute('data-step');
-    if (step === 'configuration') {
-      const family = page.getByLabel('الحل أو العائلة المقترحة');
-      if (!(await family.inputValue())) await family.fill('بوابة تشغيلية مبدئية');
-    }
-    await page.locator('.sd-next').click();
-  }
-  await expect(page.getByRole('heading', { name: 'ملخص الاكتشاف الأولي' })).toBeVisible();
+async function reachReview(page: Page) {
+  await enterBookingBuild(page);
+  await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
+  await page.getByRole('button', { name: /تابع إلى القرار التالي/ }).click();
+  await page.getByRole('radio', { name: /نعم، أضفها/ }).click();
+  await page.getByRole('button', { name: /احفظ التكوين وتابع/ }).click();
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'review');
 }
 
-test.beforeAll(async () => {
-  await mkdir(evidenceDirectory, { recursive: true });
-});
+async function expectNoHorizontalOverflow(page: Page) {
+  const sizes = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(sizes.scrollWidth).toBeLessThanOrEqual(sizes.clientWidth + 1);
+}
 
-test('prefill adapter maps future Solutions context without coupling', () => {
-  const draft = createStartDiscoveryDraft(
-    {
-      version: START_DISCOVERY_PREFILL_VERSION,
-      source: {
-        adapter: 'solutions-decision-workspace',
-        label: 'مساحة قرار الحلول',
-        referenceId: 'decision-42',
-      },
-      selectedProblem: 'مشكلة مختارة',
-      selectedOutcome: 'نتيجة مختارة',
-      recommendedFamily: 'عائلة موصى بها',
-      selectedCapabilities: ['بحث', 'بحث', 'حجز'],
-      optionalCapabilities: ['تقارير'],
-      configurationPreference: 'بداية محدودة',
-      budgetPreference: 'أفضل تحديد النطاق أولًا',
-      knownDependencies: ['مصدر بيانات'],
-      unknowns: ['مالك القرار'],
-      relevantReferenceContext: 'مرجع ذو صلة',
+test.beforeAll(async () => { await mkdir(evidenceDirectory, { recursive: true }); });
+
+test('v1 prefill and N12 explicit channel presence remain preserved', () => {
+  expect(START_DISCOVERY_PREFILL_VERSION).toBe(1);
+  const absent = readStartDiscoveryRouteState({
+    discoveryPrefill: {
+      version: 1,
+      solutionFamilyId: 'booking',
+      decisionOrigin: 'USER_DIRECT',
+      recommendationResolution: 'decisive',
+      selectedCapabilities: ['قدرة قديمة مختارة'],
     },
-    'configured',
-  );
-
-  expect(draft.currentProblem).toBe('مشكلة مختارة');
-  expect(draft.objective).toBe('نتيجة مختارة');
-  expect(draft.expectedOutcomes).toBe('');
-  expect(draft.selectedCapabilities).toEqual(['بحث', 'حجز']);
-  expect(draft.prefillSource?.referenceId).toBe('decision-42');
-
-  const summary = buildDiscoverySummary(draft);
-  expect(summary.groups.map((group) => group.status)).toEqual([
-    'known',
-    'selected',
-    'preferred',
-    'dependent',
-    'unknown',
-  ]);
-  expect(formatDiscoverySummary(summary)).toContain('UNKNOWN / NEEDS DISCOVERY');
-});
-
-test('Solutions handoff preserves captured facts and capability provenance without semantic duplication', () => {
-  const snapshot: DecisionSnapshot = {
-    entryMode: 'discover',
-    facts: {
-      outcome: 'operate',
-      activity: 'operations',
-      audience: 'team',
-      complexity: 'integrations',
-      constraints: 'نظام قائم يجب مراعاته',
-    },
-    recommendedFamily: 'portals',
-    selectedCapabilities: [
-      'نمذجة الطلب والحالة',
-      'قدرة موصى بها من النظام',
-      'تكاملات وهوية وصلاحيات متقدمة',
-    ],
-    capabilitySelections: [
-      {
-        name: 'نمذجة الطلب والحالة',
-        classification: 'CORE',
-        provenance: 'SYSTEM_SEEDED',
-      },
-      {
-        name: 'قدرة موصى بها من النظام',
-        classification: 'RECOMMENDED',
-        provenance: 'SYSTEM_SEEDED',
-      },
-      {
-        name: 'تكاملات وهوية وصلاحيات متقدمة',
-        classification: 'CUSTOM',
-        provenance: 'USER_SELECTED',
-      },
-    ],
-    configuration: 'connected',
-    budgetPreference: 'flexible',
-    budgetRange: 'حسب القيمة',
-    confirmedDependencies: ['عملية تشغيل قابلة للوصف'],
-    unknowns: ['اعتماد يحتاج تحققًا'],
-    evidenceState: 'REFERENCE_ONLY',
-  };
-
-  const prefill = mapSolutionsDecisionToDiscovery(snapshot);
-  expect(prefill.selectedOutcome).toBeUndefined();
-  expect(prefill.capturedFacts).toEqual({
-    outcome: 'تنظيم عمل وطلبات داخلية',
-    activity: 'عمليات وفرق',
-    audience: 'فريق داخلي',
-    complexity: 'أنظمة أو تكاملات مهمة',
-    constraints: 'نظام قائم يجب مراعاته',
   });
-  expect(prefill.selectedCapabilities).toEqual(['تكاملات وهوية وصلاحيات متقدمة']);
-  expect(prefill.capabilitySelections).toEqual(snapshot.capabilitySelections);
-  expect(prefill.relevantReferenceContext).not.toContain('REFERENCE_ONLY');
+  expect(absent?.solutionFamilyId).toBe('booking');
+  expect(absent?.decisionOrigin).toBe('USER_DIRECT');
+  expect(absent?.recommendationResolution).toBe('decisive');
+  expect(Object.prototype.hasOwnProperty.call(absent ?? {}, 'capabilitySelections')).toBe(false);
+  expect(createStartDiscoveryDraft(absent).selectedCapabilities).toEqual(['قدرة قديمة مختارة']);
 
-  const draft = createStartDiscoveryDraft(prefill, 'configured');
-  expect(draft.objective).toBe('');
-  expect(draft.expectedOutcomes).toBe('');
-  expect(draft.selectedCapabilities).toEqual(['تكاملات وهوية وصلاحيات متقدمة']);
-  expect(draft.capturedFacts).toEqual(prefill.capturedFacts);
+  const presentEmpty = readStartDiscoveryRouteState({
+    discoveryPrefill: {
+      version: 1,
+      selectedCapabilities: ['يجب ألا تعود'],
+      optionalCapabilities: ['يجب ألا تعود أيضًا'],
+      capabilitySelections: [],
+    },
+  });
+  expect(presentEmpty?.capabilitySelections).toEqual([]);
+  const emptyDraft = createStartDiscoveryDraft(presentEmpty);
+  expect(emptyDraft.selectedCapabilities).toEqual([]);
+  expect(emptyDraft.optionalCapabilities).toEqual([]);
 
-  const summary = buildDiscoverySummary(draft);
-  const known = summary.groups.find((group) => group.status === 'known');
-  const preferred = summary.groups.find((group) => group.status === 'preferred');
-  expect(known?.items.find((item) => item.label === 'النتيجة المحفوظة من قرار الحلول')?.values).toEqual([
-    'تنظيم عمل وطلبات داخلية',
-  ]);
-  expect(known?.items.find((item) => item.label === 'طبيعة النشاط المحفوظة')?.values).toEqual([
-    'عمليات وفرق',
-  ]);
-  expect(known?.items.find((item) => item.label === 'الجمهور المحفوظ')?.values).toEqual([
-    'فريق داخلي',
-  ]);
-  expect(known?.items.find((item) => item.label === 'عمق التشغيل المحفوظ')?.values).toEqual([
-    'أنظمة أو تكاملات مهمة',
-  ]);
-  expect(known?.items.find((item) => item.label === 'القيد الحر المحفوظ')?.values).toEqual([
-    'نظام قائم يجب مراعاته',
-  ]);
-  expect(preferred?.items.find((item) => item.label === 'قدرات أدرجها النظام مبدئيًا')?.values).toEqual([
-    'نمذجة الطلب والحالة — أساسي من النظام',
-    'قدرة موصى بها من النظام — موصى به من النظام',
-  ]);
+  const contradictory = readStartDiscoveryRouteState({
+    discoveryPrefill: {
+      version: 1,
+      capabilitySelections: [
+        { name: 'قدرة متعارضة', classification: 'RECOMMENDED', provenance: 'SYSTEM_SEEDED' },
+        { name: ' قدرة متعارضة ', classification: 'CUSTOM', provenance: 'USER_SELECTED' },
+      ],
+    },
+  });
+  expect(contradictory?.capabilitySelections).toEqual([]);
+  expect(createStartDiscoveryDraft(contradictory).selectedCapabilities).toEqual([]);
 });
 
-test('all four certainty conditions produce distinct progressive paths', async ({ page }) => {
-  for (const certaintyCase of certaintyCases) {
-    await openDiscovery(page);
-    await page
-      .getByRole('radio', { name: new RegExp(certaintyCase.label) })
-      .click();
-    await expect(page.locator('.start-discovery')).toHaveAttribute(
-      'data-certainty',
-      certaintyCase.value,
-    );
-    await expect(page.locator('.sd-context nav li')).toHaveCount(
-      certaintyCase.steps.length,
-    );
-    await expect(page.locator('.sd-context nav li span')).toHaveText(
-      certaintyCase.steps,
-    );
+test('direct entry exposes exactly three major stages and three entrances without creating extra stages', async ({ page }) => {
+  await openStart(page);
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-major-stage-count', '3');
+  await expect(page.locator('.sfp-stage-rail li')).toHaveCount(3);
+  await expect(page.locator('.sfp-stage-rail')).toContainText('اكتشف ما يناسبك');
+  await expect(page.locator('.sfp-stage-rail')).toContainText('كوّن حلّك');
+  await expect(page.locator('.sfp-stage-rail')).toContainText('راجع وابدأ');
+  for (const label of ['ساعدني على اكتشاف ما أحتاج', 'أعرف تقريبًا نوع الحل', 'أريد أن أبدأ من مثال']) {
+    await expect(page.getByRole('button', { name: new RegExp(label) })).toBeVisible();
   }
-
-  expect(getDiscoverySteps('exploring')).not.toContain('configuration');
-  expect(getDiscoverySteps('detailed')).toContain('dependencies');
 });
 
-test('required fields block progress and focus the first invalid control', async ({ page }) => {
-  await openDiscovery(page);
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await expect(page.getByRole('alert')).toContainText('اختر العبارة الأقرب');
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-step', 'certainty');
+test('Discover is progressive, keeps recommendation separate from selection, and exposes six canonical families', async ({ page }) => {
+  await directRecommendation(page);
+  await expect(page.getByLabel('ما الذي تريد تغييره؟')).toHaveCount(0);
+  await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('الحجوزات والخدمات');
+  await expect(page.locator('[data-testid="user-selection"]')).toContainText('لم تعتمد اتجاهًا بعد.');
+  await expect(page.getByText('تقدير أولي للميزانية')).toBeVisible();
+  await expect(page.getByText(/10,000–25,000/)).toBeVisible();
+  await expect(page.getByText(/ليس عرض سعر نهائيًا/)).toBeVisible();
+  await expect(page.locator('[data-testid="project-pulse"]')).toHaveCount(1);
 
-  await chooseCertainty(page, 'لا أعرف ماذا أحتاج');
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await expect(page.getByText('حدد هدفًا رئيسيًا للمشروع.')).toBeVisible();
-  await expect(page.getByText('صف المشكلة الحالية بجملة واحدة على الأقل.')).toBeVisible();
-  await expect(page.getByLabel('الهدف الرئيسي بصياغتك')).toBeFocused();
-});
-
-test('short exploring branch permits optional fields and reaches review before completion', async ({ page }) => {
-  await openDiscovery(page);
-  await chooseCertainty(page, 'لا أعرف ماذا أحتاج');
-  await completeFoundation(page);
-  await expect(page.locator('.start-discovery')).toHaveAttribute(
-    'data-step',
-    'people-outcomes',
-  );
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await expect(page.locator('.start-discovery')).toHaveAttribute(
-    'data-step',
-    'preferences',
-  );
-  await page.getByRole('button', { name: 'مراجعة الملخص' }).click();
-
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-step', 'summary');
-  await expect(page.getByText('هذا الملخص يتغير فور تعديل قراراتك.')).toBeVisible();
-  await expect(page.getByText('لم تُرسل البيانات ولم تُحفظ في خادم.')).toBeVisible();
-  await expect(page.getByText('شكل الحل والقدرات المناسبة')).toBeVisible();
-});
-
-test('detailed path preserves selected, dependent, and unknown data through edit and revisit', async ({ page }) => {
-  await openDiscovery(page);
-  await chooseCertainty(page, 'أعرف معظم متطلباتي');
-  await completeFoundation(page, 'الوضع القديم يحتاج تنظيمًا.');
-  await page.getByLabel('المستخدمون المقصودون').fill('فريق العمليات');
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await page.getByLabel('الحل أو العائلة المقترحة').fill('بوابة تشغيلية');
-  await page
-    .getByLabel('قدرات حُسمت مبدئيًا')
-    .fill('استقبال الطلبات\nمتابعة الحالة');
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await page.getByLabel('تكاملات تحتاج تحققًا').fill('نظام داخلي غير مفحوص');
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await page
-    .getByLabel('أسئلة أو مجهولات نحتاج لاكتشافها')
-    .fill('جاهزية البيانات');
-  await page.getByRole('button', { name: 'مراجعة الملخص' }).click();
-
-  await expect(page.locator('[data-summary-status="selected"]')).toContainText(
-    'استقبال الطلبات',
-  );
-  await expect(page.locator('[data-summary-status="dependent"]')).toContainText(
-    'نظام داخلي غير مفحوص',
-  );
-  await expect(page.locator('[data-summary-status="unknown"]')).toContainText(
-    'جاهزية البيانات',
-  );
-
-  await page.getByRole('button', { name: 'تعديل قسم معلوم' }).click();
-  await page.getByLabel('المشكلة الحالية').fill('الوضع المحدّث يحتاج تنظيمًا.');
-  await page.getByRole('button', { name: 'حفظ والعودة إلى الملخص' }).click();
-  await expect(page.locator('[data-summary-status="known"]')).toContainText(
-    'الوضع المحدّث يحتاج تنظيمًا.',
-  );
-  await expect(page.locator('[data-summary-status="known"]')).not.toContainText(
-    'الوضع القديم يحتاج تنظيمًا.',
-  );
-});
-
-test('prefilled context remains reviewable and visibly classified', async ({ page }) => {
-  await openDiscovery(page, '?prefill=1&certainty=configured');
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
-  await expect(page.getByText('تم حمل سياق سابق إلى هذه الصفحة.')).toBeVisible();
-  await expect(page.getByText('SDW-DEMO-04')).toBeVisible();
-  await expect(page.getByLabel('الهدف الرئيسي بصياغتك')).toHaveValue(
-    'توحيد رحلة الطلب ومتابعة حالته من نقطة واحدة.',
-  );
-  await page.getByRole('button', { name: '01 نقطة البداية' }).click();
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-step', 'certainty');
-  await page.getByRole('button', { name: '02 بوصلة المشروع' }).click();
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await expect(page.getByLabel('قدرات حُسمت مبدئيًا')).toHaveValue(
-    /استقبال الطلبات/,
-  );
-  await reachSummary(page);
-
-  for (const status of ['known', 'selected', 'preferred', 'dependent', 'unknown']) {
-    await expect(page.locator(`[data-summary-status="${status}"]`)).toBeVisible();
-  }
-  await expect(page.locator('[data-summary-status="selected"]')).toContainText(
-    'متابعة الحالة',
-  );
-  await expect(page.locator('[data-summary-status="preferred"]')).toContainText(
+  await page.getByText('قارن أو اختر اتجاهًا آخر').click();
+  for (const title of [
+    'مواقع الأعمال والخدمات',
+    'التجارة الرقمية وتجارب العلامات',
+    'الحجوزات والخدمات',
+    'العقارات والأصول',
     'الأنظمة التشغيلية والبوابات',
-  );
-  await expect(page.locator('[data-summary-status="dependent"]')).toContainText(
-    'مراجعة مصدر بيانات الطلبات الحالي',
-  );
+    'التعليم والمعرفة والمحتوى',
+  ]) {
+    await expect(page.getByRole('button', { name: new RegExp(title) })).toBeVisible();
+  }
+  await page.getByRole('button', { name: /العقارات والأصول/ }).click();
+  await expect(page.locator('[data-testid="user-selection"]')).toContainText('العقارات والأصول');
+  await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('الحجوزات والخدمات');
 });
 
-test('local completion never claims remote submission and can return to review', async ({ page }) => {
-  await openDiscovery(page);
-  await chooseCertainty(page, 'لا أعرف ماذا أحتاج');
-  await completeFoundation(page);
-  await reachSummary(page);
-  await page.getByRole('button', { name: 'تثبيت نسخة المراجعة' }).click();
-
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-step', 'complete');
-  await expect(page.getByText('تم تثبيت نسخة المراجعة محليًا.')).toBeVisible();
-  await expect(page.getByText('Your project has been submitted')).toHaveCount(0);
-  await expect(page.getByText('تم إرسال مشروعك')).toHaveCount(0);
-  await page.getByRole('button', { name: 'العودة إلى الملخص' }).click();
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-step', 'summary');
+test('valid Solutions v1 context is visibly carried without asking known truth again', async ({ page }) => {
+  await openStart(page, '?prefill=booking');
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
+  await expect(page.locator('[data-testid="carried-context"]')).toContainText('جعل الحجز أوضح للعميل والفريق');
+  await expect(page.locator('[data-testid="carried-context"]')).toContainText('خدمة تعتمد على المواعيد');
+  await expect(page.getByLabel('ما الذي تريد تغييره؟')).toHaveCount(0);
+  await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('الحجوزات والخدمات');
+  await expect(page.locator('[data-testid="user-selection"]')).toContainText('لم تعتمد اتجاهًا بعد.');
 });
 
-test('keyboard activation, Arrow-key roving tabindex, focus transfer, and auto LTR input work', async ({ page }) => {
-  await openDiscovery(page);
-  const group = page.getByRole('radiogroup', { name: 'مستوى وضوح متطلبات المشروع' });
-  const radios = group.getByRole('radio');
-  await expect(radios.nth(0)).toHaveAttribute('tabindex', '0');
-  await expect(radios.nth(1)).toHaveAttribute('tabindex', '-1');
-  await radios.nth(0).focus();
-  await page.keyboard.press('ArrowDown');
-  await expect(radios.nth(1)).toBeFocused();
-  await expect(radios.nth(1)).toHaveAttribute('aria-checked', 'true');
-  await expect(radios.nth(1)).toHaveAttribute('tabindex', '0');
-  await expect(radios.nth(0)).toHaveAttribute('tabindex', '-1');
+test('Build presents one dominant decision, family journey, semantic selection and material consequence', async ({ page }) => {
+  await enterBookingBuild(page);
+  await expect(page.locator('.sfp-journey')).toContainText('قبل الحجز');
+  await expect(page.locator('.sfp-journey')).toContainText('الحجز');
+  await expect(page.locator('.sfp-journey')).toContainText('قبل الموعد');
+  await expect(page.locator('.sfp-journey')).toContainText('تقديم الخدمة');
+  await expect(page.locator('.sfp-journey')).toContainText('بعد الخدمة');
+  await expect(page.getByRole('heading', { name: 'هل تريد تحصيل مبلغ عند الحجز؟' })).toBeVisible();
+  await expect(page.locator('.sfp-decision h2')).toHaveCount(1);
 
-  await page.getByRole('button', { name: 'متابعة' }).focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'ما الذي يستحق أن يتغيّر؟' })).toBeFocused();
+  const answer = page.getByRole('radio', { name: /نعم، دفع أو عربون/ });
+  await answer.focus();
+  await page.keyboard.press('Space');
+  await expect(answer).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('heading', { name: 'ماذا يتغير؟' })).toBeVisible();
+  await expect(page.locator('[data-testid="decision-consequence"]')).toContainText('في المشروع');
+  await expect(page.getByText(/12,000–25,000/)).toBeVisible();
+  await expect(page.locator('[data-testid="project-pulse"]')).toHaveCount(1);
+});
 
-  const objective = page.getByLabel('الهدف الرئيسي بصياغتك');
-  await objective.fill('Improve service intake');
-  await expect(objective).toHaveCSS('direction', 'ltr');
-  await objective.focus();
-  await expect(objective).toBeFocused();
+test('a prior Build decision can be revised without creating a new stage', async ({ page }) => {
+  await enterBookingBuild(page);
+  const yes = page.getByRole('radio', { name: /نعم، دفع أو عربون/ });
+  const no = page.getByRole('radio', { name: /لا، بدون دفع الآن/ });
+  await yes.click();
+  await expect(yes).toHaveAttribute('aria-checked', 'true');
+  await no.click();
+  await expect(no).toHaveAttribute('aria-checked', 'true');
+  await expect(yes).toHaveAttribute('aria-checked', 'false');
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-major-stage-count', '3');
+});
+
+test('contextual example traps focus, preserves decision state, and restores focus on close', async ({ page }) => {
+  await enterBookingBuild(page);
+  await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
+  const trigger = page.getByRole('button', { name: /شاهد مثالًا/ });
+  await trigger.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('[data-asset-id="FAM-03-CTX-01"]')).toHaveAttribute('data-asset-status', 'approved-unbound');
+  await expect(dialog.locator('img')).toHaveCount(0);
+  await expect(dialog).toContainText('الأصل البصري المعتمد بانتظار الربط التشغيلي');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await expect(page.getByRole('radio', { name: /نعم، دفع أو عربون/ })).toHaveAttribute('aria-checked', 'true');
+});
+
+test('pending FAM-05 contextual slot stays semantic and does not fabricate product art', async ({ page }) => {
+  await openStart(page, '?prefill=portals');
+  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+  const firstAnswer = page.locator('.sfp-decision [role="radio"]').first();
+  await firstAnswer.click();
+  await page.getByRole('button', { name: /شاهد مثالًا/ }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.locator('[data-asset-id="FAM-05-CTX-01"]')).toHaveAttribute('data-asset-status', 'unresolved');
+  await expect(dialog.locator('img')).toHaveCount(0);
+  await expect(dialog).toContainText('المثال البصري لهذا السياق لم يُعتمد بعد');
+});
+
+test('Review carries choices into a customer-readable blueprint and exact start actions', async ({ page }) => {
+  await reachReview(page);
+  await expect(page.locator('[data-testid="project-blueprint"]')).toContainText('الحجوزات والخدمات');
+  await expect(page.locator('[data-testid="project-blueprint"]')).toContainText('ربط التقويم أو الدفع');
+  await expect(page.locator('[data-testid="project-summary"]')).toHaveCount(1);
+  await expect(page.locator('[data-testid="project-pulse"]')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'يمكنك المتابعة' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ابدأ المشروع بهذا المخطط' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'عدّل مشروعك' })).toBeVisible();
+  await expect(page.getByText(/لن تحتاج إلى إدخالها من جديد/)).toBeVisible();
+  await expect(page.locator('.sfp-review-needs li')).toHaveCount(2);
+
+  await page.getByRole('button', { name: 'عدّل مشروعك' }).click();
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
+  await page.getByRole('button', { name: /احفظ التكوين وتابع/ }).click();
+  await expect(page.locator('[data-testid="project-blueprint"]')).toContainText('ربط التقويم أو الدفع');
+  await page.getByRole('button', { name: 'ابدأ المشروع بهذا المخطط' }).click();
+  await expect(page.locator('#root')).toHaveAttribute('data-completed-family', 'booking');
+  await expect(page.getByRole('status')).toContainText('تم تجهيز المخطط محليًا');
+});
+
+test('session state survives a route-equivalent reload without silently losing the project', async ({ page }) => {
+  await enterBookingBuild(page);
+  await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
+  await page.reload();
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
+  await expect(page.getByRole('radio', { name: /نعم، دفع أو عربون/ })).toHaveAttribute('aria-checked', 'true');
 });
 
 for (const width of [1440, 1024, 768, 430, 390]) {
-  test(`renders without horizontal overflow, console errors, or page errors at ${width}px`, async ({ page }) => {
-    const consoleErrors: string[] = [];
-    const pageErrors: string[] = [];
-    page.on('console', (message) => {
-      if (message.type() === 'error') consoleErrors.push(message.text());
-    });
-    page.on('pageerror', (error) => pageErrors.push(error.message));
-
-    await page.setViewportSize({
-      width,
-      height: width >= 1024 ? 900 : width === 768 ? 1024 : 844,
-    });
-    await openDiscovery(page);
-    await page.getByRole('radio', { name: /لدي اتجاه عام/ }).click();
-    await page.getByRole('button', { name: 'متابعة' }).click();
-    const dimensions = await page.evaluate(() => {
-      const discovery = document.querySelector('.start-discovery');
-      if (!discovery) throw new Error('Start / Discovery root is missing');
-      return {
-        clientWidth: document.documentElement.clientWidth,
-        scrollWidth: document.documentElement.scrollWidth,
-        rootDirection: getComputedStyle(discovery).direction,
-      };
-    });
-
-    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
-    expect(dimensions.rootDirection).toBe('rtl');
-    expect(consoleErrors).toEqual([]);
-    expect(pageErrors).toEqual([]);
-
-    await page.screenshot({
-      path: resolve(evidenceDirectory, `start-discovery-${width}-foundation.png`),
-      fullPage: true,
-      animations: 'disabled',
-    });
+  test(`START has no horizontal overflow and keeps the primary action reachable at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width <= 430 ? 844 : width === 768 ? 1024 : 900 });
+    await directRecommendation(page);
+    await expectNoHorizontalOverflow(page);
+    await expect(page.getByRole('button', { name: /اختر هذا الاتجاه/ })).toBeVisible();
   });
 }
 
-test('captures prefilled summary evidence at desktop and one-handed mobile widths', async ({ page }) => {
-  for (const [width, height] of [
-    [1440, 900],
-    [390, 844],
-  ] as const) {
+for (const [width, height] of [[1440, 900], [768, 1024], [390, 844]] as const) {
+  test(`captures frozen START Discover Build Review evidence at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height });
-    await openDiscovery(page, '?prefill=1&certainty=configured');
-    await page.getByRole('button', { name: 'متابعة' }).click();
-    await reachSummary(page);
-    await page.screenshot({
-      path: resolve(evidenceDirectory, `start-discovery-${width}-prefilled-summary.png`),
-      fullPage: true,
-      animations: 'disabled',
-    });
-  }
+    await directRecommendation(page);
+    await page.screenshot({ path: resolve(evidenceDirectory, `discover-${width}.png`), fullPage: true, animations: 'disabled' });
+    await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+    await page.locator('.sfp-decision [role="radio"]').first().click();
+    await page.screenshot({ path: resolve(evidenceDirectory, `build-${width}.png`), fullPage: true, animations: 'disabled' });
+    while ((await page.locator('.start-discovery').getAttribute('data-stage')) === 'build') {
+      const button = page.getByRole('button', { name: /تابع إلى القرار التالي|احفظ التكوين وتابع/ });
+      if (await button.isDisabled()) await page.locator('.sfp-decision [role="radio"]').first().click();
+      await button.click();
+    }
+    await page.screenshot({ path: resolve(evidenceDirectory, `review-${width}.png`), fullPage: true, animations: 'disabled' });
+  });
+}
+
+test('captures unresolved FAM-05 contextual asset behavior', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStart(page, '?prefill=portals');
+  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+  await page.locator('.sfp-decision [role="radio"]').first().click();
+  await page.getByRole('button', { name: /شاهد مثالًا/ }).click();
+  await page.screenshot({ path: resolve(evidenceDirectory, 'fam-05-unresolved-context.png'), fullPage: true, animations: 'disabled' });
 });

@@ -1,13 +1,4 @@
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Clipboard,
-  CornerDownLeft,
-  Pencil,
-  Printer,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowLeft, Check, Eye, X } from 'lucide-react';
 import {
   useEffect,
   useMemo,
@@ -17,941 +8,382 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  budgetOptions,
-  certaintyOptions,
-  configurationOptions,
-  domainOptions,
-  objectiveOptions,
-  stepLabels,
-  summaryStatusContent,
-  timingOptions,
-} from '../../data/start-discovery/discoveryContent';
+  PROVISIONAL_START_PRICING,
+  START_ENTRY_INTENTS,
+  START_MAJOR_STAGES,
+  formatBudgetBand,
+  getDecisionConsequence,
+  getFamilyDecisions,
+  getFamilyJourney,
+  getStartFamily,
+  isStartFamilyId,
+  recommendStartFamily,
+  startConfigurationDirections,
+  startFamilies,
+  type StartDecisionAnswer,
+  type StartEntryIntent,
+  type StartFamilyId,
+  type StartStageId,
+} from '../../data/start-discovery/startExperience';
+import {
+  getFamilyAssetId,
+  getFamilyVisualAsset,
+  type FamilyVisualAsset,
+} from '../../data/visual/familyVisualAssets';
 import type {
-  DiscoveryCertainty,
-  DiscoveryStepId,
-  DiscoverySummaryStatus,
+  DiscoveryCapabilitySelection,
   StartDiscoveryBodyProps,
   StartDiscoveryDraft,
+  StartDiscoveryPrefill,
 } from '../../types/start-discovery';
-import {
-  buildDiscoverySummary,
-  createStartDiscoveryDraft,
-  formatDiscoverySummary,
-  formatListInput,
-  getDiscoverySteps,
-  parseListInput,
-} from './discoveryModel';
+import { buildDiscoverySummary, createStartDiscoveryDraft } from './discoveryModel';
 import './start-discovery.css';
 
-interface FieldProps {
-  label: string;
-  htmlFor?: string;
-  hint?: string;
-  optional?: boolean;
-  error?: string;
-  errorId?: string;
-  children: ReactNode;
+const SESSION_KEY = 'gs-start-frozen-product-v1';
+
+type Answers = Record<string, StartDecisionAnswer>;
+
+interface LocalState {
+  stage: StartStageId;
+  furthest: StartStageId;
+  discoverStep: 0 | 1 | 2;
+  intent?: StartEntryIntent;
+  recommended: StartFamilyId;
+  selected?: StartFamilyId;
+  decisionIndex: number;
+  answers: Answers;
+  experience: string;
 }
 
-interface TextFieldProps {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  hint?: string;
-  optional?: boolean;
-  error?: string;
-  multiline?: boolean;
+interface StoredState {
+  local: LocalState;
+  draft: StartDiscoveryDraft;
 }
 
-interface ListFieldProps extends Omit<TextFieldProps, 'value' | 'onChange'> {
-  value: string[];
-  onChange: (value: string[]) => void;
+function unique(values: readonly string[]) {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
-const statusEditStep: Record<DiscoverySummaryStatus, DiscoveryStepId> = {
-  known: 'foundation',
-  selected: 'configuration',
-  preferred: 'preferences',
-  dependent: 'dependencies',
-  unknown: 'preferences',
-};
+function familyFromPrefill(prefill?: StartDiscoveryPrefill): StartFamilyId | undefined {
+  if (isStartFamilyId(prefill?.solutionFamilyId)) return prefill.solutionFamilyId;
+  return startFamilies.find((family) => family.title === prefill?.recommendedFamily)?.id;
+}
 
-const stageIntros: Partial<Record<DiscoveryStepId, string>> = {
-  foundation: 'ابدأ بما تريد تغييره، لا باسم المنتج الذي تتوقعه.',
-  'people-outcomes': 'أضف ما يقرّبنا من الاستخدام الحقيقي والنتيجة المرغوبة.',
-  configuration: 'سجّل ما حُسم وما يزال مجرد احتمال؛ سنبقي الفرق واضحًا.',
-  dependencies: 'هذه ليست وعود تكامل. إنها قائمة تحقق لما يجب فحصه لاحقًا.',
-  preferences: 'التفضيلات هنا تساعد على تشكيل النقاش ولا تنشئ سعرًا أو موعدًا.',
-};
+function userAlreadySelected(prefill?: StartDiscoveryPrefill) {
+  return Boolean(prefill?.decisionOrigin && prefill.decisionOrigin !== 'SYSTEM_FINDER');
+}
 
-function handleRovingRadioKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-  const navigationKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
-  if (!navigationKeys.includes(event.key)) return;
-
-  const group = event.currentTarget.closest('[role="radiogroup"]');
-  const radios = group
-    ? Array.from(group.querySelectorAll<HTMLButtonElement>('[role="radio"]:not(:disabled)'))
-    : [];
-  if (!radios.length) return;
-
-  const currentIndex = radios.indexOf(event.currentTarget);
-  if (currentIndex < 0) return;
-
-  let nextIndex = currentIndex;
-  if (event.key === 'Home') nextIndex = 0;
-  if (event.key === 'End') nextIndex = radios.length - 1;
-  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-    nextIndex = (currentIndex + 1) % radios.length;
+function readStored(): StoredState | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const parsed = JSON.parse(window.sessionStorage.getItem(SESSION_KEY) ?? 'null') as StoredState | null;
+    if (!parsed || !START_MAJOR_STAGES.some((stage) => stage.id === parsed.local?.stage)) return undefined;
+    if (!isStartFamilyId(parsed.local.recommended)) return undefined;
+    if (parsed.local.selected && !isStartFamilyId(parsed.local.selected)) return undefined;
+    return parsed;
+  } catch {
+    return undefined;
   }
-  if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-    nextIndex = (currentIndex - 1 + radios.length) % radios.length;
-  }
-
-  event.preventDefault();
-  radios[nextIndex].focus();
-  radios[nextIndex].click();
 }
 
-function Field({
-  label,
-  htmlFor,
-  hint,
-  optional,
-  error,
-  errorId,
-  children,
-}: FieldProps) {
-  return (
-    <div className={`sd-field${error ? ' sd-field--error' : ''}`}>
-      <div className="sd-field__heading">
-        {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : <span>{label}</span>}
-        <small>{optional ? 'اختياري' : 'مطلوب'}</small>
+function initialLocal(prefill?: StartDiscoveryPrefill): LocalState {
+  if (!prefill) {
+    const stored = readStored();
+    if (stored) return stored.local;
+  }
+  const family = familyFromPrefill(prefill) ?? 'business';
+  return {
+    stage: 'discover',
+    furthest: 'discover',
+    discoverStep: prefill ? 2 : 0,
+    recommended: family,
+    selected: prefill && userAlreadySelected(prefill) ? family : undefined,
+    decisionIndex: 0,
+    answers: {},
+    experience: 'focused',
+  };
+}
+
+function initialDraft(prefill?: StartDiscoveryPrefill, initialCertainty?: StartDiscoveryBodyProps['initialCertainty']) {
+  if (!prefill) {
+    const stored = readStored();
+    if (stored?.draft) return stored.draft;
+  }
+  return createStartDiscoveryDraft(prefill, initialCertainty);
+}
+
+function AssetSlot({ asset, alt, decorative = false }: { asset?: FamilyVisualAsset; alt: string; decorative?: boolean }) {
+  if (!asset) return null;
+  if (!asset.runtimeUrl) {
+    return (
+      <div
+        className="sfp-asset-slot"
+        data-asset-id={asset.id}
+        data-asset-status={asset.status === 'UNRESOLVED' ? 'unresolved' : 'approved-unbound'}
+        aria-hidden={decorative || undefined}
+        role={decorative ? undefined : 'img'}
+        aria-label={decorative ? undefined : `${alt} — الأصل البصري بانتظار الربط التشغيلي.`}
+      >
+        <span aria-hidden="true">{asset.status === 'UNRESOLVED' ? '◇' : 'GS'}</span>
       </div>
-      {hint ? <p className="sd-field__hint">{hint}</p> : null}
-      {children}
-      {error ? (
-        <p id={errorId} className="sd-field__error" role="alert">
-          {error}
-        </p>
-      ) : null}
+    );
+  }
+  return <img src={asset.runtimeUrl} alt={decorative ? '' : alt} aria-hidden={decorative || undefined} data-asset-id={asset.id} />;
+}
+
+function StageRail({ current, furthest, onChange }: { current: StartStageId; furthest: StartStageId; onChange: (stage: StartStageId) => void }) {
+  const furthestIndex = START_MAJOR_STAGES.findIndex((stage) => stage.id === furthest);
+  return (
+    <nav className="sfp-stage-rail" aria-label="مراحل البدء">
+      <ol>
+        {START_MAJOR_STAGES.map((stage, index) => (
+          <li key={stage.id} data-stage-state={stage.id === current ? 'current' : index < START_MAJOR_STAGES.findIndex((item) => item.id === current) ? 'complete' : 'future'}>
+            <button type="button" disabled={index > furthestIndex} aria-current={stage.id === current ? 'step' : undefined} onClick={() => onChange(stage.id)}>
+              <bdi>{stage.number}</bdi><span>{stage.label}</span>
+              {index < START_MAJOR_STAGES.findIndex((item) => item.id === current) ? <Check aria-hidden="true" /> : null}
+            </button>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+function Pulse({ goal, recommended, selected, budget, reviewNeeds }: { goal: string; recommended: StartFamilyId; selected?: StartFamilyId; budget: string; reviewNeeds?: readonly string[] }) {
+  return (
+    <aside className="sfp-pulse" data-testid="project-pulse" aria-labelledby="sfp-pulse-title">
+      <span>الحالة الحالية</span><h2 id="sfp-pulse-title">مشروعك الآن</h2>
+      <dl>
+        {goal ? <div><dt>الهدف</dt><dd>{goal}</dd></div> : null}
+        <div><dt>الاتجاه المقترح</dt><dd>{getStartFamily(recommended).title}</dd></div>
+        <div><dt>اختيارك</dt><dd>{selected ? getStartFamily(selected).title : 'لم تعتمد اتجاهًا بعد.'}</dd></div>
+        <div><dt>الميزانية التقريبية</dt><dd><bdi dir="ltr">USD {budget}</bdi></dd></div>
+        {reviewNeeds?.length ? <div><dt>يحتاج مراجعة</dt><dd>{reviewNeeds.slice(0, 2).join('، ')}</dd></div> : null}
+      </dl>
+    </aside>
+  );
+}
+
+function RadioGroup({ label, children }: { label: string; children: ReactNode }) {
+  return <div className="sfp-radio-group" role="radiogroup" aria-label={label}>{children}</div>;
+}
+
+function Drawer({ open, asset, familyTitle, onClose, trigger }: { open: boolean; asset?: FamilyVisualAsset; familyTitle: string; onClose: () => void; trigger: React.RefObject<HTMLButtonElement | null> }) {
+  const panel = useRef<HTMLDivElement>(null);
+  const close = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    close.current?.focus();
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+      trigger.current?.focus();
+    };
+  }, [open, trigger]);
+  if (!open) return null;
+  const trap = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') { event.preventDefault(); onClose(); return; }
+    if (event.key !== 'Tab') return;
+    const nodes = [...(panel.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') ?? [])];
+    if (!nodes.length) return;
+    const first = nodes[0]; const last = nodes[nodes.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  };
+  return (
+    <div className="sfp-drawer-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <div ref={panel} className="sfp-drawer" role="dialog" aria-modal="true" aria-labelledby="sfp-drawer-title" onKeyDown={trap}>
+        <button ref={close} type="button" className="sfp-drawer-close" onClick={onClose} aria-label="إغلاق المثال"><X /></button>
+        <span className="sfp-eyebrow">مثال سياقي</span><h2 id="sfp-drawer-title">كيف يمكن أن يبدو جزء من {familyTitle}؟</h2>
+        <AssetSlot asset={asset} alt={`مثال سياقي لعائلة ${familyTitle}`} />
+        <div className="sfp-drawer-copy">
+          <p><strong>ما الذي يعرضه؟</strong> يوضح اتجاهًا بصريًا وسياق استخدام مرتبطًا بالقرار الحالي.</p>
+          <p><strong>ما الذي لا يعرضه؟</strong> ليس تصميمًا نهائيًا ولا يثبت كل الوظائف أو التكاملات.</p>
+          {asset?.status === 'UNRESOLVED' ? <p data-asset-note="pending">المثال البصري لهذا السياق لم يُعتمد بعد.</p> : null}
+          {asset?.status === 'APPROVED_UNBOUND' ? <p data-asset-note="unbound">الأصل البصري المعتمد بانتظار الربط التشغيلي.</p> : null}
+        </div>
+      </div>
     </div>
   );
 }
 
-function TextField({
-  id,
-  label,
-  value,
-  onChange,
-  placeholder,
-  hint,
-  optional,
-  error,
-  multiline = true,
-}: TextFieldProps) {
-  const controlProps = {
-    id,
-    value,
-    placeholder,
-    dir: 'auto' as const,
-    'aria-invalid': Boolean(error),
-    'aria-describedby': error ? `${id}-error` : undefined,
-    onChange: (
-      event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    ) => onChange(event.target.value),
+export function StartDiscoveryBody({ prefill, initialCertainty, className = '', onDraftChange, onLocalComplete }: StartDiscoveryBodyProps) {
+  const [draft, setDraft] = useState<StartDiscoveryDraft>(() => initialDraft(prefill, initialCertainty));
+  const [local, setLocal] = useState<LocalState>(() => initialLocal(prefill));
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const exampleTrigger = useRef<HTMLButtonElement>(null);
+
+  const activeFamilyId = local.selected ?? local.recommended;
+  const activeFamily = getStartFamily(activeFamilyId);
+  const decisions = useMemo(() => getFamilyDecisions(activeFamilyId), [activeFamilyId]);
+  const currentDecision = decisions[Math.min(local.decisionIndex, Math.max(0, decisions.length - 1))];
+  const currentAnswer = currentDecision ? local.answers[currentDecision.id] : undefined;
+  const currentConsequence = currentDecision && currentAnswer ? getDecisionConsequence(activeFamilyId, currentDecision, currentAnswer) : undefined;
+  const materialEffect = decisions.some((decision) => {
+    const answer = local.answers[decision.id];
+    return answer ? getDecisionConsequence(activeFamilyId, decision, answer).material : false;
+  });
+  const budgetBand = formatBudgetBand(materialEffect);
+  const journey = getFamilyJourney(activeFamilyId);
+  const experienceDirection = startConfigurationDirections.find((item) => item.id === local.experience) ?? startConfigurationDirections[0];
+  const reviewNeeds = unique([
+    ...draft.unknowns,
+    ...decisions.filter((decision) => local.answers[decision.id] === 'unknown').map((decision) => decision.capabilityName),
+    ...decisions.filter((decision) => local.answers[decision.id] === 'yes' && getDecisionConsequence(activeFamilyId, decision, 'yes').material).map((decision) => `تحقق ${decision.capabilityName}`),
+  ]).slice(0, 3);
+  const goal = draft.objective || draft.capturedFacts?.outcome || draft.currentProblem;
+  const familyCode = String(startFamilies.findIndex((family) => family.id === activeFamilyId) + 1).padStart(2, '0');
+  const masterAsset = getFamilyVisualAsset(getFamilyAssetId(activeFamilyId, 'MASTER'));
+  const contextAsset = getFamilyVisualAsset(getFamilyAssetId(activeFamilyId, 'CTX-01'));
+
+  useEffect(() => { onDraftChange?.(draft); }, [draft, onDraftChange]);
+  useEffect(() => {
+    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify({ local, draft } satisfies StoredState));
+  }, [local, draft]);
+  useEffect(() => { window.requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true })); }, [local.stage]);
+
+  const patchDraft = (patch: Partial<StartDiscoveryDraft>) => setDraft((current) => ({ ...current, ...patch }));
+  const setStage = (stage: StartStageId) => {
+    const order = START_MAJOR_STAGES.map((item) => item.id);
+    setLocal((current) => ({ ...current, stage, furthest: order.indexOf(stage) > order.indexOf(current.furthest) ? stage : current.furthest }));
   };
 
-  return (
-    <Field
-      label={label}
-      htmlFor={id}
-      hint={hint}
-      optional={optional}
-      error={error}
-      errorId={`${id}-error`}
-    >
-      {multiline ? (
-        <textarea {...controlProps} rows={3} />
-      ) : (
-        <input {...controlProps} type="text" />
-      )}
-    </Field>
-  );
-}
+  const buildRecommendation = () => {
+    const family = recommendStartFamily(`${draft.currentProblem} ${draft.objective} ${draft.intendedUsers}`);
+    setLocal((current) => ({ ...current, recommended: family, discoverStep: 2 }));
+    patchDraft({ recommendedFamily: getStartFamily(family).title, solutionFamilyId: family });
+  };
 
-function ListField({ value, onChange, ...props }: ListFieldProps) {
-  return (
-    <TextField
-      {...props}
-      value={formatListInput(value)}
-      onChange={(nextValue) => onChange(parseListInput(nextValue))}
-      hint={props.hint ?? 'افصل بين البنود بسطر جديد أو فاصلة.'}
-    />
-  );
-}
-
-function ChoiceSet({
-  label,
-  options,
-  value,
-  onChange,
-  optional = true,
-}: {
-  label: string;
-  options: readonly string[];
-  value: string;
-  onChange: (value: string) => void;
-  optional?: boolean;
-}) {
-  const hasCarriedValue = Boolean(value) && !options.includes(value);
-
-  return (
-    <Field label={label} optional={optional}>
-      <div className="sd-choice-set" role="group" aria-label={label}>
-        {hasCarriedValue ? (
-          <button
-            type="button"
-            className="is-selected"
-            aria-pressed="true"
-            data-carried-prefill="true"
-            onClick={() => onChange('')}
-          >
-            <span>{value}</span>
-            <i aria-hidden="true"><Check /></i>
-          </button>
-        ) : null}
-        {options.map((option) => (
-          <button
-            key={option}
-            type="button"
-            className={value === option ? 'is-selected' : ''}
-            aria-pressed={value === option}
-            onClick={() => onChange(value === option ? '' : option)}
-          >
-            <span>{option}</span>
-            <i aria-hidden="true">{value === option ? <Check /> : null}</i>
-          </button>
-        ))}
-      </div>
-    </Field>
-  );
-}
-
-function StageHeader({
-  id,
-  title,
-  eyebrow,
-  headingRef,
-}: {
-  id: string;
-  title: string;
-  eyebrow: string;
-  headingRef: React.RefObject<HTMLHeadingElement>;
-}) {
-  return (
-    <header className="sd-stage-header">
-      <p>{eyebrow}</p>
-      <h2 id={id} ref={headingRef} tabIndex={-1}>
-        {title}
-      </h2>
-    </header>
-  );
-}
-
-export function StartDiscoveryBody({
-  prefill,
-  initialCertainty,
-  className = '',
-  onDraftChange,
-  onLocalComplete,
-}: StartDiscoveryBodyProps) {
-  const [draft, setDraft] = useState<StartDiscoveryDraft>(() =>
-    createStartDiscoveryDraft(prefill, initialCertainty),
-  );
-  const [currentStep, setCurrentStep] = useState<DiscoveryStepId>(
-    initialCertainty ? 'foundation' : 'certainty',
-  );
-  const [visited, setVisited] = useState<Set<DiscoveryStepId>>(
-    () =>
-      new Set(
-        initialCertainty
-          ? (['certainty', 'foundation'] as DiscoveryStepId[])
-          : ['certainty'],
-      ),
-  );
-  const [returnToSummary, setReturnToSummary] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [copyState, setCopyState] = useState('');
-  const stageHeadingRef = useRef<HTMLHeadingElement>(null);
-  const workspaceRef = useRef<HTMLDivElement>(null);
-
-  const steps = useMemo(() => getDiscoverySteps(draft.certainty), [draft.certainty]);
-  const summary = useMemo(() => buildDiscoverySummary(draft), [draft]);
-  const currentIndex = steps.indexOf(currentStep);
-  const visibleIndex = currentStep === 'complete' ? steps.length : Math.max(currentIndex + 1, 1);
-  const answeredCount = summary.groups.reduce(
-    (total, summaryGroup) =>
-      total + summaryGroup.items.reduce((count, entry) => count + entry.values.length, 0),
-    0,
-  );
-  const carriedFactSummary = [
-    draft.capturedFacts?.outcome ? `النتيجة: ${draft.capturedFacts.outcome}` : undefined,
-    draft.capturedFacts?.activity ? `النشاط: ${draft.capturedFacts.activity}` : undefined,
-    draft.capturedFacts?.audience ? `الجمهور: ${draft.capturedFacts.audience}` : undefined,
-    draft.capturedFacts?.complexity ? `العمق: ${draft.capturedFacts.complexity}` : undefined,
-    draft.capturedFacts?.constraints ? `القيد: ${draft.capturedFacts.constraints}` : undefined,
-  ].filter((value): value is string => Boolean(value)).join(' · ');
-
-  useEffect(() => {
-    onDraftChange?.(draft);
-  }, [draft, onDraftChange]);
-
-  useEffect(() => {
-    setVisited((current) => new Set(current).add(currentStep));
-    stageHeadingRef.current?.focus({ preventScroll: true });
-    setCopyState('');
-  }, [currentStep]);
-
-  function updateDraft<K extends keyof StartDiscoveryDraft>(
-    key: K,
-    value: StartDiscoveryDraft[K],
-  ) {
-    setDraft((current) => ({ ...current, [key]: value }));
-    setErrors((current) => {
-      if (!current[key]) return current;
-      const next = { ...current };
-      delete next[key];
-      return next;
+  const chooseFamily = (familyId: StartFamilyId) => {
+    const family = getStartFamily(familyId);
+    const inherited = draft.capabilitySelections.filter((selection) => family.capabilities.some((capability) => capability.name === selection.name));
+    setLocal((current) => ({ ...current, selected: familyId, decisionIndex: 0, answers: {} }));
+    patchDraft({
+      solutionFamilyId: familyId,
+      recommendedFamily: family.title,
+      decisionOrigin: 'USER_DIRECT',
+      selectedCapabilities: inherited.filter((selection) => selection.provenance === 'USER_SELECTED').map((selection) => selection.name),
+      capabilitySelections: inherited,
     });
-  }
+  };
 
-  function selectCertainty(certainty: DiscoveryCertainty) {
-    updateDraft('certainty', certainty);
-  }
+  const selectAnswer = (answer: StartDecisionAnswer) => {
+    if (!currentDecision) return;
+    const capability = activeFamily.capabilities.find((item) => item.name === currentDecision.capabilityName);
+    const without = draft.capabilitySelections.filter((selection) => selection.name !== currentDecision.capabilityName);
+    let selections: DiscoveryCapabilitySelection[] = without;
+    if (answer === 'yes' && capability) {
+      selections = [...without, { name: capability.name, classification: capability.classification, provenance: 'USER_SELECTED' }];
+    }
+    setLocal((current) => ({ ...current, answers: { ...current.answers, [currentDecision.id]: answer } }));
+    patchDraft({
+      capabilitySelections: selections,
+      selectedCapabilities: selections.filter((selection) => selection.provenance === 'USER_SELECTED').map((selection) => selection.name),
+      uncertainCapabilities: answer === 'unknown' ? unique([...draft.uncertainCapabilities, currentDecision.capabilityName]) : draft.uncertainCapabilities.filter((name) => name !== currentDecision.capabilityName),
+    });
+  };
 
-  function validateStep(step: DiscoveryStepId) {
-    const nextErrors: Record<string, string> = {};
-    if (step === 'certainty' && !draft.certainty) {
-      nextErrors.certainty = 'اختر العبارة الأقرب إلى وضعك الحالي.';
-    }
-    if (step === 'foundation') {
-      if (!draft.objective.trim()) nextErrors.objective = 'حدد هدفًا رئيسيًا للمشروع.';
-      if (!draft.currentProblem.trim()) {
-        nextErrors.currentProblem = 'صف المشكلة الحالية بجملة واحدة على الأقل.';
-      }
-    }
-    if (
-      step === 'configuration' &&
-      (draft.certainty === 'configured' || draft.certainty === 'detailed') &&
-      !draft.recommendedFamily.trim() &&
-      !draft.selectedCapabilities.length
-    ) {
-      nextErrors.recommendedFamily =
-        'اذكر الحل أو العائلة أو قدرة واحدة سبق أن اخترتها.';
-    }
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length) {
-      window.requestAnimationFrame(() => {
-        const invalid = workspaceRef.current?.querySelector<HTMLElement>(
-          '[aria-invalid="true"], .sd-certainty-options',
-        );
-        invalid?.focus();
-      });
-      return false;
-    }
-    return true;
-  }
-
-  function goNext() {
-    if (!validateStep(currentStep)) return;
-    if (currentStep === 'summary') {
-      setCurrentStep('complete');
-      onLocalComplete?.(summary, draft);
+  const nextBuild = () => {
+    if (currentDecision && !currentAnswer) return;
+    if (local.decisionIndex < decisions.length - 1) {
+      setLocal((current) => ({ ...current, decisionIndex: current.decisionIndex + 1 }));
       return;
     }
-    if (returnToSummary) {
-      setReturnToSummary(false);
-      setCurrentStep('summary');
-      return;
-    }
-    const nextStep = steps[currentIndex + 1];
-    if (nextStep) setCurrentStep(nextStep);
-  }
+    setStage('review');
+  };
 
-  function goBack() {
-    if (currentStep === 'complete') {
-      setCurrentStep('summary');
-      return;
-    }
-    if (returnToSummary) {
-      setReturnToSummary(false);
-      setCurrentStep('summary');
-      return;
-    }
-    const previousStep = steps[currentIndex - 1];
-    if (previousStep) setCurrentStep(previousStep);
-  }
+  const complete = () => {
+    setCompleted(true);
+    onLocalComplete?.(buildDiscoverySummary(draft), draft);
+  };
 
-  function editSummary(step: DiscoveryStepId) {
-    if (!steps.includes(step)) return;
-    setReturnToSummary(true);
-    setCurrentStep(step);
-  }
+  const carriedFacts = [
+    draft.capturedFacts?.outcome && `النتيجة: ${draft.capturedFacts.outcome}`,
+    draft.capturedFacts?.activity && `النشاط: ${draft.capturedFacts.activity}`,
+    draft.capturedFacts?.audience && `الجمهور: ${draft.capturedFacts.audience}`,
+    draft.capturedFacts?.complexity && `العمق: ${draft.capturedFacts.complexity}`,
+    draft.capturedFacts?.constraints && `القيد: ${draft.capturedFacts.constraints}`,
+  ].filter(Boolean).join(' · ');
 
-  async function copySummary() {
-    try {
-      await navigator.clipboard.writeText(formatDiscoverySummary(summary));
-      setCopyState('تم نسخ الملخص إلى جهازك.');
-    } catch {
-      setCopyState('تعذر النسخ التلقائي. يمكنك استخدام أمر الطباعة بدلًا منه.');
-    }
-  }
-
-  const stageContent = (() => {
-    if (currentStep === 'certainty') {
-      return (
-        <>
-          <StageHeader
-            id="sd-stage-title"
-            headingRef={stageHeadingRef}
-            eyebrow="01 · مستوى الوضوح"
-            title="من أين تريد أن نبدأ؟"
-          />
-          <p className="sd-stage-lead">
-            لا توجد إجابة أفضل من أخرى. اختيارك يغيّر طول المسار والأسئلة التالية.
-          </p>
-          <div
-            className="sd-certainty-options"
-            role="radiogroup"
-            aria-label="مستوى وضوح متطلبات المشروع"
-            aria-invalid={Boolean(errors.certainty)}
-            tabIndex={errors.certainty ? -1 : undefined}
-          >
-            {certaintyOptions.map((option, index) => {
-              const selected = draft.certainty === option.value;
-              return (
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  tabIndex={selected || (!draft.certainty && index === 0) ? 0 : -1}
-                  key={option.value}
-                  className={selected ? 'is-selected' : ''}
-                  onKeyDown={handleRovingRadioKeyDown}
-                  onClick={() => selectCertainty(option.value)}
-                >
-                  <bdi>{option.marker}</bdi>
-                  <span>
-                    <strong>{option.label}</strong>
-                    <small>{option.description}</small>
-                  </span>
-                  <i aria-hidden="true">{selected ? <Check /> : null}</i>
-                </button>
-              );
-            })}
-          </div>
-          {errors.certainty ? (
-            <p className="sd-field__error" role="alert">
-              {errors.certainty}
-            </p>
-          ) : null}
-        </>
-      );
-    }
-
-    if (currentStep === 'foundation') {
-      return (
-        <>
-          <StageHeader
-            id="sd-stage-title"
-            headingRef={stageHeadingRef}
-            eyebrow="02 · تعريف الحاجة"
-            title="ما الذي يستحق أن يتغيّر؟"
-          />
-          <p className="sd-stage-lead">{stageIntros.foundation}</p>
-          <Field label="الهدف الرئيسي" error={errors.objective}>
-            <div className="sd-objective-options" role="group" aria-label="أهداف مقترحة">
-              {objectiveOptions.map((option) => (
-                <button
-                  type="button"
-                  key={option}
-                  aria-pressed={draft.objective === option}
-                  className={draft.objective === option ? 'is-selected' : ''}
-                  onClick={() => updateDraft('objective', option)}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-            <input
-              id="sd-objective"
-              type="text"
-              dir="auto"
-              value={draft.objective}
-              aria-label="الهدف الرئيسي بصياغتك"
-              aria-invalid={Boolean(errors.objective)}
-              placeholder="أو اكتب الهدف بصياغتك…"
-              onChange={(event) => updateDraft('objective', event.target.value)}
-            />
-          </Field>
-          <TextField
-            id="sd-current-problem"
-            label="المشكلة الحالية"
-            value={draft.currentProblem}
-            error={errors.currentProblem}
-            placeholder="ما الذي يحدث اليوم وتريد تغييره؟"
-            onChange={(value) => updateDraft('currentProblem', value)}
-          />
-          <ChoiceSet
-            label="النشاط أو المجال"
-            options={domainOptions}
-            value={draft.domain}
-            onChange={(value) => updateDraft('domain', value)}
-          />
-        </>
-      );
-    }
-
-    if (currentStep === 'people-outcomes') {
-      return (
-        <>
-          <StageHeader
-            id="sd-stage-title"
-            headingRef={stageHeadingRef}
-            eyebrow="03 · سياق الاستخدام"
-            title="لمن؟ وماذا يجب أن يتحسن؟"
-          />
-          <p className="sd-stage-lead">{stageIntros['people-outcomes']}</p>
-          <TextField
-            id="sd-users"
-            label="المستخدمون المقصودون"
-            value={draft.intendedUsers}
-            optional
-            placeholder="مثال: فريق العمليات، عملاء جدد، شركاء…"
-            onChange={(value) => updateDraft('intendedUsers', value)}
-          />
-          <TextField
-            id="sd-outcomes"
-            label="النتائج المتوقعة"
-            value={draft.expectedOutcomes}
-            optional
-            placeholder="ما النتيجة التي ستجعل المشروع مفيدًا؟ دون أرقام غير مؤكدة."
-            onChange={(value) => updateDraft('expectedOutcomes', value)}
-          />
-          <TextField
-            id="sd-workflows"
-            label="أهم سير عمل"
-            value={draft.importantWorkflows}
-            optional
-            placeholder="رحلة أو إجراء يجب أن يعمل بوضوح…"
-            onChange={(value) => updateDraft('importantWorkflows', value)}
-          />
-        </>
-      );
-    }
-
-    if (currentStep === 'configuration') {
-      return (
-        <>
-          <StageHeader
-            id="sd-stage-title"
-            headingRef={stageHeadingRef}
-            eyebrow="04 · قرار الحل"
-            title="ما الذي اخترته؟ وما الذي ما زال احتمالًا؟"
-          />
-          <p className="sd-stage-lead">{stageIntros.configuration}</p>
-          <TextField
-            id="sd-family"
-            label="الحل أو العائلة المقترحة"
-            value={draft.recommendedFamily}
-            optional={draft.certainty !== 'configured' && draft.certainty !== 'detailed'}
-            error={errors.recommendedFamily}
-            multiline={false}
-            placeholder="اسم العائلة أو الاتجاه إن كان معروفًا"
-            onChange={(value) => updateDraft('recommendedFamily', value)}
-          />
-          <ListField
-            id="sd-selected-capabilities"
-            label="قدرات حُسمت مبدئيًا"
-            value={draft.selectedCapabilities}
-            optional
-            placeholder={'بوابة خدمة\nإدارة طلبات'}
-            onChange={(value) => updateDraft('selectedCapabilities', value)}
-          />
-          <ListField
-            id="sd-optional-capabilities"
-            label="قدرات اختيارية"
-            value={draft.optionalCapabilities}
-            optional
-            placeholder={'تقارير إضافية\nتجربة متعددة اللغات'}
-            onChange={(value) => updateDraft('optionalCapabilities', value)}
-          />
-          <ListField
-            id="sd-uncertain-capabilities"
-            label="قدرات غير محسومة"
-            value={draft.uncertainCapabilities}
-            optional
-            placeholder="أي قدرة تحتاج مقارنة أو تحققًا"
-            onChange={(value) => updateDraft('uncertainCapabilities', value)}
-          />
-          <ChoiceSet
-            label="تفضيل التكوين"
-            options={configurationOptions}
-            value={draft.configurationPreference}
-            onChange={(value) => updateDraft('configurationPreference', value)}
-          />
-        </>
-      );
-    }
-
-    if (currentStep === 'dependencies') {
-      return (
-        <>
-          <StageHeader
-            id="sd-stage-title"
-            headingRef={stageHeadingRef}
-            eyebrow="05 · محيط المشروع"
-            title="ما الذي قد يعتمد عليه النطاق؟"
-          />
-          <p className="sd-stage-lead">{stageIntros.dependencies}</p>
-          <TextField
-            id="sd-existing-systems"
-            label="أنظمة قائمة"
-            value={draft.existingSystems}
-            optional
-            placeholder="أسماء أو أوصاف الأنظمة ذات الصلة"
-            onChange={(value) => updateDraft('existingSystems', value)}
-          />
-          <TextField
-            id="sd-integrations"
-            label="تكاملات تحتاج تحققًا"
-            value={draft.integrations}
-            optional
-            hint="ذكر النظام هنا لا يعني تأكيد دعم التكامل معه."
-            placeholder="أنظمة أو مزودون أو قنوات ينبغي فحصها"
-            onChange={(value) => updateDraft('integrations', value)}
-          />
-          <ListField
-            id="sd-dependencies"
-            label="تبعيات معروفة"
-            value={draft.dependencies}
-            optional
-            placeholder={'قرار من فريق آخر\nوصول إلى مصدر بيانات'}
-            onChange={(value) => updateDraft('dependencies', value)}
-          />
-          <div className="sd-field-pair">
-            <TextField
-              id="sd-data"
-              label="البيانات أو الانتقال"
-              value={draft.dataConsiderations}
-              optional
-              placeholder="مصادر، جودة، نقل أو تنظيف مطلوب"
-              onChange={(value) => updateDraft('dataConsiderations', value)}
-            />
-            <TextField
-              id="sd-content"
-              label="المحتوى"
-              value={draft.contentConsiderations}
-              optional
-              placeholder="محتوى موجود، جديد، متعدد اللغات…"
-              onChange={(value) => updateDraft('contentConsiderations', value)}
-            />
-          </div>
-        </>
-      );
-    }
-
-    if (currentStep === 'preferences') {
-      return (
-        <>
-          <StageHeader
-            id="sd-stage-title"
-            headingRef={stageHeadingRef}
-            eyebrow="06 · حدود النقاش"
-            title="ما التفضيلات التي يجب أن تبقى أمامنا؟"
-          />
-          <p className="sd-stage-lead">{stageIntros.preferences}</p>
-          <ChoiceSet
-            label="تفضيل الميزانية"
-            options={budgetOptions}
-            value={draft.budgetPreference}
-            onChange={(value) => updateDraft('budgetPreference', value)}
-          />
-          <ChoiceSet
-            label="تفضيل التوقيت"
-            options={timingOptions}
-            value={draft.timingPreference}
-            onChange={(value) => updateDraft('timingPreference', value)}
-          />
-          <TextField
-            id="sd-constraints"
-            label="قيود يجب مراعاتها"
-            value={draft.constraints}
-            optional
-            placeholder="سياسات داخلية، وصول، لغة، أجهزة أو حدود أخرى…"
-            onChange={(value) => updateDraft('constraints', value)}
-          />
-          <ListField
-            id="sd-unknowns"
-            label="أسئلة أو مجهولات نحتاج لاكتشافها"
-            value={draft.unknowns}
-            optional
-            placeholder={'من يملك القرار النهائي؟\nهل البيانات جاهزة؟'}
-            onChange={(value) => updateDraft('unknowns', value)}
-          />
-          <TextField
-            id="sd-notes"
-            label="ملاحظات إضافية"
-            value={draft.additionalNotes}
-            optional
-            placeholder="أي سياق لا يناسب الحقول السابقة"
-            onChange={(value) => updateDraft('additionalNotes', value)}
-          />
-        </>
-      );
-    }
-
-    if (currentStep === 'summary' || currentStep === 'complete') {
-      const completed = currentStep === 'complete';
-      return (
-        <>
-          <StageHeader
-            id="sd-stage-title"
-            headingRef={stageHeadingRef}
-            eyebrow={completed ? 'نسخة محلية · جاهزة للمراجعة' : 'قبل الإكمال · راجع وعدّل'}
-            title={completed ? 'ملخصك منظّم في هذه الجلسة' : 'ملخص الاكتشاف الأولي'}
-          />
-          <div className={`sd-local-state${completed ? ' is-complete' : ''}`}>
-            {completed ? <Check aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
-            <p>
-              <strong>
-                {completed
-                  ? 'تم تثبيت نسخة المراجعة محليًا.'
-                  : 'هذا الملخص يتغير فور تعديل قراراتك.'}
-              </strong>
-              <span>
-                لم تُرسل البيانات ولم تُحفظ في خادم. النتيجة إعداد للاكتشاف والنطاق فقط.
-              </span>
-            </p>
-          </div>
-          <div className="sd-summary-actions">
-            <button type="button" onClick={copySummary}>
-              <Clipboard aria-hidden="true" />
-              نسخ الملخص
-            </button>
-            <button type="button" onClick={() => window.print()}>
-              <Printer aria-hidden="true" />
-              طباعة
-            </button>
-          </div>
-          <p className="sd-copy-state" aria-live="polite">
-            {copyState}
-          </p>
-          <div className="sd-summary" aria-label="التصنيف المنظم لملخص الاكتشاف">
-            {summary.groups.map((summaryGroup) => {
-              const content = summaryStatusContent[summaryGroup.status];
-              const editStep = statusEditStep[summaryGroup.status];
-              const canEdit = steps.includes(editStep);
-              return (
-                <section
-                  key={summaryGroup.status}
-                  className={`sd-summary-group sd-summary-group--${summaryGroup.status}`}
-                  data-summary-status={summaryGroup.status}
-                >
-                  <header>
-                    <div>
-                      <bdi>{content.code}</bdi>
-                      <h3>{summaryGroup.label}</h3>
-                    </div>
-                    {canEdit ? (
-                      <button
-                        type="button"
-                        aria-label={`تعديل قسم ${summaryGroup.label}`}
-                        onClick={() => editSummary(editStep)}
-                      >
-                        <Pencil aria-hidden="true" />
-                        تعديل
-                      </button>
-                    ) : null}
-                  </header>
-                  <p>{summaryGroup.description}</p>
-                  {summaryGroup.items.length ? (
-                    <dl>
-                      {summaryGroup.items.map((summaryItem) => (
-                        <div key={summaryItem.label}>
-                          <dt>{summaryItem.label}</dt>
-                          <dd>
-                            {summaryItem.values.map((value) => (
-                              <span key={value} dir="auto">
-                                {value}
-                              </span>
-                            ))}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ) : (
-                    <p className="sd-summary-empty">لم تُسجّل معلومات في هذا التصنيف.</p>
-                  )}
-                </section>
-              );
-            })}
-          </div>
-          <aside className="sd-boundary-note">
-            <strong>حدود هذه النسخة</strong>
-            <span>
-              ليست عرض سعر، أو موعد تسليم، أو ضمان تكامل، أو تأكيد جاهزية إنتاج أو استضافة.
-            </span>
-          </aside>
-        </>
-      );
-    }
-
-    return null;
-  })();
-
-  return (
-    <section
-      className={`start-discovery ${className}`.trim()}
-      dir="rtl"
-      lang="ar"
-      aria-labelledby="start-discovery-title"
-      data-step={currentStep}
-      data-certainty={draft.certainty ?? 'unselected'}
-      data-prefilled={Boolean(prefill)}
-    >
-      <div className="sd-atmosphere" aria-hidden="true" />
-      <div className="sd-shell">
-        <header className="sd-intro">
-          <div>
-            <p className="sd-eyebrow">
-              <span aria-hidden="true" />
-              GS / START · DISCOVERY
-            </p>
-            <h1 id="start-discovery-title" data-route-focus tabIndex={-1}>حوّل الفكرة غير المكتملة إلى بداية واضحة.</h1>
-          </div>
-          <div className="sd-intro__copy">
-            <p>
-              مسار قصير يتكيّف مع مقدار ما تعرفه الآن، ويبني ملخصًا مهنيًا قابلًا للمراجعة.
-            </p>
-            <small>
-              مرحلة إعداد للنطاق — لا إرسال، لا تسعير نهائي، ولا وعد بموعد.
-            </small>
-          </div>
-        </header>
-
-        {prefill ? (
-          <div className="sd-prefill-banner" role="status">
-            <CornerDownLeft aria-hidden="true" />
-            <p>
-              <strong>تم حمل سياق سابق إلى هذه الصفحة.</strong>
-              <span>
-                راجعه وعدّله بحرية
-                {draft.prefillSource?.label ? ` · ${draft.prefillSource.label}` : ''}.
-              </span>
-              {carriedFactSummary ? (
-                <span data-carried-facts="true">محفوظ للمراجعة · {carriedFactSummary}</span>
-              ) : null}
-            </p>
-            {draft.prefillSource?.referenceId ? (
-              <bdi>{draft.prefillSource.referenceId}</bdi>
-            ) : null}
-          </div>
-        ) : null}
-
-        <div className="sd-mobile-context">
-          <details>
-            <summary>
-              <span>سياق القرار الحالي</span>
-              <bdi>{answeredCount.toString().padStart(2, '0')}</bdi>
-            </summary>
-            <div>
-              <strong>{summary.certaintyLabel}</strong>
-              <span dir="auto">{draft.objective || 'الهدف لم يُحدد بعد'}</span>
-            </div>
-          </details>
+  const discover = (
+    <section className="sfp-stage sfp-discover" aria-labelledby="start-discovery-title">
+      <header className="sfp-stage-heading">
+        <p className="sfp-eyebrow">المرحلة 01 · اكتشف ما يناسبك</p>
+        <h1 id="start-discovery-title" ref={headingRef} tabIndex={-1}>ابدأ بما تريد تغييره، لا باسم منتج جاهز.</h1>
+        <p>قدّم فقط ما يكفي لنكوّن اتجاهًا مفيدًا، ثم اعتمده أنت أو غيّره.</p>
+      </header>
+      {prefill && carriedFacts ? <div className="sfp-carried" data-testid="carried-context"><strong>ما نعرفه من قرارك السابق</strong><p>{carriedFacts}</p></div> : null}
+      {local.discoverStep === 0 ? (
+        <div className="sfp-entry-intents">
+          <h2>كيف تفضّل أن تبدأ؟</h2>
+          {START_ENTRY_INTENTS.map((intent) => <button key={intent.id} type="button" onClick={() => setLocal((current) => ({ ...current, intent: intent.id, discoverStep: 1 }))}><strong>{intent.label}</strong><small>{intent.description}</small><ArrowLeft aria-hidden="true" /></button>)}
         </div>
-
-        <div className="sd-layout">
-          <aside className="sd-context" aria-label="سياق القرار ومسار الاكتشاف">
-            <div className="sd-context__heading">
-              <span>سياق القرار</span>
-              <bdi>{answeredCount.toString().padStart(2, '0')}</bdi>
-            </div>
-            <div className="sd-context__signal">
-              <small>نقطة البداية</small>
-              <strong>{summary.certaintyLabel}</strong>
-              <span dir="auto">{draft.objective || 'الهدف لم يُحدد بعد'}</span>
-            </div>
-            <nav aria-label="مراحل الاكتشاف">
-              <ol>
-                {steps.map((step, index) => {
-                  const active = step === currentStep;
-                  const accessible = active || visited.has(step);
-                  return (
-                    <li key={step} className={active ? 'is-active' : ''}>
-                      <button
-                        type="button"
-                        disabled={!accessible}
-                        aria-current={active ? 'step' : undefined}
-                        onClick={() => accessible && setCurrentStep(step)}
-                      >
-                        <bdi>{String(index + 1).padStart(2, '0')}</bdi>
-                        <span>{stepLabels[step]}</span>
-                        <i aria-hidden="true" />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            </nav>
-            <p className="sd-context__boundary">
-              المجهول هنا جزء من جودة النطاق، لا نقصًا يجب إخفاؤه.
-            </p>
-          </aside>
-
-          <div className="sd-workspace" ref={workspaceRef}>
-            <div className="sd-progress-copy" aria-live="polite">
-              <span>{stepLabels[currentStep]}</span>
-              <bdi>
-                {String(visibleIndex).padStart(2, '0')} / {String(steps.length).padStart(2, '0')}
-              </bdi>
-            </div>
-            <div className="sd-stage">{stageContent}</div>
-
-            <footer className="sd-navigation">
-              <div>
-                {currentStep !== 'certainty' ? (
-                  <button type="button" className="sd-back" onClick={goBack}>
-                    <ArrowRight aria-hidden="true" />
-                    {returnToSummary || currentStep === 'complete'
-                      ? 'العودة إلى الملخص'
-                      : 'السابق'}
-                  </button>
-                ) : (
-                  <span />
-                )}
-              </div>
-              {currentStep !== 'complete' ? (
-                <button type="button" className="sd-next" onClick={goNext}>
-                  <span>
-                    {returnToSummary
-                      ? 'حفظ والعودة إلى الملخص'
-                      : currentStep === 'summary'
-                        ? 'تثبيت نسخة المراجعة'
-                        : steps[currentIndex + 1] === 'summary'
-                          ? 'مراجعة الملخص'
-                          : 'متابعة'}
-                  </span>
-                  <ArrowLeft aria-hidden="true" />
-                </button>
-              ) : null}
-            </footer>
-          </div>
+      ) : null}
+      {local.discoverStep === 1 ? (
+        <div className="sfp-discovery-fields">
+          <label>ما الذي تريد تغييره؟<textarea dir="auto" value={draft.currentProblem} onChange={(event) => patchDraft({ currentProblem: event.target.value })} placeholder="مثال: أريد جعل حجز الخدمة أوضح وأسهل." /></label>
+          <label>من سيستخدم هذا الحل؟<input dir="auto" value={draft.intendedUsers} onChange={(event) => patchDraft({ intendedUsers: event.target.value })} placeholder="العملاء، فريق الخدمة، أو أطراف أخرى" /></label>
+          <label>ما النتيجة التي تريد الوصول إليها؟<textarea dir="auto" value={draft.objective} onChange={(event) => patchDraft({ objective: event.target.value })} placeholder="صف النتيجة التي تهمك بجملة قصيرة." /></label>
+          <button type="button" className="sfp-primary" disabled={!draft.currentProblem.trim()} onClick={buildRecommendation}>ابنِ اتجاهًا أوليًا <ArrowLeft /></button>
         </div>
+      ) : null}
+      {local.discoverStep === 2 ? (
+        <div className="sfp-recommendation-grid">
+          <main>
+            <div className="sfp-recommendation" data-testid="system-recommendation">
+              <span>ما نوصي به</span><h2>{getStartFamily(local.recommended).title}</h2><p>نعتقد أن هذا الاتجاه يناسب ما نعرفه الآن؛ التوصية ليست اختيارًا نيابةً عنك.</p>
+              <AssetSlot asset={getFamilyVisualAsset(getFamilyAssetId(local.recommended, 'MASTER'))} alt={`مشهد عائلة ${getStartFamily(local.recommended).title}`} />
+            </div>
+            <div className="sfp-user-selection" data-testid="user-selection"><span>اختيارك</span><strong>{local.selected ? getStartFamily(local.selected).title : 'لم تعتمد اتجاهًا بعد.'}</strong></div>
+            <div className="sfp-budget"><span>{PROVISIONAL_START_PRICING.label}</span><strong><bdi dir="ltr">USD {formatBudgetBand(false)}</bdi></strong><small>{PROVISIONAL_START_PRICING.disclaimer}</small></div>
+            <button type="button" className="sfp-primary" onClick={() => { chooseFamily(local.selected ?? local.recommended); setStage('build'); }}>اختر هذا الاتجاه <ArrowLeft /></button>
+            <details className="sfp-family-explorer"><summary>قارن أو اختر اتجاهًا آخر</summary><div>{startFamilies.map((family) => <button key={family.id} type="button" aria-pressed={local.selected === family.id} onClick={() => chooseFamily(family.id)}><bdi>{family.number}</bdi><span><strong>{family.title}</strong><small>{family.cue}</small></span>{local.selected === family.id ? <Check /> : null}</button>)}</div></details>
+          </main>
+          <Pulse goal={goal} recommended={local.recommended} selected={local.selected} budget={formatBudgetBand(false)} />
+        </div>
+      ) : null}
+    </section>
+  );
+
+  const build = (
+    <section className="sfp-stage sfp-build" aria-labelledby="start-build-title">
+      <header className="sfp-stage-heading"><p className="sfp-eyebrow">المرحلة 02 · كوّن حلّك</p><h1 id="start-build-title" ref={headingRef} tabIndex={-1}>قرار واحد واضح في كل مرة.</h1><p>{activeFamily.title}</p></header>
+      <div className="sfp-build-layout">
+        <main>
+          <nav className="sfp-journey" aria-label="لحظات رحلة الحل">{journey.map((moment, index) => <span key={moment} data-current={index === Math.min(local.decisionIndex, journey.length - 1) ? 'true' : undefined}><bdi>{String(index + 1).padStart(2, '0')}</bdi>{moment}</span>)}</nav>
+          {currentDecision ? <article className="sfp-decision"><span>القرار الحالي</span><h2>{currentDecision.question}</h2><RadioGroup label={currentDecision.question}>{currentDecision.answers.map((answer) => { const selected = currentAnswer === answer.id; return <button key={answer.id} type="button" role="radio" aria-checked={selected} className={selected ? 'is-selected' : ''} onClick={() => selectAnswer(answer.id)}><i aria-hidden="true">{selected ? <Check /> : null}</i><span><strong>{answer.label}</strong><small>{answer.detail}</small></span></button>; })}</RadioGroup></article> : null}
+          {currentConsequence ? <section className="sfp-consequence" data-testid="decision-consequence" aria-labelledby="sfp-consequence-title"><span>الأثر الفوري</span><h2 id="sfp-consequence-title">ماذا يتغير؟</h2><div><article><strong>للعميل</strong><p>{currentConsequence.customer}</p></article><article><strong>في الحل</strong><p>{currentConsequence.solution}</p></article><article><strong>في المشروع</strong><p>{currentConsequence.project}</p></article></div></section> : null}
+          <section className="sfp-experience" aria-labelledby="sfp-experience-title"><span>اتجاه التجربة</span><h2 id="sfp-experience-title">كيف تريد أن يستخدم العميل الحل؟</h2><RadioGroup label="اتجاه تجربة العميل">{startConfigurationDirections.map((direction, index) => <button key={direction.id} type="button" role="radio" aria-checked={local.experience === direction.id} className={local.experience === direction.id ? 'is-selected' : ''} onClick={() => { setLocal((current) => ({ ...current, experience: direction.id })); patchDraft({ configurationPreference: direction.title }); }}><span><small>{index === 0 ? 'موصى به' : 'بديل'}</small><strong>{direction.shortLabel}</strong><em>{direction.description}</em></span></button>)}</RadioGroup></section>
+          <div className="sfp-build-actions"><button ref={exampleTrigger} type="button" className="sfp-example" onClick={() => setDrawerOpen(true)}><Eye /> شاهد مثالًا</button><button type="button" className="sfp-primary" disabled={Boolean(currentDecision && !currentAnswer)} onClick={nextBuild}>{local.decisionIndex < decisions.length - 1 ? 'تابع إلى القرار التالي' : 'احفظ التكوين وتابع'} <ArrowLeft /></button></div>
+        </main>
+        <Pulse goal={goal} recommended={local.recommended} selected={activeFamilyId} budget={budgetBand} reviewNeeds={reviewNeeds} />
+      </div>
+      <Drawer open={drawerOpen} asset={contextAsset} familyTitle={activeFamily.title} onClose={() => setDrawerOpen(false)} trigger={exampleTrigger} />
+    </section>
+  );
+
+  const selectedCapabilityNames = unique([
+    ...activeFamily.capabilities.filter((capability) => capability.classification === 'CORE').map((capability) => capability.name),
+    ...draft.capabilitySelections.filter((selection) => selection.provenance === 'USER_SELECTED').map((selection) => selection.name),
+  ]);
+  const externalNeeds = decisions.filter((decision) => local.answers[decision.id] === 'yes' && getDecisionConsequence(activeFamilyId, decision, 'yes').material).map((decision) => decision.capabilityName);
+
+  const review = (
+    <section className="sfp-stage sfp-review" aria-labelledby="start-review-title">
+      <header className="sfp-stage-heading"><p className="sfp-eyebrow">المرحلة 03 · راجع وابدأ</p><h1 id="start-review-title" ref={headingRef} tabIndex={-1}>مشروعك أصبح واضحًا بما يكفي للبدء</h1><p>راجع ما حددته، وما بقي للمراجعة، ثم ابدأ المشروع بهذا المخطط.</p></header>
+      <div className="sfp-review-layout">
+        <main className="sfp-blueprint" data-testid="project-blueprint" aria-labelledby="sfp-blueprint-title"><div className="sfp-blueprint-head"><div><span>مخطط مشروعك</span><h2 id="sfp-blueprint-title">{activeFamily.title}</h2></div><AssetSlot asset={masterAsset} alt={`مشهد داعم لعائلة ${activeFamily.title}`} /></div><div className="sfp-blueprint-flow">{journey.map((moment, index) => <details key={moment} open={index < 3}><summary><bdi>{String(index + 1).padStart(2, '0')}</bdi><strong>{moment}</strong></summary><p>{activeFamily.operatingLoop[index % activeFamily.operatingLoop.length]}</p>{index === 0 ? <small>اتجاه التجربة: {experienceDirection.shortLabel}</small> : null}{index === 1 ? <small>النطاق: {selectedCapabilityNames.join('، ')}</small> : null}{index === journey.length - 1 && externalNeeds.length ? <small>خدمات خارجية تحتاج مراجعة: {externalNeeds.join('، ')}</small> : null}</details>)}</div></main>
+        <aside className="sfp-project-summary" data-testid="project-summary" aria-labelledby="sfp-summary-title"><span>ملخص واحد للمشروع</span><h2 id="sfp-summary-title">ما الذي سنبدأ منه؟</h2><dl><div><dt>الحل المختار</dt><dd>{activeFamily.title}</dd></div><div><dt>اتجاه التجربة</dt><dd>{experienceDirection.shortLabel}</dd></div><div><dt>النطاق</dt><dd>{selectedCapabilityNames.join('، ')}</dd></div><div><dt>الميزانية التقريبية</dt><dd><bdi dir="ltr">USD {budgetBand}</bdi><small>{PROVISIONAL_START_PRICING.disclaimer}</small></dd></div>{externalNeeds.length ? <div><dt>خدمات خارجية</dt><dd>{externalNeeds.join('، ')}</dd></div> : null}</dl>{reviewNeeds.length ? <section className="sfp-review-needs"><h3>ما الذي سنراجعه معك؟</h3><ul>{reviewNeeds.map((item) => <li key={item}>{item}</li>)}</ul></section> : null}<section className="sfp-ready"><Check aria-hidden="true" /><div><h3>يمكنك المتابعة</h3><p>مشروعك واضح بما يكفي للبدء، وهناك بعض التفاصيل التي سنراجعها معك قبل تثبيت النطاق النهائي.</p></div></section><div className="sfp-final-actions"><button type="button" className="sfp-primary" onClick={complete}>ابدأ المشروع بهذا المخطط <ArrowLeft /></button><button type="button" className="sfp-secondary" onClick={() => setStage('build')}>عدّل مشروعك</button><p>المعلومات التي أدخلتها ستنتقل إلى موجز المشروع لاحقًا، ولن تحتاج إلى إدخالها من جديد.</p>{completed ? <p role="status">تم تجهيز المخطط محليًا للخطوة التالية.</p> : null}</div></aside>
       </div>
     </section>
+  );
+
+  return (
+    <div className={`start-discovery sfp-start ${className}`.trim()} dir="rtl" data-stage={local.stage} data-major-stage-count="3" data-prefilled={prefill ? 'true' : 'false'} data-certainty={prefill ? 'configured' : 'exploring'} data-recommended-family={local.recommended} data-selected-family={local.selected ?? ''} data-family-code={`FAM-${familyCode}`}>
+      <div className="sfp-shell"><StageRail current={local.stage} furthest={local.furthest} onChange={setStage} />{local.stage === 'discover' ? discover : null}{local.stage === 'build' ? build : null}{local.stage === 'review' ? review : null}</div>
+    </div>
   );
 }
