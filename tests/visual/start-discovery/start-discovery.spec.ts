@@ -11,7 +11,8 @@ const evidenceDirectory = resolve(
 );
 
 async function openStart(page: Page, query = '') {
-  await page.addInitScript(() => window.sessionStorage.removeItem('gs-start-frozen-product-v1'));
+  await page.goto(previewPath);
+  await page.evaluate(() => window.sessionStorage.removeItem('gs-start-frozen-product-v1'));
   await page.goto(`${previewPath}${query}`);
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator('.start-discovery')).toBeVisible();
