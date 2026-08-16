@@ -322,6 +322,7 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
         <div className="sfp-entry-intents" role="radiogroup" aria-label="نقطة الدخول إلى الاكتشاف">
           <h2>كيف تفضّل أن تبدأ؟</h2>
           {START_ENTRY_INTENTS.map((intent) => <button key={intent.id} type="button" role="radio" aria-checked={local.intent === intent.id} onKeyDown={(event) => { if (event.key === ' ') { event.preventDefault(); setLocal((current) => ({ ...current, intent: intent.id })); } }} onClick={() => setLocal((current) => ({ ...current, intent: intent.id, discoverStep: 1 }))}><strong>{intent.label}</strong><small>{intent.description}</small>{local.intent === intent.id ? <Check aria-hidden="true" /> : <ArrowLeft aria-hidden="true" />}</button>)}
+          <div className="sfp-entry-footer"><button type="button" className="sfp-primary" disabled={!local.intent} onClick={() => setLocal((current) => ({ ...current, discoverStep: 1 }))}>متابعة <ArrowLeft aria-hidden="true" /></button></div>
         </div>
       ) : null}
       {local.discoverStep === 1 ? (
