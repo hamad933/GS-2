@@ -35,6 +35,42 @@ async function capture(page: Page, name: string, fullPage = true) {
   });
 }
 
+async function reachStartRecommendation(page: Page) {
+  await page.goto('/start');
+  await page.evaluate(() => window.sessionStorage.removeItem('gs-start-frozen-product-v1'));
+  await open(page, '/start', '#start-discovery-title');
+  await page.getByRole('radio', { name: /ساعدني على اكتشاف ما أحتاج/ }).click();
+  await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+  await page.getByLabel('ما الذي تريد تغييره؟').fill('أريد تنظيم الحجز والمواعيد للعملاء');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('من سيستخدم هذا الحل؟').fill('العملاء وفريق الخدمة');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('رحلة حجز أوضح بخطوات أقل');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('ما السياق التشغيلي الذي يجب أن نعرفه؟').fill('خدمة بمواعيد يديرها فريق داخلي');
+  await page.getByRole('button', { name: /ابنِ اتجاهًا أوليًا/ }).click();
+  await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('الحجوزات والخدمات');
+}
+
+async function reachMeaningfulStartBuild(page: Page) {
+  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
+  await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
+  await page.locator('.sfp-decision [role="radio"]').first().click();
+  await page.locator('.sfp-experience [role="radio"]').first().click();
+  await expect(page.locator('[data-testid="decision-consequence"]')).toBeVisible();
+}
+
+async function finishStartBuild(page: Page) {
+  while ((await page.locator('.start-discovery').getAttribute('data-stage')) === 'build') {
+    const decision = page.locator('.sfp-decision [role="radio"]').first();
+    if (await decision.count()) await decision.click();
+    await page.getByRole('button', { name: /تابع في الرحلة|احفظ التكوين وتابع/ }).click();
+  }
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'review');
+  await expect(page.locator('[data-testid="project-blueprint"]')).toBeVisible();
+}
+
 async function chooseFinderOption(page: Page, name: string, last = false) {
   await page.getByRole('radio', { name: new RegExp(name) }).click();
   await page.getByRole('button', { name: last ? /بناء الاتجاه/ : /السؤال التالي/ }).click();
@@ -96,6 +132,21 @@ for (const [width, height] of [[1440, 900], [390, 844]] as const) {
     await expect(page).toHaveURL(/\/start$/);
     await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
     await capture(page, `w05-${width}-start-solutions-prefill.png`);
+  });
+}
+
+for (const [width, height] of [[1440, 900], [768, 1024], [390, 844]] as const) {
+  test(`captures integrated START R3 decision states at ${width}px`, async ({ page }) => {
+    test.slow();
+    await page.setViewportSize({ width, height });
+    await reachStartRecommendation(page);
+    await capture(page, `w01-r3-${width}-start-discover.png`);
+
+    await reachMeaningfulStartBuild(page);
+    await capture(page, `w01-r3-${width}-start-build.png`);
+
+    await finishStartBuild(page);
+    await capture(page, `w01-r3-${width}-start-review.png`);
   });
 }
 
