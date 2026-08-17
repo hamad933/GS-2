@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { SolutionsDecisionWorkspace } from '../features/solutions';
-import { createStartDiscoveryRouteState } from '../integration/solutionsToDiscovery';
+import { SolutionsExploration } from '../features/solutions';
+import { createStartDiscoveryRouteStateFromExploration } from '../integration/solutionsToDiscovery';
 import { RouteReadySignal } from './RouteReadySignal';
 import './integratedPublicPages.css';
 
@@ -9,11 +9,18 @@ export default function SolutionsRoute() {
 
   return (
     <RouteReadySignal>
-      <div className="integrated-public-page integrated-public-page--solutions">
-        <SolutionsDecisionWorkspace
-          onStartDiscovery={(snapshot) => {
-            navigate('/start', { state: createStartDiscoveryRouteState(snapshot) });
+      <div
+        className="integrated-public-page integrated-public-page--solutions"
+        data-route-focus
+        tabIndex={-1}
+      >
+        <SolutionsExploration
+          onStartFamily={(familyId, origin) => {
+            navigate('/start', {
+              state: createStartDiscoveryRouteStateFromExploration(familyId, origin),
+            });
           }}
+          onDiscover={() => navigate('/start')}
         />
       </div>
     </RouteReadySignal>

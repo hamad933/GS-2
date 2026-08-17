@@ -1,10 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const WORKSPACE = '#solutions-decision-workspace';
+const SOLUTIONS = '#solutions-exploration';
+const SOLUTIONS_ROUTE_FOCUS = '.integrated-public-page--solutions';
 
 const publicRoutes = [
   { path: '/', focus: '#main-content' },
-  { path: '/solutions', focus: '#gsdw-entry-title' },
+  { path: '/solutions', focus: SOLUTIONS_ROUTE_FOCUS },
   { path: '/reference-projects', focus: '#reference-projects-title' },
   { path: '/how-we-work', focus: '#how-we-work-title' },
   { path: '/start', focus: '#start-discovery-title' },
@@ -36,41 +37,8 @@ async function openRoute(page: Page, path: string, focus: string) {
 }
 
 async function openSolutions(page: Page) {
-  await openRoute(page, '/solutions', '#gsdw-entry-title');
-  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-step', 'entry');
-}
-
-async function chooseFinderOption(page: Page, name: string, last = false) {
-  await page.getByRole('radio', { name: new RegExp(name) }).click();
-  await page.getByRole('button', { name: last ? /بناء الاتجاه/ : /السؤال التالي/ }).click();
-}
-
-async function reachPortalRecommendation(page: Page) {
-  await openSolutions(page);
-  await page.getByRole('button', { name: /ساعدني أكتشف ما أحتاجه/ }).click();
-  await chooseFinderOption(page, 'تنظيم عمل وطلبات داخلية');
-  await chooseFinderOption(page, 'عمليات وفرق');
-  await chooseFinderOption(page, 'فريق داخلي');
-  await page.getByRole('radio', { name: /أنظمة أو تكاملات مهمة/ }).click();
-  await page.getByPlaceholder(/نظام قائم/).fill('نظام داخلي قائم يحتاج تحققًا تقنيًا');
-  await page.getByRole('button', { name: /بناء الاتجاه/ }).click();
-  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-family', 'portals');
-}
-
-async function reachDecisionSummary(page: Page) {
-  await reachPortalRecommendation(page);
-  await page.getByRole('button', { name: /تكوين الاتجاه/ }).click();
-  await page.getByRole('button', { name: /تكاملات وهوية وصلاحيات متقدمة/ }).click();
-  await page.getByRole('button', { name: /مقارنة اتجاه التكوين/ }).click();
-  await page.getByRole('radio', { name: /ربط عدة مسارات مترابطة/ }).click();
-  await page.getByRole('button', { name: /إضافة القيود والميزانية/ }).click();
-  await page.getByRole('radio', { name: /مرونة حسب القيمة/ }).click();
-  await page.getByPlaceholder('اكتب النطاق أو القيد بصيغتك').fill(
-    'نطاق يحدده صاحب القرار بعد مراجعة الاعتمادات',
-  );
-  await page.getByText('عملية تشغيل قابلة للوصف', { exact: true }).click();
-  await page.getByRole('button', { name: /إنتاج ملخص القرار/ }).click();
-  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-step', 'summary');
+  await openRoute(page, '/solutions', SOLUTIONS_ROUTE_FOCUS);
+  await expect(page.locator(SOLUTIONS)).toHaveAttribute('data-mode', 'explore');
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -97,7 +65,7 @@ test('supports direct production entry to every public destination', async ({ pa
 test('header navigation reaches every accepted production route', async ({ page }) => {
   await openRoute(page, '/', '#main-content');
   for (const [label, path, focus] of [
-    ['الحلول', '/solutions', '#gsdw-entry-title'],
+    ['الحلول', '/solutions', SOLUTIONS_ROUTE_FOCUS],
     ['المشاريع المرجعية', '/reference-projects', '#reference-projects-title'],
     ['كيف نعمل', '/how-we-work', '#how-we-work-title'],
     ['الرئيسية', '/', '#main-content'],
@@ -114,7 +82,7 @@ test('header navigation reaches every accepted production route', async ({ page 
 
 test('mobile navigation supports Escape, active state, and route activation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await openRoute(page, '/solutions', '#gsdw-entry-title');
+  await openRoute(page, '/solutions', SOLUTIONS_ROUTE_FOCUS);
   const openButton = page.getByRole('button', { name: 'فتح قائمة التنقل' });
   await openButton.focus();
   await page.keyboard.press('Enter');
@@ -133,7 +101,7 @@ test('mobile navigation supports Escape, active state, and route activation', as
 
 test('browser Back and Forward restore routes, focus, and saved scroll', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 560 });
-  await openRoute(page, '/solutions', '#gsdw-entry-title');
+  await openRoute(page, '/solutions', SOLUTIONS_ROUTE_FOCUS);
   await page.evaluate(() => window.scrollTo(0, 360));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
   await page.evaluate(() => document.querySelector<HTMLAnchorElement>('.hero-nav__links a[href="/how-we-work"]')?.click());
@@ -141,7 +109,7 @@ test('browser Back and Forward restore routes, focus, and saved scroll', async (
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   await page.goBack();
   await expect(page).toHaveURL(/\/solutions$/);
-  await expect(page.locator('#gsdw-entry-title')).toBeFocused();
+  await expect(page.locator(SOLUTIONS_ROUTE_FOCUS)).toBeFocused();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
   await page.goForward();
   await expect(page).toHaveURL(/\/how-we-work$/);
@@ -158,84 +126,114 @@ test('404 is branded, recoverable, and keeps navigation live', async ({ page }) 
 
 test('homepage protected sections remain present and interactive', async ({ page }) => {
   await openRoute(page, '/', '#main-content');
-  for (const selector of ['#hero', '#solutions-universe', '#reference-proof', '#system-anatomy', '#project-gateway']) await expect(page.locator(selector)).toBeVisible();
+  for (const selector of ['#hero', '#solutions-universe', '#reference-proof', '#system-anatomy', '#project-gateway']) {
+    await expect(page.locator(selector)).toBeVisible();
+  }
   await page.locator('#solutions-universe').locator('.s02-station-5').click();
   await expect(page.locator('#solutions-universe')).toHaveAttribute('data-active', 'portals');
   await page.locator('#reference-proof').locator('[data-project-selector="rp04"]').click();
   await expect(page.locator('#reference-proof')).toHaveAttribute('data-project', 'rp04');
 });
 
-test('Solutions keeps all three entry modes in the real route', async ({ page }) => {
+test('Solutions exposes all six accepted families inside one exploration route', async ({ page }) => {
   await openSolutions(page);
-  for (const [label, mode] of [
-    ['ساعدني أكتشف ما أحتاجه', 'discover'],
-    ['أعرف تقريبًا ما أحتاجه', 'direction'],
-    ['أريد مقارنة الخيارات', 'compare'],
-  ] as const) {
-    await page.getByRole('button', { name: new RegExp(label) }).click();
-    await expect(page.locator(WORKSPACE)).toHaveAttribute('data-mode', mode);
-    await page.getByRole('button', { name: 'تغيير نقطة البداية' }).click();
-    await expect(page.locator(WORKSPACE)).toHaveAttribute('data-step', 'entry');
+  const titles = [
+    'مواقع الأعمال والخدمات',
+    'التجارة الرقمية وتجارب العلامات',
+    'الحجوزات والخدمات',
+    'العقارات والأصول',
+    'الأنظمة التشغيلية والبوابات',
+    'التعليم والمعرفة والمحتوى',
+  ];
+  await expect(page.getByRole('tab')).toHaveCount(6);
+  for (const title of titles) {
+    const family = page.getByRole('tab', { name: new RegExp(title) });
+    await family.click();
+    await expect(family).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tabpanel').getByRole('heading', { name: title, exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/solutions$/);
   }
 });
 
-test('Solutions exposes all six accepted families without leaving the route', async ({ page }) => {
+test('Solutions selected family stays product-led and bounded', async ({ page }) => {
   await openSolutions(page);
-  await page.getByRole('button', { name: /أعرف تقريبًا ما أحتاجه/ }).click();
-  for (const title of ['مواقع الأعمال والخدمات', 'التجارة الرقمية وتجارب العلامات', 'الحجوزات والخدمات', 'العقارات والأصول', 'الأنظمة التشغيلية والبوابات', 'التعليم والمعرفة والمحتوى']) {
-    const family = page.getByRole('button', { name: new RegExp(title) });
-    await family.click();
-    await expect(family).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('.gsdw-quick-context')).toBeVisible();
-  }
+  const panel = page.getByRole('tabpanel');
+  await expect(panel.getByRole('heading', { name: 'الحجوزات والخدمات', exact: true })).toBeVisible();
+  await expect(panel.locator('[data-asset-id="FAM-03-MSC-01"]')).toBeVisible();
+  await expect(panel.locator('[data-asset-id^="FAM-03-DIR-"]')).toHaveCount(3);
+  await expect(panel.getByText(/ليست قوالب أو باقات أو منتجات جاهزة للبيع/)).toBeVisible();
+  await expect(panel.getByText(/ليس عرض سعر/)).toBeVisible();
+  await expect(panel.getByText('RP-03 — Booking & Service Operations')).toBeVisible();
+  await expect(page.getByText(/Capability Builder|Project Pulse|تكوين الاتجاه/)).toHaveCount(0);
+});
+
+test('Solutions family navigation keeps keyboard focus and explicit selected state', async ({ page }) => {
+  await openSolutions(page);
+  const booking = page.getByRole('tab', { name: /الحجوزات والخدمات/ });
+  await booking.focus();
+  await page.keyboard.press('ArrowDown');
+  const assets = page.getByRole('tab', { name: /العقارات والأصول/ });
+  await expect(assets).toBeFocused();
+  await expect(assets).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator(SOLUTIONS)).toHaveAttribute('data-family', 'assets');
+});
+
+test('Solutions compare is an in-route bounded state with the central distinction intact', async ({ page }) => {
+  await openSolutions(page);
+  await page.getByRole('button', { name: 'قارن الحجوزات بالتشغيل' }).click();
+  await expect(page.locator(SOLUTIONS)).toHaveAttribute('data-mode', 'compare');
+  await expect(page.locator('.solutions-compare-row')).toHaveCount(5);
+  await expect(page.getByText('رحلة العميل إلى الخدمة والموعد')).toBeVisible();
+  await expect(page.getByText('عمل الفريق والطلبات والسجلات')).toBeVisible();
   await expect(page).toHaveURL(/\/solutions$/);
 });
 
-test('Solutions Finder produces the deterministic recommendation and alternative', async ({ page }) => {
-  await reachPortalRecommendation(page);
-  await expectSkipLinkParked(page);
-  await expect(page.getByRole('heading', { name: 'الأنظمة التشغيلية والبوابات' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'الحجوزات والخدمات' })).toBeVisible();
-  await expect(page.getByText('اتجاه بديل يستحق النظر')).toBeVisible();
-  await expect(page.getByText('عمق التشغيل: أنظمة أو تكاملات مهمة')).toBeVisible();
-});
-
-test('Solutions configuration preserves capabilities, budget, dependencies, and human-readable evidence truth', async ({ page }) => {
-  await reachDecisionSummary(page);
-  await expect(page.getByText('تكاملات وهوية وصلاحيات متقدمة', { exact: true })).toBeVisible();
-  await expect(page.getByText('مرونة حسب القيمة', { exact: true })).toBeVisible();
-  await expect(page.getByText('نطاق يحدده صاحب القرار بعد مراجعة الاعتمادات')).toBeVisible();
-  const unresolved = page.locator('.gsdw-summary-row[data-kind="unknown"]');
-  await expect(unresolved).toHaveCount(1);
-  await expect(unresolved).not.toContainText('اعتماد غير محسوم: عملية تشغيل قابلة للوصف');
-  await expect(page.getByText('مرجع سياقي فقط', { exact: true })).toBeVisible();
-  await expect(page.getByText('REFERENCE_ONLY', { exact: true })).toHaveCount(0);
-});
-
-test('Solutions Decision Summary carries v1 fact context and decision metadata into frozen Start', async ({ page }) => {
-  await reachDecisionSummary(page);
-  await page.getByRole('button', { name: /تجهيز الانتقال إلى Discovery/ }).click();
+test('Solutions selected-family CTA enters frozen START with only selected-family provenance', async ({ page }) => {
+  await openSolutions(page);
+  await page.getByRole('button', { name: 'ابدأ من هذا الاتجاه' }).first().click();
   await expect(page).toHaveURL(/\/start$/);
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-major-stage-count', '3');
   await expectSkipLinkParked(page);
-  await expect(page.locator('[data-testid="carried-context"]')).toContainText('النتيجة: تنظيم عمل وطلبات داخلية');
-  await expect(page.locator('[data-testid="carried-context"]')).toContainText('النشاط: عمليات وفرق');
-  await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('الأنظمة التشغيلية والبوابات');
-  await expect(page.locator('[data-testid="user-selection"]')).toContainText('لم تعتمد اتجاهًا بعد.');
-  await expect(page.getByLabel('ما الذي تريد تغييره؟')).toHaveCount(0);
-
-  const carriedContext = await page.evaluate(() => {
-    const state = window.history.state as { usr?: { discoveryPrefill?: { solutionFamilyId?: string; decisionOrigin?: string; recommendationResolution?: string; capabilitySelections?: Array<{ name: string; provenance: string }> } } } | null;
+  const carried = await page.evaluate(() => {
+    const state = window.history.state as { usr?: { discoveryPrefill?: Record<string, unknown> } } | null;
     return state?.usr?.discoveryPrefill;
   });
-  expect(carriedContext?.solutionFamilyId).toBe('portals');
-  expect(carriedContext?.decisionOrigin).toBe('SYSTEM_FINDER');
-  expect(carriedContext?.recommendationResolution).toBe('decisive');
-  expect(carriedContext?.capabilitySelections?.some((item) => item.name === 'تكاملات وهوية وصلاحيات متقدمة' && item.provenance === 'USER_SELECTED')).toBe(true);
+  expect(carried).toEqual({
+    version: 1,
+    source: { adapter: 'solutions-exploration', label: 'استكشاف الحلول', referenceId: 'booking' },
+    solutionFamilyId: 'booking',
+    decisionOrigin: 'USER_DIRECT',
+  });
+});
 
-  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
+test('Solutions compare action carries USER_COMPARE without capability or fact fabrication', async ({ page }) => {
+  await openSolutions(page);
+  await page.getByRole('button', { name: 'قارن الحجوزات بالتشغيل' }).click();
+  await page.getByRole('button', { name: 'ابدأ من الأنظمة التشغيلية والبوابات' }).click();
+  await expect(page).toHaveURL(/\/start$/);
+  const carried = await page.evaluate(() => {
+    const state = window.history.state as { usr?: { discoveryPrefill?: Record<string, unknown> } } | null;
+    return state?.usr?.discoveryPrefill;
+  });
+  expect(carried).toEqual({
+    version: 1,
+    source: { adapter: 'solutions-exploration', label: 'استكشاف الحلول', referenceId: 'portals' },
+    solutionFamilyId: 'portals',
+    decisionOrigin: 'USER_COMPARE',
+  });
+});
+
+test('Solutions escape hatch enters START Discover without fabricated family selection', async ({ page }) => {
+  await openSolutions(page);
+  await page.getByRole('button', { name: 'لست متأكدًا من الاتجاه؟ ساعدني على الاختيار' }).click();
+  await expect(page).toHaveURL(/\/start$/);
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'false');
+  const carried = await page.evaluate(() => {
+    const state = window.history.state as { usr?: { discoveryPrefill?: unknown } } | null;
+    return state?.usr?.discoveryPrefill;
+  });
+  expect(carried).toBeUndefined();
 });
 
 test('Start direct entry needs no prefill and remains progressively functional', async ({ page }) => {
@@ -283,7 +281,9 @@ test('How We Work exposes all method stages, scope classes, and keyboard behavio
     await page.locator(`[data-method-stage="${stageId}"]`).click();
     await expect(page.locator('.how-we-work-body')).toHaveAttribute('data-active-stage', stageId);
   }
-  for (const scope of ['required', 'included', 'optional', 'conditional', 'custom', 'unknown']) await expect(page.locator(`[data-scope-state="${scope}"]`)).toBeVisible();
+  for (const scope of ['required', 'included', 'optional', 'conditional', 'custom', 'unknown']) {
+    await expect(page.locator(`[data-scope-state="${scope}"]`)).toBeVisible();
+  }
   const first = page.locator('[data-method-stage="discovery"]');
   await first.focus();
   await page.keyboard.press('ArrowDown');
@@ -294,10 +294,10 @@ test('How We Work exposes all method stages, scope classes, and keyboard behavio
 });
 
 test('integrated Arabic and English runs preserve deliberate direction', async ({ page }) => {
-  await openRoute(page, '/solutions', '#gsdw-entry-title');
-  await expect(page.locator(WORKSPACE)).toHaveAttribute('dir', 'rtl');
-  await expect(page.locator('.gsdw-eyebrow').first()).toHaveCSS('direction', 'rtl');
-  await expect(page.locator('.gsdw-brand small')).toHaveCSS('direction', 'ltr');
+  await openRoute(page, '/solutions', SOLUTIONS_ROUTE_FOCUS);
+  await expect(page.locator(SOLUTIONS)).toHaveAttribute('dir', 'rtl');
+  await expect(page.locator('.solutions-eyebrow').first()).toHaveCSS('direction', 'rtl');
+  await expect(page.locator('.solutions-budget strong')).toHaveCSS('direction', 'ltr');
   await openRoute(page, '/reference-projects', '#reference-projects-title');
   await expect(page.locator('.reference-projects-body')).toHaveAttribute('dir', 'rtl');
   await expect(page.locator('.rp-project-selector__code').first()).toHaveCSS('direction', 'ltr');

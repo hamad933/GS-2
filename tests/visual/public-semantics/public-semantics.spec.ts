@@ -1,40 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
 import { referenceProjects } from '../../../src/data/reference-projects';
 import { solutionFamilies } from '../../../src/data/solutions';
+import { mapSolutionsExplorationToDiscovery } from '../../../src/integration/solutionsToDiscovery';
+import { START_DISCOVERY_PREFILL_VERSION } from '../../../src/types/start-discovery';
 
-const WORKSPACE = '#solutions-decision-workspace';
+const SOLUTIONS = '#solutions-exploration';
 const REFERENCE_BODY = '.reference-projects-body';
 const runtimeErrors = new WeakMap<Page, string[]>();
 
 async function open(page: Page, path: string) {
   await page.goto(path);
   await page.evaluate(() => document.fonts.ready);
-}
-
-async function chooseFinderOption(page: Page, name: string) {
-  await page.getByRole('radio', { name: new RegExp(name) }).click();
-  await page.getByRole('button', { name: /السؤال التالي/ }).click();
-}
-
-async function reachDecisionSummary(page: Page) {
-  await open(page, '/solutions');
-  await page.getByRole('button', { name: /ساعدني أكتشف ما أحتاجه/ }).click();
-  await chooseFinderOption(page, 'تنظيم عمل وطلبات داخلية');
-  await chooseFinderOption(page, 'عمليات وفرق');
-  await chooseFinderOption(page, 'فريق داخلي');
-  await page.getByRole('radio', { name: /أنظمة أو تكاملات مهمة/ }).click();
-  await page.getByPlaceholder(/نظام قائم/).fill('نظام داخلي قائم يحتاج تحققًا تقنيًا');
-  await page.getByRole('button', { name: /بناء الاتجاه/ }).click();
-  await page.getByRole('button', { name: /تكوين الاتجاه/ }).click();
-  await page.getByRole('button', { name: /تكاملات وهوية وصلاحيات متقدمة/ }).click();
-  await page.getByRole('button', { name: /مقارنة اتجاه التكوين/ }).click();
-  await page.getByRole('radio', { name: /ربط عدة مسارات مترابطة/ }).click();
-  await page.getByRole('button', { name: /إضافة القيود والميزانية/ }).click();
-  await page.getByRole('radio', { name: /مرونة حسب القيمة/ }).click();
-  await page.getByPlaceholder('اكتب النطاق أو القيد بصيغتك').fill('قيد مالي يحدده صاحب القرار');
-  await page.getByText('عملية تشغيل قابلة للوصف', { exact: true }).click();
-  await page.getByRole('button', { name: /إنتاج ملخص القرار/ }).click();
-  await expect(page.locator(WORKSPACE)).toHaveAttribute('data-step', 'summary');
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -58,22 +34,95 @@ test.afterEach(async ({ page }) => {
   expect(runtimeErrors.get(page) ?? []).toEqual([]);
 });
 
-test('preserves the six solution families and the bounded capability classifications', () => {
-  expect(solutionFamilies).toHaveLength(6);
-  expect(solutionFamilies.map((family) => family.id)).toEqual([
-    'business',
-    'commerce',
-    'booking',
-    'assets',
-    'portals',
-    'knowledge',
+test('preserves the canonical six solution families and underlying domain classifications', () => {
+  expect(solutionFamilies.map(({ id, title }) => [id, title])).toEqual([
+    ['business', 'مواقع الأعمال والخدمات'],
+    ['commerce', 'التجارة الرقمية وتجارب العلامات'],
+    ['booking', 'الحجوزات والخدمات'],
+    ['assets', 'العقارات والأصول'],
+    ['portals', 'الأنظمة التشغيلية والبوابات'],
+    ['knowledge', 'التعليم والمعرفة والمحتوى'],
   ]);
-
   const classifications = new Set(
     solutionFamilies.flatMap((family) => family.capabilities.map((capability) => capability.classification)),
   );
   expect([...classifications].sort()).toEqual(['CONDITIONAL', 'CORE', 'CUSTOM', 'OPTIONAL', 'RECOMMENDED']);
-  expect(solutionFamilies.flatMap((family) => family.capabilities).every((capability) => !('id' in capability))).toBe(true);
+});
+
+test('renders the six-family Arabic exploration without exposing configurator classifications', async ({ page }) => {
+  await open(page, '/solutions');
+  await expect(page.locator(SOLUTIONS)).toHaveAttribute('dir', 'rtl');
+  await expect(page.getByRole('tab')).toHaveCount(6);
+  for (const family of solutionFamilies) {
+    await expect(page.getByRole('tab', { name: new RegExp(family.title) })).toBeVisible();
+  }
+  await expect(page.getByText(/Capability Builder|Project Pulse|START stages/)).toHaveCount(0);
+  await expect(page.getByText(/CORE|RECOMMENDED|OPTIONAL/, { exact: false })).toHaveCount(0);
+});
+
+test('selected-family semantics present fit, users, operation, product forms, orientation, and bounded reference truth', async ({ page }) => {
+  await open(page, '/solutions');
+  const panel = page.getByRole('tabpanel');
+  await expect(panel.getByRole('heading', { name: 'الحجوزات والخدمات', exact: true })).toBeVisible();
+  await expect(panel.getByText('متى يناسبني هذا النوع؟')).toBeVisible();
+  await expect(panel.getByText('من يستخدمه؟')).toBeVisible();
+  await expect(panel.getByText('كيف يعمل؟')).toBeVisible();
+  await expect(panel.getByText('ما الذي يمكن أن يتضمنه؟')).toBeVisible();
+  await expect(panel.getByText('أشكال ممكنة يمكن أن يأخذها الحل')).toBeVisible();
+  await expect(panel.getByText(/ليست قوالب أو باقات أو منتجات جاهزة للبيع/)).toBeVisible();
+  await expect(panel.getByText(/ليس عرض سعر/)).toBeVisible();
+  await expect(panel.locator('.solutions-reference')).toHaveAttribute('data-reference-code', 'RP03');
+  await expect(panel.getByText(/RP-03/)).toBeVisible();
+  await expect(panel.getByText('حجز يبدأ من احتياج واضح')).toBeVisible();
+  await expect(panel.locator('[data-asset-id="FAM-03-MSC-01"]')).toBeVisible();
+  await expect(panel.locator('[data-asset-id^="FAM-03-DIR-"]')).toHaveCount(3);
+});
+
+test('exploration handoff keeps START v1 provenance without fabricating customer facts or configuration', () => {
+  expect(mapSolutionsExplorationToDiscovery('booking', 'USER_DIRECT')).toEqual({
+    version: START_DISCOVERY_PREFILL_VERSION,
+    source: {
+      adapter: 'solutions-exploration',
+      label: 'استكشاف الحلول',
+      referenceId: 'booking',
+    },
+    solutionFamilyId: 'booking',
+    decisionOrigin: 'USER_DIRECT',
+  });
+  expect(mapSolutionsExplorationToDiscovery('portals', 'USER_COMPARE')).toEqual({
+    version: START_DISCOVERY_PREFILL_VERSION,
+    source: {
+      adapter: 'solutions-exploration',
+      label: 'استكشاف الحلول',
+      referenceId: 'portals',
+    },
+    solutionFamilyId: 'portals',
+    decisionOrigin: 'USER_COMPARE',
+  });
+});
+
+test('compare preserves the booking-versus-operations distinction without becoming a feature matrix', async ({ page }) => {
+  await open(page, '/solutions');
+  await page.getByRole('button', { name: 'قارن الحجوزات بالتشغيل' }).click();
+  await expect(page.locator(SOLUTIONS)).toHaveAttribute('data-mode', 'compare');
+  await expect(page.getByText('رحلة العميل إلى الخدمة والموعد')).toBeVisible();
+  await expect(page.getByText('عمل الفريق والطلبات والسجلات')).toBeVisible();
+  await expect(page.locator('.solutions-compare-row')).toHaveCount(5);
+  await expect(page.getByRole('button', { name: 'ابدأ من الحجوزات والخدمات' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ابدأ من الأنظمة التشغيلية والبوابات' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'لم أحسم بعد — ارجع إلى جميع الحلول' })).toBeVisible();
+});
+
+test('family browser is keyboard-operable and selection is not color-only', async ({ page }) => {
+  await open(page, '/solutions');
+  const booking = page.getByRole('tab', { name: /الحجوزات والخدمات/ });
+  await booking.focus();
+  await expect(booking).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  const assets = page.getByRole('tab', { name: /العقارات والأصول/ });
+  await expect(assets).toBeFocused();
+  await expect(assets).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator(SOLUTIONS)).toHaveAttribute('data-family', 'assets');
 });
 
 test('preserves exact RP identities, independent state, and absent outbound routes', () => {
@@ -89,10 +138,9 @@ test('preserves exact RP identities, independent state, and absent outbound rout
   ))).toBe(true);
 });
 
-test('renders localized Arabic truth first while retaining machine state as secondary metadata', async ({ page }) => {
+test('renders localized reference truth first while retaining machine state as secondary metadata', async ({ page }) => {
   await open(page, '/reference-projects');
   await expect(page.locator(REFERENCE_BODY)).toHaveAttribute('dir', 'rtl');
-
   for (const projectId of ['rp01', 'rp02', 'rp03', 'rp04']) {
     await page.locator(`[data-project-selector="${projectId}"]`).click();
     const toggle = page.getByRole('button', { name: /سجل الحدود والتحقق/ });
@@ -104,11 +152,9 @@ test('renders localized Arabic truth first while retaining machine state as seco
     ]);
     await expect(page.locator('.rp-ledger__route .rp-state-label[data-state="ROUTE_NOT_CONFIGURED"] > strong')).toHaveText('الرابط المرجعي غير مهيأ بعد');
   }
-
   await expect(page.locator('.rp-state-label > strong').filter({ hasText: /^ROUTE_NOT_CONFIGURED$/ })).toHaveCount(0);
   await expect(page.locator('.rp-state-label > small').filter({ hasText: /^ROUTE_NOT_CONFIGURED$/ }).first()).toBeVisible();
   await expect(page.locator(`${REFERENCE_BODY} a[href]`)).toHaveCount(0);
-
   const hierarchy = await page.locator('.rp-ledger__route .rp-state-label').evaluate((label) => {
     const primary = label.querySelector('strong');
     const technical = label.querySelector('small');
@@ -120,7 +166,7 @@ test('renders localized Arabic truth first while retaining machine state as seco
   expect(hierarchy.primary).toBeGreaterThan(hierarchy.technical);
 });
 
-test('renders natural English labels and preserves LTR identifiers', async ({ page }) => {
+test('renders natural English reference labels and preserves LTR identifiers', async ({ page }) => {
   await open(page, '/tests/visual/fixtures/reference-projects/index.html?locale=en');
   await expect(page.locator(REFERENCE_BODY)).toHaveAttribute('dir', 'ltr');
   await expect(page.locator('[data-project-selector="rp02"]')).toContainText('Enterprise Operations & Control');
@@ -132,95 +178,10 @@ test('renders natural English labels and preserves LTR identifiers', async ({ pa
   await expect(page.locator('.rp-project-selector__code').first()).toHaveCSS('direction', 'ltr');
 });
 
-test('separates customer facts, system direction, current configuration, unknowns, and evidence truth', async ({ page }) => {
-  await reachDecisionSummary(page);
-
-  await expect(page.getByLabel('مفتاح أنواع المعلومات')).toContainText('معلومات قدّمتها');
-  await expect(page.getByLabel('مفتاح أنواع المعلومات')).toContainText('توصية النظام / الاتجاه الحالي');
-  await expect(page.getByLabel('مفتاح أنواع المعلومات')).toContainText('التكوين الحالي');
-  await expect(page.getByLabel('مفتاح أنواع المعلومات')).toContainText('يحتاج اكتشافًا');
-
-  await expect(page.locator('.gsdw-summary-row[data-kind="fact"]')).not.toHaveCount(0);
-  await expect(page.locator('.gsdw-summary-row[data-kind="recommendation"]')).not.toHaveCount(0);
-  await expect(page.locator('.gsdw-summary-row[data-kind="configuration"]')).not.toHaveCount(0);
-  await expect(page.locator('.gsdw-summary-row[data-kind="unknown"]')).toHaveCount(1);
-  await expect(page.locator('.gsdw-summary-row[data-kind="evidence"]')).toHaveCount(1);
-  await expect(page.getByText('توصية النظام الحاسمة من المدخلات المتاحة', { exact: true })).toBeVisible();
-
-  const capabilities = page.locator('.gsdw-summary-capabilities');
-  await expect(page.locator('.gsdw-summary-row[data-kind="configuration"]').filter({ has: capabilities })).toContainText('تُعرض كل قدرة مع مصدر إدراجها');
-  const core = capabilities.locator('[data-classification="CORE"]').first();
-  const recommended = capabilities.locator('[data-classification="RECOMMENDED"]').first();
-  const custom = capabilities.locator('[data-classification="CUSTOM"]').first();
-  await expect(core).toHaveAttribute('data-provenance', 'SYSTEM_SEEDED');
-  await expect(recommended).toHaveAttribute('data-provenance', 'SYSTEM_SEEDED');
-  await expect(custom).toHaveAttribute('data-provenance', 'USER_SELECTED');
-  await expect(core).toContainText('مدرجة مبدئيًا من النظام');
-  await expect(custom).toContainText('اخترتها أنت');
-  await expect(page.locator('.gsdw-summary-row').filter({ hasText: 'قيد أو تفضيل الميزانية' })).toContainText('قيد مالي يحدده صاحب القرار');
-  await expect(page.getByText(/سعرًا أو تقييم ملاءمة مالية/)).toBeVisible();
-
-  await expect(page.locator('.gsdw-evidence > strong')).toHaveText('مرجع سياقي فقط');
-  await expect(page.locator(`${WORKSPACE} .gsdw-evidence > small`)).toHaveCount(0);
-  await expect(page.locator(WORKSPACE).getByText('REFERENCE_ONLY', { exact: true })).toHaveCount(0);
-  await expect(page.getByText(/\b(?:399|387)\b/)).toHaveCount(0);
-});
-
-test('keeps the Solutions to Start handoff truthful and capability provenance explicit', async ({ page }) => {
-  await reachDecisionSummary(page);
-  await page.getByRole('button', { name: /تجهيز الانتقال إلى Discovery/ }).click();
-
-  await expect(page).toHaveURL(/\/start$/);
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-prefilled', 'true');
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-major-stage-count', '3');
-  const carriedFacts = page.locator('[data-testid="carried-context"]');
-  await expect(carriedFacts).toContainText('النتيجة: تنظيم عمل وطلبات داخلية');
-  await expect(carriedFacts).toContainText('النشاط: عمليات وفرق');
-  await expect(carriedFacts).toContainText('الجمهور: فريق داخلي');
-  await expect(carriedFacts).toContainText('العمق: أنظمة أو تكاملات مهمة');
-  await expect(carriedFacts).toContainText('القيد: نظام داخلي قائم يحتاج تحققًا تقنيًا');
-  await expect(page.locator('[data-testid="system-recommendation"]')).toContainText('الأنظمة التشغيلية والبوابات');
-  await expect(page.locator('[data-testid="user-selection"]')).toContainText('لم تعتمد اتجاهًا بعد.');
-  await expect(page.getByLabel('ما الذي تريد تغييره؟')).toHaveCount(0);
-
-  const carriedState = await page.evaluate(() => {
-    const state = window.history.state as {
-      usr?: {
-        discoveryPrefill?: {
-          solutionFamilyId?: string;
-          decisionOrigin?: string;
-          recommendationResolution?: string;
-          capabilitySelections?: Array<{
-            name: string;
-            classification: string;
-            provenance: string;
-          }>;
-        };
-      };
-    } | null;
-    return state?.usr?.discoveryPrefill;
-  });
-  expect(carriedState?.solutionFamilyId).toBe('portals');
-  expect(carriedState?.decisionOrigin).toBe('SYSTEM_FINDER');
-  expect(carriedState?.recommendationResolution).toBe('decisive');
-  expect(carriedState?.capabilitySelections?.some((selection) => (
-    selection.name === 'تكاملات وهوية وصلاحيات متقدمة'
-      && selection.classification === 'CUSTOM'
-      && selection.provenance === 'USER_SELECTED'
-  ))).toBe(true);
-  expect(carriedState?.capabilitySelections?.some((selection) => (
-    selection.name === 'نمذجة الطلب والحالة'
-      && selection.classification === 'CORE'
-      && selection.provenance === 'SYSTEM_SEEDED'
-  ))).toBe(true);
-
-  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
-  await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'build');
-  await expect(page.locator('.start-discovery').getByText('REFERENCE_ONLY', { exact: true })).toHaveCount(0);
-});
-
-test('preserves keyboard focus and deliberate RTL/LTR direction', async ({ page }) => {
+test('preserves Reference Projects keyboard focus and deliberate RTL/LTR direction', async ({ page }) => {
   await open(page, '/reference-projects');
+  const routeFocus = page.locator('[data-route-focus]');
+  if (await routeFocus.count()) await expect(routeFocus).toBeFocused();
   const first = page.locator('[data-project-selector="rp01"]');
   await first.focus();
   await expect(first).toBeFocused();
@@ -234,13 +195,13 @@ test('preserves keyboard focus and deliberate RTL/LTR direction', async ({ page 
 for (const width of [1440, 1024, 768, 430, 390]) {
   test(`has no overflow or runtime errors in public semantic states at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 768 ? 1024 : width <= 430 ? 844 : 900 });
+    await open(page, '/solutions');
+    await expectNoHorizontalOverflow(page);
+    await page.getByRole('button', { name: 'قارن الحجوزات بالتشغيل' }).click();
+    await expectNoHorizontalOverflow(page);
     await open(page, '/reference-projects');
     await page.locator('[data-project-selector="rp04"]').click();
     await page.getByRole('button', { name: /سجل الحدود والتحقق/ }).click();
-    await expectNoHorizontalOverflow(page);
-
-    await open(page, '/solutions');
-    await expect(page.locator(WORKSPACE)).toHaveAttribute('dir', 'rtl');
     await expectNoHorizontalOverflow(page);
   });
 }

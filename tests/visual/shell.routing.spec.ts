@@ -3,10 +3,11 @@ import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 const EVIDENCE_DIR = resolve(process.env.VISUAL_EVIDENCE_DIR ?? 'visual-evidence');
+const SOLUTIONS_FOCUS = '.integrated-public-page--solutions';
 
 const PUBLIC_ROUTES = [
   { path: '/', label: 'الرئيسية', focusSelector: '#main-content' },
-  { path: '/solutions', label: 'الحلول', focusSelector: '#gsdw-entry-title' },
+  { path: '/solutions', label: 'الحلول', focusSelector: SOLUTIONS_FOCUS },
   { path: '/reference-projects', label: 'المشاريع المرجعية', focusSelector: '#reference-projects-title' },
   { path: '/how-we-work', label: 'كيف نعمل', focusSelector: '#how-we-work-title' },
   { path: '/start', label: 'ابدأ اختيارك', focusSelector: '#start-discovery-title' },
@@ -31,15 +32,10 @@ for (const route of PUBLIC_ROUTES) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(route.path);
     await expect(page).toHaveURL(new RegExp(`${route.path === '/' ? '/$' : `${route.path}$`}`));
-
     const focusTarget = page.locator(route.focusSelector);
     await expect(focusTarget).toBeVisible();
     await expect(focusTarget).toBeFocused();
-
-    if (route.path === '/') {
-      await expect(page.locator('#hero')).toBeVisible();
-    }
-
+    if (route.path === '/') await expect(page.locator('#hero')).toBeVisible();
     const activeLink = route.path === '/start'
       ? page.locator('.hero-nav__contact')
       : page.locator('.hero-nav__links').getByRole('link', { name: route.label, exact: true });
@@ -50,22 +46,17 @@ for (const route of PUBLIC_ROUTES) {
 test('supports browser back, forward, and saved scroll restoration', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 560 });
   await page.goto('/solutions');
-  await expect(page.locator('#gsdw-entry-title')).toBeFocused();
+  await expect(page.locator(SOLUTIONS_FOCUS)).toBeFocused();
   await page.evaluate(() => window.scrollTo(0, 240));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(150);
-
-  await page.evaluate(() => {
-    const link = document.querySelector<HTMLAnchorElement>('.hero-nav__links a[href="/how-we-work"]');
-    link?.click();
-  });
+  await page.evaluate(() => document.querySelector<HTMLAnchorElement>('.hero-nav__links a[href="/how-we-work"]')?.click());
   await expect(page).toHaveURL(/\/how-we-work$/);
   await expect(page.locator('#how-we-work-title')).toBeFocused();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-
   await page.goBack();
   await expect(page).toHaveURL(/\/solutions$/);
+  await expect(page.locator(SOLUTIONS_FOCUS)).toBeFocused();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(150);
-
   await page.goForward();
   await expect(page).toHaveURL(/\/how-we-work$/);
   await expect(page.locator('#how-we-work-title')).toBeFocused();
@@ -74,19 +65,15 @@ test('supports browser back, forward, and saved scroll restoration', async ({ pa
 test('mobile navigation supports keyboard operation, active state, and Escape', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/solutions');
-
   const toggle = page.getByRole('button', { name: 'فتح قائمة التنقل' });
   await toggle.focus();
   await expect(toggle).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('button', { name: 'إغلاق قائمة التنقل' })).toHaveAttribute('aria-expanded', 'true');
-
   const currentLink = page.locator('.hero-nav__mobile-panel').getByRole('link', { name: 'الحلول', exact: true });
   await expect(currentLink).toHaveAttribute('aria-current', 'page');
-
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'فتح قائمة التنقل' })).toBeFocused();
-
   await page.keyboard.press('Enter');
   const projectsLink = page.locator('.hero-nav__mobile-panel').getByRole('link', { name: 'المشاريع المرجعية' });
   await projectsLink.focus();
@@ -103,17 +90,13 @@ test('renders a recoverable branded 404 without dead links', async ({ page }) =>
   await expect(page).toHaveTitle('الصفحة غير موجودة | General Solutions');
   await page.getByRole('link', { name: 'العودة إلى الرئيسية' }).click();
   await expect(page).toHaveURL(/\/$/);
-
   const internalHrefs = await page.locator('a[href]').evaluateAll((links) => links
     .map((link) => link.getAttribute('href'))
     .filter((href): href is string => Boolean(href) && !href.startsWith('mailto:')));
   expect(internalHrefs).not.toContain('#');
   for (const href of internalHrefs) {
-    if (href.startsWith('#')) {
-      await expect(page.locator(href)).toHaveCount(1);
-    } else {
-      expect(href.startsWith('/')).toBe(true);
-    }
+    if (href.startsWith('#')) await expect(page.locator(href)).toHaveCount(1);
+    else expect(href.startsWith('/')).toBe(true);
   }
 });
 
@@ -122,13 +105,11 @@ for (const width of [1440, 1024, 768, 430, 390]) {
     const errors = await collectRuntimeErrors(page);
     await page.setViewportSize({ width, height: width === 768 ? 1024 : 900 });
     await page.goto('/solutions');
-    await expect(page.locator('#gsdw-entry-title')).toBeVisible();
-
+    await expect(page.locator('#solutions-exploration')).toBeVisible();
     if (width <= 800) {
       await page.getByRole('button', { name: 'فتح قائمة التنقل' }).click();
       await expect(page.locator('.hero-nav__mobile-panel')).toBeVisible();
     }
-
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
@@ -142,13 +123,12 @@ for (const width of [1440, 1024, 768, 430, 390]) {
 test('captures W01 shell reference evidence', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/solutions');
-  await expect(page.locator('#gsdw-entry-title')).toBeVisible();
+  await expect(page.locator('#solutions-exploration')).toBeVisible();
   await page.screenshot({
     path: resolve(EVIDENCE_DIR, 'w01-shell-solutions-1440.png'),
     fullPage: true,
     animations: 'disabled',
   });
-
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/reference-projects');
   await page.getByRole('button', { name: 'فتح قائمة التنقل' }).click();
