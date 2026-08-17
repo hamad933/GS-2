@@ -63,10 +63,10 @@ export function SolutionsExploration({ onStartFamily, onDiscover }: SolutionsExp
   const openCompare = () => { setMode('compare'); setCompareIndex(0); setSummary(false); };
   const closeCompare = () => { setMode('explore'); setCompareIndex(0); setSummary(false); };
 
-  return <main id="solutions-exploration" className="solutions-exploration" dir="rtl" data-mode={mode} data-family={familyId}>
+  return <section id="solutions-exploration" className="solutions-exploration" dir="rtl" data-mode={mode} data-family={familyId} aria-labelledby="solutions-page-title">
     <header className="solutions-exploration__intro">
       <p className="solutions-eyebrow">SOLUTIONS · ما الذي يمكن أن نبنيه؟</p>
-      <h1>ست عائلات للحلول، ومساحة واحدة لفهم الاتجاه الأقرب.</h1>
+      <h1 id="solutions-page-title">ست عائلات للحلول، ومساحة واحدة لفهم الاتجاه الأقرب.</h1>
       <p>استكشف طبيعة كل حل كما يمكن أن يعمل في الواقع. لا تحتاج إلى تكوين مشروعك هنا؛ اختر عائلة لفهمها، ثم انتقل إلى START عندما تريد تحويل الاتجاه إلى مشروعك.</p>
       <button type="button" className="solutions-link" onClick={onDiscover}>لست متأكدًا من الاتجاه؟ ساعدني على الاختيار</button>
     </header>
@@ -126,5 +126,5 @@ export function SolutionsExploration({ onStartFamily, onDiscover }: SolutionsExp
       <div className="solutions-compare__mobile" aria-live="polite">{!summary ? <article className="solutions-compare-step" data-compare-step={compareIndex + 1}><p>سؤال {compareIndex + 1} من {compare.length}</p><h3>{compare[compareIndex][0]}</h3><section><strong>الحجوزات والخدمات</strong><span>{compare[compareIndex][1]}</span></section><section><strong>الأنظمة التشغيلية والبوابات</strong><span>{compare[compareIndex][2]}</span></section><div className="solutions-actions"><button type="button" className="solutions-secondary" disabled={compareIndex === 0} onClick={() => setCompareIndex((value) => Math.max(0, value - 1))}>السابق</button><button type="button" className="solutions-primary" onClick={() => compareIndex === compare.length - 1 ? setSummary(true) : setCompareIndex((value) => value + 1)}>{compareIndex === compare.length - 1 ? 'عرض الخلاصة' : 'السؤال التالي'}</button></div></article> : <article className="solutions-compare-summary"><p>الخلاصة</p><h3>اختر المركز الحقيقي للعمل، لا قائمة الخصائص المشتركة.</h3><span>المستخدمون والإشعارات والإدارة والتكاملات قد توجد في الاتجاهين. الفرق هو ما إذا كان النظام يبدأ من رحلة العميل للخدمة، أم من حركة العمل داخل الفريق.</span></article>}</div>
       <footer className="solutions-compare__actions"><button type="button" className="solutions-primary" onClick={() => onStartFamily?.('booking', 'USER_COMPARE')}>ابدأ من الحجوزات والخدمات</button><button type="button" className="solutions-primary solutions-primary--ops" onClick={() => onStartFamily?.('portals', 'USER_COMPARE')}>ابدأ من الأنظمة التشغيلية والبوابات</button><button type="button" className="solutions-link" onClick={closeCompare}>لم أحسم بعد — ارجع إلى جميع الحلول</button></footer>
     </section>}
-  </main>;
+  </section>;
 }
