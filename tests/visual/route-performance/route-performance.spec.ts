@@ -73,11 +73,44 @@ async function expectReadableMetadata(page: Page, selector: string) {
   const locator = page.locator(selector).first();
   await expect(locator).toBeVisible();
   const metrics = await locator.evaluate((element) => {
+    const parseColor = (value: string) => {
+      const parts = value.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
+      return {
+        rgb: parts.slice(0, 3).map((part) => part / 255),
+        alpha: parts[3] ?? 1,
+      };
+    };
+    const luminance = (rgb: number[]) => {
+      const linear = rgb.map((channel) =>
+        channel <= 0.04045
+          ? channel / 12.92
+          : ((channel + 0.055) / 1.055) ** 2.4,
+      );
+      return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    };
     const style = getComputedStyle(element);
-    return { fontSize: Number.parseFloat(style.fontSize), opacity: Number.parseFloat(style.opacity) };
+    const backgroundLayers: Array<{ rgb: number[]; alpha: number }> = [];
+    let backgroundElement: Element | null = element;
+    while (backgroundElement) {
+      const layer = parseColor(getComputedStyle(backgroundElement).backgroundColor);
+      if (layer.alpha > 0) backgroundLayers.push(layer);
+      backgroundElement = backgroundElement.parentElement;
+    }
+    let effectiveBackground = [7 / 255, 16 / 255, 21 / 255];
+    for (const layer of backgroundLayers.reverse()) {
+      effectiveBackground = layer.rgb.map(
+        (channel, index) => channel * layer.alpha + effectiveBackground[index] * (1 - layer.alpha),
+      );
+    }
+    const foreground = luminance(parseColor(style.color).rgb);
+    const background = luminance(effectiveBackground);
+    return {
+      fontSize: Number.parseFloat(style.fontSize),
+      contrast: (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05),
+    };
   });
   expect(metrics.fontSize).toBeGreaterThanOrEqual(10);
-  expect(metrics.opacity).toBeGreaterThanOrEqual(1);
+  expect(metrics.contrast).toBeGreaterThanOrEqual(4.5);
 }
 
 test('Home loads without requesting any non-Home route implementation chunk', async ({ page }) => {
