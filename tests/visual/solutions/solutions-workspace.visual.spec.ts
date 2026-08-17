@@ -67,8 +67,32 @@ test('selected family is product-led and removes configurator semantics', async 
   await expect(panel.locator('[data-asset-id^="FAM-03-DIR-"]')).toHaveCount(3);
   await expect(panel.getByText('اتجاهات استكشافية، وليست قوالب أو باقات أو منتجات جاهزة للبيع.')).toBeVisible();
   await expect(panel.getByText(/ليس عرض سعر/)).toBeVisible();
-  await expect(panel.getByText('RP-03 — Booking & Service Operations')).toBeVisible();
+  await expect(panel.locator('.solutions-reference')).toHaveAttribute('data-reference-code', 'RP03');
+  await expect(panel.getByText(/RP-03/)).toBeVisible();
+  await expect(panel.getByText('حجز يبدأ من احتياج واضح')).toBeVisible();
   await expect(page.getByText(/Capability Builder|Project Pulse|CORE|RECOMMENDED|OPTIONAL/)).toHaveCount(0);
+});
+
+test('selected-family reference surface follows canonical truth across all six families', async ({ page }) => {
+  await openSolutions(page);
+  const expected = [
+    ['business', 'unavailable', 'none', 'لا يوجد مرجع مطابق متاح حاليًا'],
+    ['commerce', 'available', 'RP01', 'تجربة تجارة وهوية بصرية متصلة'],
+    ['booking', 'available', 'RP03', 'حجز يبدأ من احتياج واضح'],
+    ['assets', 'available', 'RP04', 'الأصول في مساحة قرار واحدة'],
+    ['portals', 'available', 'RP02', 'تشغيل الطلبات والسجلات بين الأدوار'],
+    ['knowledge', 'unavailable', 'none', 'لا يوجد مرجع مطابق متاح حاليًا'],
+  ] as const;
+
+  for (const [familyId, state, code, title] of expected) {
+    await page.locator(`[data-family-id="${familyId}"]`).click();
+    const reference = page.locator('.solutions-reference');
+    await expect(reference).toHaveAttribute('data-reference-state', state);
+    await expect(reference).toHaveAttribute('data-reference-code', code);
+    await expect(reference).toContainText(title);
+    await expect(reference).not.toContainText('REFERENCE_ONLY');
+    await expect(reference).not.toContainText('NOT_AVAILABLE');
+  }
 });
 
 test('family navigation is keyboard operable and retains focus', async ({ page }) => {
