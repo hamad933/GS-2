@@ -80,7 +80,7 @@ test('selected-family reference surface follows canonical truth across all six f
     ['commerce', 'available', 'RP01', 'تجربة تجارة وهوية بصرية متصلة'],
     ['booking', 'available', 'RP03', 'حجز يبدأ من احتياج واضح'],
     ['assets', 'available', 'RP04', 'الأصول في مساحة قرار واحدة'],
-    ['portals', 'available', 'RP02', 'تشغيل الطلبات والسجلات بين الأدوار'],
+    ['portals', 'available', 'RP02', 'نظام تشغيل يوضّح العمل'],
     ['knowledge', 'unavailable', 'none', 'لا يوجد مرجع مطابق متاح حاليًا'],
   ] as const;
 
