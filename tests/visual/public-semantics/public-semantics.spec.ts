@@ -179,6 +179,7 @@ test('keeps the Solutions to Start handoff contract compatible and budget user-s
 
 test('preserves keyboard focus and deliberate RTL/LTR direction', async ({ page }) => {
   await open(page, '/reference-projects');
+  await expect(page.locator('[data-route-focus]')).toBeFocused();
   const first = page.locator('[data-project-selector="rp01"]');
   await first.focus();
   await expect(first).toBeFocused();
