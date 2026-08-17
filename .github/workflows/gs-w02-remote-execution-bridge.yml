@@ -1,0 +1,320 @@
+name: GS W02 Remote Execution Bridge
+
+on:
+  push:
+    branches:
+      - governance/gs-w02-remote-execution-bridge-r1
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gs-w02-remote-execution-bridge-r1
+  cancel-in-progress: false
+
+jobs:
+  w02-remote-execution:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact bridge commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact bridge checkout
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+
+      - name: Complete verified transport payloads when required
+        id: payloads
+        shell: bash
+        env:
+          BRIDGE_BRANCH: governance/gs-w02-remote-execution-bridge-r1
+        run: |
+          set -euo pipefail
+          payload_dir="$GITHUB_WORKSPACE/governance/remote-execution/w02/payloads"
+          request="$payload_dir/ASSET_REQUEST.tsv"
+          tmp="$RUNNER_TEMP/gs-w02-payload-bootstrap"
+          rm -rf "$tmp"
+          mkdir -p "$tmp"
+
+          required_assets=(
+            FAM-03-EMB-01
+            FAM-04-EMB-01
+            FAM-05-EMB-01
+            FAM-06-EMB-01
+            FAM-03-CMP-01
+            FAM-05-CMP-01
+          )
+
+          is_required() {
+            local needle="$1"
+            local item
+            for item in "${required_assets[@]}"; do
+              [[ "$needle" == "$item" ]] && return 0
+            done
+            return 1
+          }
+
+          reconstruct_existing() {
+            local payload_file="$1"
+            local output="$2"
+            local exact="$payload_dir/$payload_file"
+            rm -f "$output"
+            if [[ -f "$exact" ]]; then
+              base64 --decode "$exact" > "$output" 2>/dev/null || return 1
+            else
+              shopt -s nullglob
+              local parts=("$exact".part-*)
+              shopt -u nullglob
+              ((${#parts[@]} > 0)) || return 1
+              cat "${parts[@]}" | base64 --decode > "$output" 2>/dev/null || return 1
+            fi
+          }
+
+          download_verified() {
+            local drive_id="$1"
+            local expected="$2"
+            local expected_size="$3"
+            local output="$4"
+            local candidate="$output.download"
+            local url actual size
+            local urls=(
+              "https://drive.usercontent.google.com/download?id=${drive_id}&export=download&confirm=t"
+              "https://drive.google.com/uc?export=download&id=${drive_id}&confirm=t"
+            )
+            for url in "${urls[@]}"; do
+              rm -f "$candidate"
+              if curl -L --fail --silent --show-error --retry 2 --retry-delay 2 -o "$candidate" "$url"; then
+                actual="$(sha256sum "$candidate" | awk '{print $1}')"
+                size="$(wc -c < "$candidate" | tr -d ' ')"
+                if [[ "$actual" == "$expected" && "$size" == "$expected_size" ]]; then
+                  mv "$candidate" "$output"
+                  return 0
+                fi
+              fi
+            done
+            echo "AUTHORITATIVE_DRIVE_FETCH_FAILED drive_id=$drive_id expected_sha=$expected expected_size=$expected_size" >&2
+            return 1
+          }
+
+          changed=0
+          while IFS=$'\t' read -r asset_id drive_id expected source_fetched destination payload_file source_size; do
+            [[ "$asset_id" == "asset_id" ]] && continue
+            is_required "$asset_id" || continue
+            [[ "$source_fetched" == "$expected" ]] || {
+              echo "REQUEST_SOURCE_AUTHORITY_MISMATCH asset=$asset_id" >&2
+              exit 31
+            }
+
+            existing="$tmp/${asset_id}.existing.webp"
+            existing_ok=0
+            if reconstruct_existing "$payload_file" "$existing"; then
+              actual="$(sha256sum "$existing" | awk '{print $1}')"
+              size="$(wc -c < "$existing" | tr -d ' ')"
+              if [[ "$actual" == "$expected" && "$size" == "$source_size" ]]; then
+                existing_ok=1
+              fi
+            fi
+            if [[ "$existing_ok" == 1 ]]; then
+              echo "PAYLOAD_ALREADY_VERIFIED asset=$asset_id sha=$expected"
+              continue
+            fi
+
+            source="$tmp/${asset_id}.source.webp"
+            download_verified "$drive_id" "$expected" "$source_size" "$source"
+            source_sha="$(sha256sum "$source" | awk '{print $1}')"
+            echo "SOURCE_VERIFIED asset=$asset_id drive_id=$drive_id sha=$source_sha"
+
+            encoded="$tmp/${asset_id}.b64"
+            base64 -w 0 "$source" > "$encoded"
+            rm -f "$payload_dir/$payload_file" "$payload_dir/$payload_file".part-*
+            split -b 48000 -d -a 3 "$encoded" "$payload_dir/$payload_file.part-"
+
+            reconstructed="$tmp/${asset_id}.reconstructed.webp"
+            reconstruct_existing "$payload_file" "$reconstructed"
+            reconstructed_sha="$(sha256sum "$reconstructed" | awk '{print $1}')"
+            reconstructed_size="$(wc -c < "$reconstructed" | tr -d ' ')"
+            [[ "$reconstructed_sha" == "$expected" && "$reconstructed_size" == "$source_size" ]] || {
+              echo "STAGED_PAYLOAD_RECONSTRUCTION_FAILED asset=$asset_id" >&2
+              exit 32
+            }
+            changed=1
+          done < "$request"
+
+          if [[ "$changed" == 1 ]]; then
+            git add -A -- "$payload_dir"
+            while IFS= read -r path; do
+              case "$path" in
+                governance/remote-execution/w02/payloads/FAM-03-EMB-01.webp.b64.part-*|\
+                governance/remote-execution/w02/payloads/FAM-04-EMB-01.webp.b64.part-*|\
+                governance/remote-execution/w02/payloads/FAM-05-EMB-01.webp.b64.part-*|\
+                governance/remote-execution/w02/payloads/FAM-06-EMB-01.webp.b64.part-*|\
+                governance/remote-execution/w02/payloads/FAM-03-CMP-01.webp.b64.part-*|\
+                governance/remote-execution/w02/payloads/FAM-05-CMP-01.webp.b64.part-*) ;;
+                *)
+                  echo "PAYLOAD_BOOTSTRAP_PATH_BOUNDARY_VIOLATION path=$path" >&2
+                  exit 33
+                  ;;
+              esac
+            done < <(git diff --cached --name-only)
+
+            git config user.name "GS Governance Remote Bridge"
+            git config user.email "governance-actions@users.noreply.github.com"
+            git commit -m "chore(governance): complete verified W02 transport payloads"
+            git push origin "HEAD:refs/heads/$BRIDGE_BRANCH"
+            echo "committed=true" >> "$GITHUB_OUTPUT"
+            echo "payload_commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            echo "PAYLOAD_PUBLICATION_COMPLETE"
+          else
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            echo "payload_commit_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "PAYLOAD_SET_ALREADY_COMPLETE"
+          fi
+
+      - name: Set up Node 20
+        if: steps.payloads.outputs.committed != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Prepare exact W02 candidate
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: bash governance/remote-execution/w02/scripts/prepare_candidate.sh
+
+      - name: Verify candidate diff
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" diff_check git diff --check "$STACKED_BASE_SHA..HEAD"
+
+      - name: Install exact dependencies
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" npm_ci npm ci
+
+      - name: Lint
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" lint npm run lint
+
+      - name: Typecheck
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" typecheck npm run typecheck
+
+      - name: Build
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" build npm run build
+
+      - name: Install Chromium
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" chromium_install npx playwright install --with-deps chromium
+
+      - name: Canonical Solutions Playwright
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" solutions_playwright \
+            npx playwright test tests/visual/solutions/solutions-workspace.visual.spec.ts \
+            --config=tests/visual/solutions/playwright.config.ts
+
+      - name: Public Semantics
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" public_semantics \
+            npx playwright test tests/visual/public-semantics/public-semantics.spec.ts \
+            --config=tests/visual/public-semantics/playwright.config.ts
+
+      - name: Route performance
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" route_performance \
+            npx playwright test tests/visual/route-performance/route-performance.spec.ts \
+            --config=playwright.config.ts
+
+      - name: Shell routing
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" shell_routing \
+            npx playwright test tests/visual/shell.routing.spec.ts \
+            --config=playwright.config.ts
+
+      - name: Home public routing
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" home_public_routing \
+            npx playwright test tests/visual/home-public-routing/home-public-routing.spec.ts \
+            --config=playwright.config.ts
+
+      - name: Public site integration
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" public_site_integration \
+            npx playwright test tests/visual/public-site.integration.spec.ts \
+            --config=playwright.config.ts
+
+      - name: Public site rendered evidence
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          cd "$CANDIDATE_DIR"
+          bash "$BRIDGE_ROOT/scripts/run_gate.sh" public_site_evidence \
+            npx playwright test tests/visual/public-site.evidence.spec.ts \
+            --config=playwright.config.ts
+
+      - name: Final drift check and transactional fast-forward
+        if: steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: bash "$BRIDGE_ROOT/scripts/finalize_publish.sh"
+
+      - name: Record workflow metadata
+        if: always() && steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: |
+          report="${REPORT_DIR:-$RUNNER_TEMP/gs-w02-remote-execution/report}"
+          mkdir -p "$report"
+          printf '%s\n' "${{ github.run_id }}" > "$report/workflow-run-id.txt"
+          printf '%s\n' "${{ github.run_attempt }}" > "$report/workflow-run-attempt.txt"
+          printf '%s\n' "${{ github.sha }}" > "$report/bridge-run-sha.txt"
+          printf '%s\n' "${CANDIDATE_SHA:-UNAVAILABLE}" > "$report/candidate-sha-observed.txt"
+
+      - name: Record no-mutation failure state
+        if: failure() && steps.payloads.outputs.committed != 'true'
+        shell: bash
+        run: bash governance/remote-execution/w02/scripts/record_failure_state.sh
+
+      - name: Upload bounded reference evidence
+        if: always() && steps.payloads.outputs.committed != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gs-w02-remote-execution-${{ env.CANDIDATE_SHA || github.sha }}
+          path: ${{ runner.temp }}/gs-w02-remote-execution/report
+          if-no-files-found: error
+          retention-days: 14
