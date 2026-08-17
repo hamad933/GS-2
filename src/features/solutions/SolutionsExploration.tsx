@@ -34,6 +34,10 @@ function Asset({ familyId, role, alt = '', className }: { familyId: SolutionFami
   return <img src={asset.runtimeUrl} alt={alt} className={className} data-asset-id={asset.id} data-asset-status="approved-bound" />;
 }
 
+function formatReferenceCode(code: string) {
+  return code.replace(/^RP(\d{2})$/, 'RP-$1');
+}
+
 export function SolutionsExploration({ onStartFamily, onDiscover }: SolutionsExplorationProps) {
   const [familyId, setFamilyId] = useState<SolutionFamilyId>('booking');
   const [mode, setMode] = useState<'explore' | 'compare'>('explore');
@@ -42,6 +46,8 @@ export function SolutionsExploration({ onStartFamily, onDiscover }: SolutionsExp
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const family = familyById[familyId];
   const meta = presentation[familyId];
+  const reference = family.reference;
+  const referenceAvailable = Boolean(reference.code) && reference.evidenceState !== 'NOT_AVAILABLE';
 
   const choose = (id: SolutionFamilyId) => { setFamilyId(id); setMode('explore'); };
   const move = (index: number) => {
@@ -115,7 +121,17 @@ export function SolutionsExploration({ onStartFamily, onDiscover }: SolutionsExp
 
         <section className="solutions-proof"><div className="solutions-heading"><p>تفاصيل إضافية عند الحاجة</p><h3>مشاهد أقرب إلى سلوك المنتج</h3></div><div className="solutions-proof__grid"><details><summary>لحظة من جهة المستخدم</summary><Asset familyId={familyId} role="CTX-01" alt={`لقطة سياقية معتمدة من جهة المستخدم لعائلة ${family.title}`} /></details><details><summary>لحظة من داخل التشغيل</summary><Asset familyId={familyId} role="CTX-02" alt={`لقطة سياقية معتمدة من داخل تشغيل عائلة ${family.title}`} /></details></div></section>
 
-        {familyId === 'booking' && <aside className="solutions-reference" aria-label="مثال سياقي للحجوزات والخدمات"><p>مثال سياقي محدود</p><h3 dir="ltr">RP-03 — Booking &amp; Service Operations</h3><span>يوضح رحلة اختيار الخدمة والموعد والتأكيد في منتج مستقل. لا يثبت نطاق مشروعك، ولا يحوّل هذا القسم إلى دراسة حالة أو صفحة مشروع.</span></aside>}
+        <aside className="solutions-reference" aria-label="السياق المرجعي للعائلة المحددة" data-reference-state={referenceAvailable ? 'available' : 'unavailable'} data-reference-code={reference.code ?? 'none'}>
+          <p>{referenceAvailable ? 'مثال سياقي محدود' : 'حالة المرجع المتاح'}</p>
+          {referenceAvailable && reference.code ? <>
+            <h3><bdi dir="ltr">{formatReferenceCode(reference.code)}</bdi> — {reference.title}</h3>
+            <span>{reference.note}</span>
+            <small>مرجع سياقي لفهم طبيعة الاتجاه فقط؛ لا يثبت نطاق مشروعك ولا ينشئ صفحة مشروع أو دراسة حالة.</small>
+          </> : <>
+            <h3>{reference.title}</h3>
+            <span>{reference.note}</span>
+          </>}
+        </aside>
 
         <footer className="solutions-footer"><div><p>هل صار الاتجاه أوضح؟</p><strong>{family.nextDecision}</strong></div><button type="button" className="solutions-primary" onClick={() => onStartFamily?.(familyId, 'USER_DIRECT')}>ابدأ من هذا الاتجاه</button></footer>
       </article>
