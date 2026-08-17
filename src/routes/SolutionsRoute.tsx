@@ -9,7 +9,11 @@ export default function SolutionsRoute() {
 
   return (
     <RouteReadySignal>
-      <div className="integrated-public-page integrated-public-page--solutions">
+      <div
+        className="integrated-public-page integrated-public-page--solutions"
+        data-route-focus
+        tabIndex={-1}
+      >
         <SolutionsExploration
           onStartFamily={(familyId, origin) => {
             navigate('/start', {
