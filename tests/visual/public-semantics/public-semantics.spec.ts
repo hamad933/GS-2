@@ -71,7 +71,9 @@ test('selected-family semantics present fit, users, operation, product forms, or
   await expect(panel.getByText('أشكال ممكنة يمكن أن يأخذها الحل')).toBeVisible();
   await expect(panel.getByText(/ليست قوالب أو باقات أو منتجات جاهزة للبيع/)).toBeVisible();
   await expect(panel.getByText(/ليس عرض سعر/)).toBeVisible();
-  await expect(panel.getByText('RP-03 — Booking & Service Operations')).toBeVisible();
+  await expect(panel.locator('.solutions-reference')).toHaveAttribute('data-reference-code', 'RP03');
+  await expect(panel.getByText(/RP-03/)).toBeVisible();
+  await expect(panel.getByText('حجز يبدأ من احتياج واضح')).toBeVisible();
   await expect(panel.locator('[data-asset-id="FAM-03-MSC-01"]')).toBeVisible();
   await expect(panel.locator('[data-asset-id^="FAM-03-DIR-"]')).toHaveCount(3);
 });
@@ -144,9 +146,24 @@ test('renders localized reference truth first while retaining machine state as s
     const toggle = page.getByRole('button', { name: /سجل الحدود والتحقق/ });
     await toggle.click();
     await expect(page.locator('.rp-ledger__evidence .rp-state-label[data-state="REFERENCE_ONLY"] > strong')).toHaveText('مرجع سياقي فقط');
+    await expect(page.locator('.rp-ledger__evidence .rp-state-label[data-state="UNAVAILABLE"] > strong')).toHaveText([
+      'الدليل غير متاح',
+      'الدليل غير متاح',
+    ]);
     await expect(page.locator('.rp-ledger__route .rp-state-label[data-state="ROUTE_NOT_CONFIGURED"] > strong')).toHaveText('الرابط المرجعي غير مهيأ بعد');
   }
+  await expect(page.locator('.rp-state-label > strong').filter({ hasText: /^ROUTE_NOT_CONFIGURED$/ })).toHaveCount(0);
+  await expect(page.locator('.rp-state-label > small').filter({ hasText: /^ROUTE_NOT_CONFIGURED$/ }).first()).toBeVisible();
   await expect(page.locator(`${REFERENCE_BODY} a[href]`)).toHaveCount(0);
+  const hierarchy = await page.locator('.rp-ledger__route .rp-state-label').evaluate((label) => {
+    const primary = label.querySelector('strong');
+    const technical = label.querySelector('small');
+    return {
+      primary: primary ? Number.parseFloat(getComputedStyle(primary).fontSize) : 0,
+      technical: technical ? Number.parseFloat(getComputedStyle(technical).fontSize) : 0,
+    };
+  });
+  expect(hierarchy.primary).toBeGreaterThan(hierarchy.technical);
 });
 
 test('renders natural English reference labels and preserves LTR identifiers', async ({ page }) => {
@@ -156,6 +173,8 @@ test('renders natural English reference labels and preserves LTR identifiers', a
   await page.locator('[data-project-selector="rp02"]').click();
   await page.getByRole('button', { name: /boundaries and verification ledger/i }).click();
   await expect(page.locator('.rp-state-label[data-state="REFERENCE_ONLY"] > strong').first()).toHaveText('Contextual reference only');
+  await expect(page.locator('.rp-state-label[data-state="UNAVAILABLE"] > strong').first()).toHaveText('Evidence unavailable');
+  await expect(page.locator('.rp-ledger__route .rp-state-label > strong')).toHaveText('Reference route not configured yet');
   await expect(page.locator('.rp-project-selector__code').first()).toHaveCSS('direction', 'ltr');
 });
 
