@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - governance/gs-w02-remote-execution-bridge-r1
+  pull_request:
+    branches:
+      - governance/gs-deep-review-w08-c-current-baseline
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -14,8 +18,14 @@ concurrency:
 
 jobs:
   w02-remote-execution:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.pull_request.number == 73 &&
+       github.event.pull_request.head.ref == 'governance/gs-w02-remote-execution-bridge-r1' &&
+       github.event.pull_request.base.ref == 'governance/gs-deep-review-w08-c-current-baseline')
     runs-on: ubuntu-latest
     env:
+      BRIDGE_EXACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       GIT_AUTHOR_NAME: GS Governance Remote Bridge run ${{ github.run_id }}
       GIT_AUTHOR_EMAIL: governance-actions@users.noreply.github.com
       GIT_COMMITTER_NAME: GS Governance Remote Bridge run ${{ github.run_id }}
@@ -24,12 +34,12 @@ jobs:
       - name: Check out exact bridge commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.BRIDGE_EXACT_SHA }}
           fetch-depth: 0
 
       - name: Verify exact bridge checkout
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+        run: test "$(git rev-parse HEAD)" = "$BRIDGE_EXACT_SHA"
 
       - name: Complete verified transport payloads when required
         id: payloads
@@ -169,70 +179,64 @@ jobs:
             git config user.email "governance-actions@users.noreply.github.com"
             git commit -m "chore(governance): complete verified W02 transport payloads"
             git push origin "HEAD:refs/heads/$BRIDGE_BRANCH"
+            new_bridge_sha="$(git rev-parse HEAD)"
             echo "committed=true" >> "$GITHUB_OUTPUT"
-            echo "payload_commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-            echo "PAYLOAD_PUBLICATION_COMPLETE"
+            echo "payload_commit_sha=$new_bridge_sha" >> "$GITHUB_OUTPUT"
+            echo "BRIDGE_EXACT_SHA=$new_bridge_sha" >> "$GITHUB_ENV"
+            echo "PAYLOAD_PUBLICATION_COMPLETE bridge_sha=$new_bridge_sha"
           else
             echo "committed=false" >> "$GITHUB_OUTPUT"
-            echo "payload_commit_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-            echo "PAYLOAD_SET_ALREADY_COMPLETE"
+            echo "payload_commit_sha=$BRIDGE_EXACT_SHA" >> "$GITHUB_OUTPUT"
+            echo "BRIDGE_EXACT_SHA=$BRIDGE_EXACT_SHA" >> "$GITHUB_ENV"
+            echo "PAYLOAD_SET_ALREADY_COMPLETE bridge_sha=$BRIDGE_EXACT_SHA"
           fi
 
       - name: Set up Node 20
-        if: steps.payloads.outputs.committed != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Prepare exact W02 candidate
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
-        run: bash governance/remote-execution/w02/scripts/prepare_candidate.sh
+        run: GITHUB_SHA="$BRIDGE_EXACT_SHA" bash governance/remote-execution/w02/scripts/prepare_candidate.sh
 
       - name: Verify candidate diff
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
           bash "$BRIDGE_ROOT/scripts/run_gate.sh" diff_check git diff --check "$STACKED_BASE_SHA..HEAD"
 
       - name: Install exact dependencies
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
           bash "$BRIDGE_ROOT/scripts/run_gate.sh" npm_ci npm ci
 
       - name: Lint
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
           bash "$BRIDGE_ROOT/scripts/run_gate.sh" lint npm run lint
 
       - name: Typecheck
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
           bash "$BRIDGE_ROOT/scripts/run_gate.sh" typecheck npm run typecheck
 
       - name: Build
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
           bash "$BRIDGE_ROOT/scripts/run_gate.sh" build npm run build
 
       - name: Install Chromium
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
           bash "$BRIDGE_ROOT/scripts/run_gate.sh" chromium_install npx playwright install --with-deps chromium
 
       - name: Canonical Solutions Playwright
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
@@ -241,7 +245,6 @@ jobs:
             --config=tests/visual/solutions/playwright.config.ts
 
       - name: Public Semantics
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
@@ -250,7 +253,6 @@ jobs:
             --config=tests/visual/public-semantics/playwright.config.ts
 
       - name: Route performance
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
@@ -259,7 +261,6 @@ jobs:
             --config=playwright.config.ts
 
       - name: Shell routing
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
@@ -268,7 +269,6 @@ jobs:
             --config=playwright.config.ts
 
       - name: Home public routing
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
@@ -277,7 +277,6 @@ jobs:
             --config=playwright.config.ts
 
       - name: Public site integration
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
@@ -286,7 +285,6 @@ jobs:
             --config=playwright.config.ts
 
       - name: Public site rendered evidence
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: |
           cd "$CANDIDATE_DIR"
@@ -295,28 +293,27 @@ jobs:
             --config=playwright.config.ts
 
       - name: Final drift check and transactional fast-forward
-        if: steps.payloads.outputs.committed != 'true'
         shell: bash
         run: bash "$BRIDGE_ROOT/scripts/finalize_publish.sh"
 
       - name: Record workflow metadata
-        if: always() && steps.payloads.outputs.committed != 'true'
+        if: always()
         shell: bash
         run: |
           report="${REPORT_DIR:-$RUNNER_TEMP/gs-w02-remote-execution/report}"
           mkdir -p "$report"
           printf '%s\n' "${{ github.run_id }}" > "$report/workflow-run-id.txt"
           printf '%s\n' "${{ github.run_attempt }}" > "$report/workflow-run-attempt.txt"
-          printf '%s\n' "${{ github.sha }}" > "$report/bridge-run-sha.txt"
+          printf '%s\n' "$BRIDGE_EXACT_SHA" > "$report/bridge-run-sha.txt"
           printf '%s\n' "${CANDIDATE_SHA:-UNAVAILABLE}" > "$report/candidate-sha-observed.txt"
 
       - name: Record no-mutation failure state
-        if: failure() && steps.payloads.outputs.committed != 'true'
+        if: failure()
         shell: bash
         run: bash governance/remote-execution/w02/scripts/record_failure_state.sh
 
       - name: Upload bounded reference evidence
-        if: always() && steps.payloads.outputs.committed != 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gs-w02-remote-execution-${{ env.CANDIDATE_SHA || github.sha }}
