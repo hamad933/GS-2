@@ -110,7 +110,7 @@ jobs:
         run: npx playwright test tests/visual/route-performance/route-performance.spec.ts --project=chromium --workers=1
 
       - name: Run root How We Work suite
-        run: npx playwright test tests/visual/how-we-work/how-we-work.visual.spec.ts --project=chromium --workers=1
+        run: npx playwright test tests/visual/how-we-work/how-we-work.visual.spec.ts --config=tests/visual/how-we-work/playwright.config.ts
 
       - name: Run root shell-routing suite
         run: npx playwright test tests/visual/shell.routing.spec.ts --project=chromium --workers=1
