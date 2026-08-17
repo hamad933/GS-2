@@ -125,6 +125,8 @@ The deterministic rule is:
 
 This allows standalone governance PRs to remain correctly out of scope while preventing a future integrated candidate from false-passing after accepting W08-B product changes without its required specialized regression.
 
+The Visual Evidence job binds `VISUAL_EVIDENCE_DIR` to `visual-evidence/public-site`, so W08-B specialized captures are written under `visual-evidence/public-site/gs-pages-w08-b/`. When W08-B is in scope, artifact validation requires the non-empty `after-430-s03-reference-proof.png`, `after-390-s03-reference-proof.png`, `after-430-footer.png`, and `after-390-footer.png` files in that subdirectory. These mobile S03 and Footer captures are included in the same exact-SHA artifact as the remaining public-site evidence. The existing generic recursive PNG validation and governed R5 screenshot requirements remain unchanged.
+
 ## Final evidence route coverage and M14 dependency
 
 The source-ready workflow is intended to be capable of executing on one exact future integrated SHA:

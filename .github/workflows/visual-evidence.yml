@@ -23,6 +23,7 @@ jobs:
     env:
       EVIDENCE_DIR: visual-evidence/public-site
       W05_EVIDENCE_DIR: visual-evidence/public-site
+      VISUAL_EVIDENCE_DIR: visual-evidence/public-site
     steps:
       - name: Check out exact tested commit
         uses: actions/checkout@v4
@@ -143,6 +144,8 @@ jobs:
 
       - name: Verify captured evidence
         shell: bash
+        env:
+          W08_B_IN_SCOPE: ${{ steps.w08b-scope.outputs.in_scope || 'false' }}
         run: |
           test -d "$EVIDENCE_DIR"
           mapfile -t files < <(find "$EVIDENCE_DIR" -type f -name '*.png' -print | sort)
@@ -156,6 +159,16 @@ jobs:
             'w08-r5-390-solutions-compare-at-limit.png'; do
             test -s "$EVIDENCE_DIR/$required"
           done
+
+          if [[ "$W08_B_IN_SCOPE" == 'true' ]]; then
+            for required in \
+              'gs-pages-w08-b/after-430-s03-reference-proof.png' \
+              'gs-pages-w08-b/after-390-s03-reference-proof.png' \
+              'gs-pages-w08-b/after-430-footer.png' \
+              'gs-pages-w08-b/after-390-footer.png'; do
+              test -s "$EVIDENCE_DIR/$required"
+            done
+          fi
 
       - name: Upload reference-only visual evidence
         uses: actions/upload-artifact@v4
