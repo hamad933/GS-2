@@ -41,9 +41,17 @@ while IFS=$'\t' read -r asset_id drive_id expected source_fetched destination pa
   [[ "$asset_id" == 'asset_id' ]] && continue
   if [[ "$source_fetched" != "$expected" ]]; then echo "SOURCE_FETCHED_AUTHORITY_MISMATCH asset=$asset_id expected=$expected source=$source_fetched" >&2; exit 30; fi
   payload="$BRIDGE_ROOT/payloads/$payload_file"; output="$RECONSTRUCTED/${asset_id}.webp"
-  base64 --decode "$payload" > "$output"
+  if [[ -f "$payload" ]]; then
+    base64 --decode "$payload" > "$output"
+  else
+    shopt -s nullglob
+    chunks=("$payload".part-*)
+    shopt -u nullglob
+    if [[ ${#chunks[@]} -eq 0 ]]; then echo "PAYLOAD_MISSING asset=$asset_id payload=$payload" >&2; exit 31; fi
+    cat "${chunks[@]}" | base64 --decode > "$output"
+  fi
   reconstructed=$(sha256sum "$output" | awk '{print $1}'); actual_size=$(wc -c < "$output" | tr -d ' ')
-  if [[ "$reconstructed" != "$expected" || "$actual_size" != "$source_size" ]]; then echo "RECONSTRUCTED_ASSET_MISMATCH asset=$asset_id expected_sha=$expected actual_sha=$reconstructed expected_size=$source_size actual_size=$actual_size" >&2; exit 31; fi
+  if [[ "$reconstructed" != "$expected" || "$actual_size" != "$source_size" ]]; then echo "RECONSTRUCTED_ASSET_MISMATCH asset=$asset_id expected_sha=$expected actual_sha=$reconstructed expected_size=$source_size actual_size=$actual_size" >&2; exit 32; fi
 done < "$REQUEST"
 printf 'asset_reconstruction\tPASS\t8/8 canonical SHA256 values matched\n' >> "$REPORT_DIR/validation-summary.tsv"
 
