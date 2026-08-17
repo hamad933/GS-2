@@ -16,7 +16,7 @@ const homepageRoutes = [
     section: '#solutions-universe',
     label: 'استكشف جميع الحلول',
     path: '/solutions',
-    focus: '#gsdw-entry-title',
+    focus: '.integrated-public-page--solutions',
     activeNavigation: '.hero-nav__links a[href="/solutions"]',
   },
   {
@@ -106,10 +106,8 @@ for (const route of homepageRoutes) {
     const navigationEntriesBefore = await page.evaluate(
       () => window.performance.getEntriesByType('navigation').length,
     );
-
     const link = await expectVisibleFocus(page, route.section, route.label);
     await link.press('Enter');
-
     await expect(page).toHaveURL(new RegExp(`${route.path}$`));
     await expect(page.locator(route.focus)).toBeFocused();
     await expect(page.locator(route.activeNavigation)).toHaveAttribute('aria-current', 'page');
@@ -117,37 +115,24 @@ for (const route of homepageRoutes) {
     await expect.poll(() => page.evaluate(
       () => window.performance.getEntriesByType('navigation').length,
     )).toBe(navigationEntriesBefore);
-
     await page.goBack();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator(HOME)).toBeFocused();
-    await expect(page.locator('.hero-nav__links a[href="/"]')).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    await expect(page.locator('.hero-nav__links a[href="/"]')).toHaveAttribute('aria-current', 'page');
   });
 }
 
 test('Homepage interactions remain functional across Hero, S02, S03, and S04', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openHome(page);
-
   const hero = page.locator('#hero');
-  await expect(hero.getByRole('link', { name: 'استكشف كيف نعمل', exact: true })).toHaveAttribute(
-    'href',
-    '/how-we-work',
-  );
+  await expect(hero.getByRole('link', { name: 'استكشف كيف نعمل', exact: true })).toHaveAttribute('href', '/how-we-work');
   await page.getByRole('button', { name: 'إطلاق خدمة رقمية', exact: true }).click();
   await expect(hero).toHaveAttribute('data-stage', 'direction');
-  await expect(hero.getByRole('link', { name: 'استكشف الحلول', exact: true })).toHaveAttribute(
-    'href',
-    '/solutions',
-  );
+  await expect(hero.getByRole('link', { name: 'استكشف الحلول', exact: true })).toHaveAttribute('href', '/solutions');
   await page.getByRole('button', { name: 'خطوة رئيسية واحدة' }).click();
   await expect(hero).toHaveAttribute('data-stage', 'build');
-  await expect(
-    hero.getByRole('link', { name: 'شاهد المشاريع المرجعية', exact: true }),
-  ).toHaveAttribute('href', '/reference-projects');
+  await expect(hero.getByRole('link', { name: 'شاهد المشاريع المرجعية', exact: true })).toHaveAttribute('href', '/reference-projects');
   for (const action of ['رتّب الرحلة حول الهدف', 'وحّد التجربة', 'جرّب المسار']) {
     await page.getByRole('button', { name: action, exact: true }).click();
   }
@@ -190,19 +175,14 @@ test('Homepage entry metadata and deliberate RTL/LTR direction are preserved', a
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.locator('.gs-home')).toHaveAttribute('dir', 'rtl');
   await expect(page.locator('#reference-proof')).toHaveAttribute('dir', 'rtl');
-  await expect(page.locator('.reference-proof-v2__project-copy > p:first-child')).toHaveCSS(
-    'direction',
-    'ltr',
-  );
+  await expect(page.locator('.reference-proof-v2__project-copy > p:first-child')).toHaveCSS('direction', 'ltr');
   await expect(page.locator('.anatomy-brand')).toHaveCSS('direction', 'ltr');
-
   const description = page.locator('meta[name="description"]');
   await expect(description).toHaveAttribute('content', /ابدأ اختيار المسار الأقرب إلى احتياجك/);
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#071014');
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/gs-favicon.svg');
   const faviconResponse = await request.get('/gs-favicon.svg');
   expect(faviconResponse.ok()).toBe(true);
-
   const entryResponse = await request.get('/');
   const entryHtml = await entryResponse.text();
   expect(entryHtml).toContain('<title>حلول رقمية تبدأ من احتياجك | General Solutions</title>');
@@ -219,7 +199,6 @@ for (const width of [1440, 1024, 768, 430, 390]) {
     await page.locator('#solutions-universe .s02-station-5').click();
     await page.locator('#reference-proof [data-project-selector="rp02"]').click();
     await page.locator('#system-anatomy').getByRole('button', { name: 'التكامل', exact: true }).click();
-
     for (const selector of [
       '#hero .e2-cta-primary',
       '#solutions-universe .s02-actions a[href="/solutions"]',
@@ -227,10 +206,7 @@ for (const width of [1440, 1024, 768, 430, 390]) {
       '#system-anatomy .anatomy-route-link',
       '#project-gateway .gateway-cta--primary',
       '#project-gateway .gateway-cta--secondary',
-    ]) {
-      await expect(page.locator(selector)).toBeVisible();
-    }
-
+    ]) await expect(page.locator(selector)).toBeVisible();
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
