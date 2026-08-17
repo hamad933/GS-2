@@ -51,9 +51,17 @@ async function reachFirstBookingDecision(page: Page) {
   await expect(page.getByRole('heading', { name: 'هل تريد تحصيل مبلغ عند الحجز؟' })).toBeVisible();
 }
 
+async function adoptFirstExperience(page: Page, collapseAfter = false) {
+  const support = page.locator('.sfp-build-support');
+  const wasOpen = await support.evaluate((element: HTMLDetailsElement) => element.open);
+  if (!wasOpen) await support.locator('summary').click();
+  await page.locator('.sfp-experience [role="radio"]').first().click();
+  if (collapseAfter && !wasOpen) await support.locator('summary').click();
+}
+
 async function finishBuild(page: Page, adoptExperience = true) {
   if (adoptExperience) {
-    await page.locator('.sfp-experience [role="radio"]').first().click();
+    await adoptFirstExperience(page, true);
   }
   while ((await page.locator('.start-discovery').getAttribute('data-stage')) === 'build') {
     const decision = page.locator('.sfp-decision [role="radio"]').first();
@@ -111,18 +119,15 @@ test('v1 prefill remains compatible while SYSTEM_FINDER identity stays recommend
   expect(createStartDiscoveryDraft(presentEmpty).selectedCapabilities).toEqual([]);
 });
 
-test('the registry binds exactly 32 approved WebPs and leaves exactly four contextual IDs unresolved', () => {
+test('the registry binds all 36 governed START WebPs including the four final contextual assets', () => {
   const assets = Object.values(familyVisualAssets);
   const bound = assets.filter((asset) => asset.status === 'APPROVED_BOUND');
-  const unresolved = assets.filter((asset) => asset.status === 'UNRESOLVED');
-  expect(bound).toHaveLength(32);
+  expect(bound).toHaveLength(36);
   expect(bound.every((asset) => asset.runtimeUrl && asset.canonicalPath?.endsWith('.webp'))).toBe(true);
-  expect(unresolved.map((asset) => asset.id).sort()).toEqual([
-    'FAM-05-CTX-01',
-    'FAM-05-CTX-02',
-    'FAM-06-CTX-01',
-    'FAM-06-CTX-02',
-  ]);
+  for (const assetId of ['FAM-05-CTX-01', 'FAM-05-CTX-02', 'FAM-06-CTX-01', 'FAM-06-CTX-02']) {
+    expect(familyVisualAssets[assetId]).toMatchObject({ status: 'APPROVED_BOUND' });
+    expect(familyVisualAssets[assetId].runtimeUrl).toBeTruthy();
+  }
 });
 
 test('direct entry exposes exactly three major stages and three keyboard-complete entrances', async ({ page }) => {
@@ -264,15 +269,47 @@ test('approved contextual evidence is a bound image and the drawer restores focu
   await expect(page.getByRole('radio', { name: /نعم، دفع أو عربون/ })).toHaveAttribute('aria-checked', 'true');
 });
 
-test('FAM-05 contextual evidence stays governed unresolved without a fabricated image', async ({ page }) => {
+test('FAM-05 contextual evidence renders the final approved bound image', async ({ page }) => {
   await openStart(page, '?prefill=portals');
   await page.getByRole('button', { name: /تابع مع اختيارك/ }).click();
   await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
   await page.getByRole('button', { name: /شاهد مثالًا مرتبطًا/ }).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.locator('[data-asset-id="FAM-05-CTX-01"]')).toHaveAttribute('data-asset-status', 'unresolved');
-  await expect(dialog.locator('img')).toHaveCount(0);
-  await expect(dialog).toContainText('لم يُعتمد بعد');
+  await expect(dialog.locator('img[data-asset-id="FAM-05-CTX-01"]')).toHaveAttribute('data-asset-status', 'approved-bound');
+  await expect(dialog).not.toContainText('لم يُعتمد بعد');
+});
+
+test('mobile Build keeps one compact Project Pulse and the primary CTA before supporting exploration', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await reachFirstBookingDecision(page);
+  await page.locator('.sfp-decision [role="radio"]').first().click();
+
+  const support = page.locator('.sfp-build-support');
+  await expect(page.locator('[data-testid="project-pulse"]')).toHaveCount(1);
+  await expect(support.locator('summary')).toBeVisible();
+  expect(await support.evaluate((element: HTMLDetailsElement) => element.open)).toBe(false);
+  await expectNoHorizontalOverflow(page);
+
+  const order = await page.evaluate(() => {
+    const box = (selector: string) => {
+      const rect = document.querySelector(selector)?.getBoundingClientRect();
+      if (!rect) throw new Error(`Missing mobile Build selector: ${selector}`);
+      return { top: rect.top + window.scrollY, bottom: rect.bottom + window.scrollY };
+    };
+    return {
+      consequence: box('[data-testid="decision-consequence"]'),
+      pulse: box('[data-testid="project-pulse"]'),
+      action: box('.sfp-build-actions'),
+      support: box('.sfp-build-support'),
+    };
+  });
+  expect(order.pulse.top).toBeGreaterThanOrEqual(order.consequence.bottom - 1);
+  expect(order.action.top).toBeGreaterThanOrEqual(order.pulse.bottom - 1);
+  expect(order.support.top).toBeGreaterThanOrEqual(order.action.bottom - 1);
+
+  await support.locator('summary').click();
+  await expect(page.locator('.sfp-experience [role="radio"]')).toHaveCount(3);
+  await expect(page.locator('.sfp-experience [role="radio"]').first()).toHaveAttribute('tabindex', '0');
 });
 
 test('Review preserves recommendation, customer adoption, experience truth, and final local handoff', async ({ page }) => {
@@ -326,7 +363,7 @@ for (const [width, height] of [[1440, 900], [1024, 900], [768, 1024], [430, 932]
     await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
     await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
     await page.locator('.sfp-decision [role="radio"]').first().click();
-    await page.locator('.sfp-experience [role="radio"]').first().click();
+    await adoptFirstExperience(page, true);
     await page.screenshot({ path: resolve(evidenceDirectory, `build-${width}.png`), fullPage: true, animations: 'disabled' });
     await finishBuild(page);
     await page.screenshot({ path: resolve(evidenceDirectory, `review-${width}.png`), fullPage: true, animations: 'disabled' });

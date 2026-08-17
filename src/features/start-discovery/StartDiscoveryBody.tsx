@@ -386,7 +386,7 @@ function Drawer({ open, asset, familyTitle, onClose, trigger }: { open: boolean;
         <div className="sfp-drawer-copy">
           <p><strong>ما الذي يعرضه؟</strong> يوضح سياق استخدام مرتبطًا بلحظة الرحلة والقرار الحالي.</p>
           <p><strong>ما الذي لا يعرضه؟</strong> ليس تصميمًا نهائيًا ولا يثبت كل الوظائف أو التكاملات.</p>
-          {asset?.status === 'UNRESOLVED' ? <p data-asset-note="pending">المثال البصري لهذا السياق لم يُعتمد بعد، لذلك أبقينا الحالة صريحة بلا بديل مصطنع.</p> : null}
+          {asset && !asset.runtimeUrl ? <p data-asset-note="pending">المثال البصري لهذا السياق لم يُعتمد بعد، لذلك أبقينا الحالة صريحة بلا بديل مصطنع.</p> : null}
         </div>
       </div>
     </div>
@@ -409,6 +409,10 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
   const [local, setLocal] = useState<LocalState>(() => initialLocal(prefill));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [compactBuildComposition, setCompactBuildComposition] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 520px)').matches
+  ));
+  const [buildSupportOpen, setBuildSupportOpen] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const exampleTrigger = useRef<HTMLButtonElement>(null);
 
@@ -442,6 +446,13 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
   const contextAsset = getFamilyVisualAsset(getFamilyAssetId(activeFamilyId, currentStep?.evidenceRole ?? 'CTX-01'));
 
   useEffect(() => { onDraftChange?.(draft); }, [draft, onDraftChange]);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 520px)');
+    const updateComposition = () => setCompactBuildComposition(query.matches);
+    updateComposition();
+    query.addEventListener('change', updateComposition);
+    return () => query.removeEventListener('change', updateComposition);
+  }, []);
   useEffect(() => {
     window.sessionStorage.setItem(SESSION_KEY, JSON.stringify({
       fingerprint: prefillFingerprint(prefill),
@@ -666,21 +677,32 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
       <header className="sfp-stage-heading" data-density="compact"><p className="sfp-eyebrow">المرحلة 02 · كوّن حلّك</p><h1 id="start-build-title" ref={headingRef} tabIndex={-1}>كوّن الحل حول رحلة العميل.</h1><p>{activeFamily.title} · قرار واحد ونتيجته المباشرة في كل مرة.</p></header>
       <div className="sfp-build-layout">
         <main className="sfp-build-workspace">
-          <nav className="sfp-journey" aria-label="لحظات رحلة الحل">{journey.map((moment, index) => { const firstStep = buildSteps.findIndex((step) => step.momentId === moment.id); const current = currentStep?.momentId === moment.id; return <button key={moment.id} type="button" disabled={firstStep > local.furthestBuildStep} data-current={current ? 'true' : undefined} data-complete={firstStep < local.buildStepIndex ? 'true' : undefined} onClick={() => setLocal((state) => ({ ...state, buildStepIndex: firstStep }))}><bdi>{String(index + 1).padStart(2, '0')}</bdi><span>{moment.label}</span>{firstStep < local.buildStepIndex ? <Check aria-hidden="true" /> : null}</button>; })}</nav>
-          <section className="sfp-current-moment" aria-labelledby="sfp-current-moment-title"><span>لحظة الرحلة الحالية</span><h2 id="sfp-current-moment-title">{currentMoment?.label}</h2><p>{currentStep?.body}</p></section>
-          {currentStep?.kind === 'information' ? <article className="sfp-moment-brief" data-testid="journey-information"><span>لحظة في الرحلة</span><h2>{currentStep.title}</h2><p>{currentStep.body}</p><ul>{activeFamily.capabilities.filter((capability) => capability.classification === 'CORE').map((capability) => <li key={capability.name}><strong>{capability.name}</strong><small>{capability.description}</small></li>)}</ul></article> : null}
-          {currentDecision ? <div className="sfp-decision-result"><article className="sfp-decision" data-moment-id={currentDecision.momentId}><span>القرار الحالي</span><h2>{currentDecision.question}</h2><AccessibleRadioGroup label={currentDecision.question} value={currentAnswer} options={currentDecision.answers.map((answer) => ({ value: answer.id, label: answer.label, description: answer.detail }))} onChange={selectAnswer} /></article>{currentConsequence ? <section className="sfp-consequence" data-testid="decision-consequence" aria-labelledby="sfp-consequence-title"><span>النتيجة المرتبطة بقرارك</span><h2 id="sfp-consequence-title">ماذا يتغير؟</h2><div><article><strong>للعميل</strong><p>{currentConsequence.customer}</p></article><article><strong>في الحل</strong><p>{currentConsequence.solution}</p></article><article><strong>في المشروع</strong><p>{currentConsequence.project}</p></article></div></section> : null}</div> : null}
-          <div className="sfp-build-support">
+          <div className="sfp-build-primary">
+            <nav className="sfp-journey" aria-label="لحظات رحلة الحل">{journey.map((moment, index) => { const firstStep = buildSteps.findIndex((step) => step.momentId === moment.id); const current = currentStep?.momentId === moment.id; return <button key={moment.id} type="button" disabled={firstStep > local.furthestBuildStep} data-current={current ? 'true' : undefined} data-complete={firstStep < local.buildStepIndex ? 'true' : undefined} onClick={() => setLocal((state) => ({ ...state, buildStepIndex: firstStep }))}><bdi>{String(index + 1).padStart(2, '0')}</bdi><span>{moment.label}</span>{firstStep < local.buildStepIndex ? <Check aria-hidden="true" /> : null}</button>; })}</nav>
+            <section className="sfp-current-moment" aria-labelledby="sfp-current-moment-title"><span>لحظة الرحلة الحالية</span><h2 id="sfp-current-moment-title">{currentMoment?.label}</h2><p>{currentStep?.body}</p></section>
+            {currentStep?.kind === 'information' ? <article className="sfp-moment-brief" data-testid="journey-information"><span>لحظة في الرحلة</span><h2>{currentStep.title}</h2><p>{currentStep.body}</p><ul>{activeFamily.capabilities.filter((capability) => capability.classification === 'CORE').map((capability) => <li key={capability.name}><strong>{capability.name}</strong><small>{capability.description}</small></li>)}</ul></article> : null}
+            {currentDecision ? <div className="sfp-decision-result"><article className="sfp-decision" data-moment-id={currentDecision.momentId}><span>القرار الحالي</span><h2>{currentDecision.question}</h2><AccessibleRadioGroup label={currentDecision.question} value={currentAnswer} options={currentDecision.answers.map((answer) => ({ value: answer.id, label: answer.label, description: answer.detail }))} onChange={selectAnswer} /></article>{currentConsequence ? <section className="sfp-consequence" data-testid="decision-consequence" aria-labelledby="sfp-consequence-title"><span>النتيجة المرتبطة بقرارك</span><h2 id="sfp-consequence-title">ماذا يتغير؟</h2><div><article><strong>للعميل</strong><p>{currentConsequence.customer}</p></article><article><strong>في الحل</strong><p>{currentConsequence.solution}</p></article><article><strong>في المشروع</strong><p>{currentConsequence.project}</p></article></div></section> : null}</div> : null}
+          </div>
+          <Pulse goal={goal} recommended={local.recommended} selected={local.selected} budget={budgetBand} reviewNeeds={reviewNeeds} />
+          <div className="sfp-build-actions"><p>يمكنك العودة وتعديل أي قرار سابق.</p><button type="button" className="sfp-primary" disabled={Boolean(currentDecision && !currentAnswer)} onClick={nextBuild}>{local.buildStepIndex < buildSteps.length - 1 ? 'تابع في الرحلة' : 'احفظ التكوين وتابع'} <ArrowLeft /></button></div>
+          <details
+            className="sfp-build-support"
+            open={!compactBuildComposition || buildSupportOpen}
+            onToggle={(event) => {
+              if (compactBuildComposition) setBuildSupportOpen(event.currentTarget.open);
+            }}
+          >
+            <summary><span>استكشاف داعم</span><strong>شكل التجربة والمشهد السياقي</strong><small>نقترح: {recommendedExperienceDirection.shortLabel} · اعتمدت: {selectedExperienceDirection?.shortLabel ?? 'لم تعتمد شكلًا بعد.'}</small></summary>
+            <div className="sfp-build-support-content">
             <section className="sfp-experience" aria-labelledby="sfp-experience-title" data-recommended-experience={local.recommendedExperience} data-selected-experience={local.selectedExperience ?? ''}>
               <span>شكل التجربة</span><h2 id="sfp-experience-title">اتجاه مقترح، والاعتماد قرارك.</h2>
               <div className="sfp-experience-truth"><p><strong>نقترح:</strong> {recommendedExperienceDirection.shortLabel}</p><p><strong>اعتمدت:</strong> {selectedExperienceDirection?.shortLabel ?? 'لم تعتمد شكلًا بعد.'}</p></div>
               <AccessibleRadioGroup label="شكل تجربة العميل" value={local.selectedExperience} fallbackValue={local.recommendedExperience} options={startConfigurationDirections.map((direction) => ({ value: direction.id, label: direction.shortLabel, description: direction.description, eyebrow: direction.id === local.recommendedExperience ? 'موصى به للمراجعة' : 'بديل' }))} onChange={(experience) => { setLocal((current) => ({ ...current, selectedExperience: experience })); patchDraft({ configurationPreference: startConfigurationDirections.find((direction) => direction.id === experience)?.title ?? '' }); }} />
             </section>
             <section className="sfp-context-preview" aria-labelledby="sfp-context-preview-title"><div><span>مشهد مرتبط بهذه اللحظة</span><h2 id="sfp-context-preview-title">{currentMoment?.label}</h2><p>يساعدك هذا المشهد على قراءة القرار في سياقه، ولا يمثل تصميم مشروعك النهائي.</p></div><AssetSlot asset={contextAsset} alt={`مثال سياقي لعائلة ${activeFamily.title} في ${currentMoment?.label}`} /><button ref={exampleTrigger} type="button" className="sfp-example" onClick={() => setDrawerOpen(true)}><Eye /> شاهد مثالًا مرتبطًا بهذه اللحظة وتفاصيله</button></section>
-          </div>
-          <div className="sfp-build-actions"><p>يمكنك العودة وتعديل أي قرار سابق.</p><button type="button" className="sfp-primary" disabled={Boolean(currentDecision && !currentAnswer)} onClick={nextBuild}>{local.buildStepIndex < buildSteps.length - 1 ? 'تابع في الرحلة' : 'احفظ التكوين وتابع'} <ArrowLeft /></button></div>
+            </div>
+          </details>
         </main>
-        <Pulse goal={goal} recommended={local.recommended} selected={local.selected} budget={budgetBand} reviewNeeds={reviewNeeds} />
       </div>
       <Drawer open={drawerOpen} asset={contextAsset} familyTitle={activeFamily.title} onClose={() => setDrawerOpen(false)} trigger={exampleTrigger} />
     </section>

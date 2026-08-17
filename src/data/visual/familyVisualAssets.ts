@@ -1,6 +1,6 @@
 export type FamilyAssetFamily = 'FAM-01' | 'FAM-02' | 'FAM-03' | 'FAM-04' | 'FAM-05' | 'FAM-06';
 export type FamilyAssetRole = 'MASTER' | 'DIRECTION' | 'CONTEXTUAL_CUSTOMER' | 'CONTEXTUAL_OPERATIONS';
-export type FamilyAssetStatus = 'APPROVED_BOUND' | 'UNRESOLVED';
+export type FamilyAssetStatus = 'APPROVED_BOUND';
 
 export interface FamilyVisualAsset {
   id: string;
@@ -40,14 +40,17 @@ const runtimeAssets: Record<string, string> = {
   'FAM-05-DIR-01': new URL('../../assets/gs-public-v1/families/FAM-05/DIRECTIONS/FAM-05-DIR-01.webp', import.meta.url).href,
   'FAM-05-DIR-02': new URL('../../assets/gs-public-v1/families/FAM-05/DIRECTIONS/FAM-05-DIR-02.webp', import.meta.url).href,
   'FAM-05-DIR-03': new URL('../../assets/gs-public-v1/families/FAM-05/DIRECTIONS/FAM-05-DIR-03.webp', import.meta.url).href,
+  'FAM-05-CTX-01': new URL('../../assets/gs-public-v1/families/FAM-05/CONTEXTUAL/FAM-05-CTX-01.webp', import.meta.url).href,
+  'FAM-05-CTX-02': new URL('../../assets/gs-public-v1/families/FAM-05/CONTEXTUAL/FAM-05-CTX-02.webp', import.meta.url).href,
   'FAM-06-MSC-01': new URL('../../assets/gs-public-v1/families/FAM-06/MASTER/FAM-06-MSC-01.webp', import.meta.url).href,
   'FAM-06-DIR-01': new URL('../../assets/gs-public-v1/families/FAM-06/DIRECTIONS/FAM-06-DIR-01.webp', import.meta.url).href,
   'FAM-06-DIR-02': new URL('../../assets/gs-public-v1/families/FAM-06/DIRECTIONS/FAM-06-DIR-02.webp', import.meta.url).href,
   'FAM-06-DIR-03': new URL('../../assets/gs-public-v1/families/FAM-06/DIRECTIONS/FAM-06-DIR-03.webp', import.meta.url).href,
+  'FAM-06-CTX-01': new URL('../../assets/gs-public-v1/families/FAM-06/CONTEXTUAL/FAM-06-CTX-01.webp', import.meta.url).href,
+  'FAM-06-CTX-02': new URL('../../assets/gs-public-v1/families/FAM-06/CONTEXTUAL/FAM-06-CTX-02.webp', import.meta.url).href,
 };
 
 const approved = (id: string, family: FamilyAssetFamily, role: FamilyAssetRole, canonicalPath: string): FamilyVisualAsset => ({ id, family, role, status: 'APPROVED_BOUND', runtimeUrl: runtimeAssets[id], canonicalPath });
-const unresolved = (id: string, family: FamilyAssetFamily, role: FamilyAssetRole): FamilyVisualAsset => ({ id, family, role, status: 'UNRESOLVED', runtimeUrl: null, canonicalPath: null });
 
 export const familyVisualAssets: Record<string, FamilyVisualAsset> = {
   'FAM-01-MSC-01': approved('FAM-01-MSC-01', 'FAM-01', 'MASTER', 'src/assets/gs-public-v1/families/FAM-01/MASTER/FAM-01-MSC-01.webp'),
@@ -82,15 +85,15 @@ export const familyVisualAssets: Record<string, FamilyVisualAsset> = {
   'FAM-05-DIR-01': approved('FAM-05-DIR-01', 'FAM-05', 'DIRECTION', 'src/assets/gs-public-v1/families/FAM-05/DIRECTIONS/FAM-05-DIR-01.webp'),
   'FAM-05-DIR-02': approved('FAM-05-DIR-02', 'FAM-05', 'DIRECTION', 'src/assets/gs-public-v1/families/FAM-05/DIRECTIONS/FAM-05-DIR-02.webp'),
   'FAM-05-DIR-03': approved('FAM-05-DIR-03', 'FAM-05', 'DIRECTION', 'src/assets/gs-public-v1/families/FAM-05/DIRECTIONS/FAM-05-DIR-03.webp'),
-  'FAM-05-CTX-01': unresolved('FAM-05-CTX-01', 'FAM-05', 'CONTEXTUAL_CUSTOMER'),
-  'FAM-05-CTX-02': unresolved('FAM-05-CTX-02', 'FAM-05', 'CONTEXTUAL_OPERATIONS'),
+  'FAM-05-CTX-01': approved('FAM-05-CTX-01', 'FAM-05', 'CONTEXTUAL_CUSTOMER', 'src/assets/gs-public-v1/families/FAM-05/CONTEXTUAL/FAM-05-CTX-01.webp'),
+  'FAM-05-CTX-02': approved('FAM-05-CTX-02', 'FAM-05', 'CONTEXTUAL_OPERATIONS', 'src/assets/gs-public-v1/families/FAM-05/CONTEXTUAL/FAM-05-CTX-02.webp'),
 
   'FAM-06-MSC-01': approved('FAM-06-MSC-01', 'FAM-06', 'MASTER', 'src/assets/gs-public-v1/families/FAM-06/MASTER/FAM-06-MSC-01.webp'),
   'FAM-06-DIR-01': approved('FAM-06-DIR-01', 'FAM-06', 'DIRECTION', 'src/assets/gs-public-v1/families/FAM-06/DIRECTIONS/FAM-06-DIR-01.webp'),
   'FAM-06-DIR-02': approved('FAM-06-DIR-02', 'FAM-06', 'DIRECTION', 'src/assets/gs-public-v1/families/FAM-06/DIRECTIONS/FAM-06-DIR-02.webp'),
   'FAM-06-DIR-03': approved('FAM-06-DIR-03', 'FAM-06', 'DIRECTION', 'src/assets/gs-public-v1/families/FAM-06/DIRECTIONS/FAM-06-DIR-03.webp'),
-  'FAM-06-CTX-01': unresolved('FAM-06-CTX-01', 'FAM-06', 'CONTEXTUAL_CUSTOMER'),
-  'FAM-06-CTX-02': unresolved('FAM-06-CTX-02', 'FAM-06', 'CONTEXTUAL_OPERATIONS'),
+  'FAM-06-CTX-01': approved('FAM-06-CTX-01', 'FAM-06', 'CONTEXTUAL_CUSTOMER', 'src/assets/gs-public-v1/families/FAM-06/CONTEXTUAL/FAM-06-CTX-01.webp'),
+  'FAM-06-CTX-02': approved('FAM-06-CTX-02', 'FAM-06', 'CONTEXTUAL_OPERATIONS', 'src/assets/gs-public-v1/families/FAM-06/CONTEXTUAL/FAM-06-CTX-02.webp'),
 
 };
 
