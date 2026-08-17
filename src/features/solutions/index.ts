@@ -1,2 +1,5 @@
-export { SolutionsDecisionWorkspace } from './SolutionsDecisionWorkspace';
-export type { SolutionsDecisionWorkspaceProps, DecisionSnapshot } from '../../types/solutions';
+export { SolutionsExploration } from './SolutionsExploration';
+export type {
+  SolutionsExplorationProps,
+  SolutionsExplorationStartOrigin,
+} from './SolutionsExploration';

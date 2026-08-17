@@ -8,13 +8,23 @@ import {
   START_DISCOVERY_PREFILL_VERSION,
   type DiscoveryCapabilitySelection,
   type DiscoveryCapturedFacts,
+  type DiscoveryDecisionOrigin,
   type StartDiscoveryPrefill,
 } from '../types/start-discovery';
-import type { DecisionSnapshot, EvidenceState } from '../types/solutions';
+import type {
+  DecisionSnapshot,
+  EvidenceState,
+  SolutionFamilyId,
+} from '../types/solutions';
 
 export interface StartDiscoveryRouteState {
   discoveryPrefill: StartDiscoveryPrefill;
 }
+
+export type SolutionsExplorationStartOrigin = Extract<
+  DiscoveryDecisionOrigin,
+  'USER_DIRECT' | 'USER_COMPARE'
+>;
 
 const evidenceLabels: Record<EvidenceState, string> = {
   VERIFIED_IMPLEMENTATION: 'تنفيذ متحقق',
@@ -35,10 +45,7 @@ function mapBudgetPreference(snapshot: DecisionSnapshot) {
     ? undefined
     : budgetPreferences.find((item) => item.id === snapshot.budgetPreference)?.title;
   const suppliedRange = snapshot.budgetRange.trim();
-
-  if (preference && suppliedRange) {
-    return `${preference} · النطاق الذي ذكره المستخدم: ${suppliedRange}`;
-  }
+  if (preference && suppliedRange) return `${preference} · النطاق الذي ذكره المستخدم: ${suppliedRange}`;
   if (suppliedRange) return `النطاق الذي ذكره المستخدم: ${suppliedRange}`;
   return preference;
 }
@@ -46,7 +53,6 @@ function mapBudgetPreference(snapshot: DecisionSnapshot) {
 function mapReferenceContext(snapshot: DecisionSnapshot) {
   const reference = familyById[snapshot.recommendedFamily].reference;
   if (!reference.code) return undefined;
-
   return `${reference.code} — ${reference.title}. ${reference.note} حالة السياق: ${evidenceLabels[reference.evidenceState]}.`;
 }
 
@@ -58,15 +64,11 @@ function mapCapturedFacts(snapshot: DecisionSnapshot): DiscoveryCapturedFacts | 
   }
   const constraints = snapshot.facts.constraints.trim();
   if (constraints) capturedFacts.constraints = constraints;
-
   return Object.keys(capturedFacts).length ? capturedFacts : undefined;
 }
 
 function mapCapabilitySelections(snapshot: DecisionSnapshot): DiscoveryCapabilitySelection[] {
-  if (snapshot.capabilitySelections?.length) {
-    return snapshot.capabilitySelections.map((selection) => ({ ...selection }));
-  }
-
+  if (snapshot.capabilitySelections?.length) return snapshot.capabilitySelections.map((selection) => ({ ...selection }));
   const family = familyById[snapshot.recommendedFamily];
   return unique(snapshot.selectedCapabilities).map((name) => ({
     name,
@@ -75,35 +77,16 @@ function mapCapabilitySelections(snapshot: DecisionSnapshot): DiscoveryCapabilit
   }));
 }
 
-/**
- * Translates the Solutions decision contract into Start / Discovery v1 without
- * relabelling system inference as customer fact.
- */
-export function mapSolutionsDecisionToDiscovery(
-  snapshot: DecisionSnapshot,
-): StartDiscoveryPrefill {
+/** Compatibility mapper for the superseded decision-workspace contract. */
+export function mapSolutionsDecisionToDiscovery(snapshot: DecisionSnapshot): StartDiscoveryPrefill {
   const family = familyById[snapshot.recommendedFamily];
   const capabilitySelections = mapCapabilitySelections(snapshot);
-  const userSelections = capabilitySelections.filter(
-    (selection) => selection.provenance === 'USER_SELECTED',
-  );
-  const selectedCapabilities = unique(
-    userSelections
-      .filter((selection) => selection.classification !== 'OPTIONAL')
-      .map((selection) => selection.name),
-  );
-  const optionalCapabilities = unique(
-    userSelections
-      .filter((selection) => selection.classification === 'OPTIONAL')
-      .map((selection) => selection.name),
-  );
-
+  const userSelections = capabilitySelections.filter((selection) => selection.provenance === 'USER_SELECTED');
+  const selectedCapabilities = unique(userSelections.filter((selection) => selection.classification !== 'OPTIONAL').map((selection) => selection.name));
+  const optionalCapabilities = unique(userSelections.filter((selection) => selection.classification === 'OPTIONAL').map((selection) => selection.name));
   return {
     version: START_DISCOVERY_PREFILL_VERSION,
-    source: {
-      adapter: 'solutions-decision-workspace',
-      label: 'ملخص قرار الحلول',
-    },
+    source: { adapter: 'solutions-decision-workspace', label: 'ملخص قرار الحلول' },
     recommendedFamily: family.title,
     solutionFamilyId: family.id,
     decisionOrigin: snapshot.decisionOrigin,
@@ -112,9 +95,7 @@ export function mapSolutionsDecisionToDiscovery(
     optionalCapabilities,
     capabilitySelections,
     capturedFacts: mapCapturedFacts(snapshot),
-    configurationPreference: configurationDirections.find(
-      (direction) => direction.id === snapshot.configuration,
-    )?.title,
+    configurationPreference: configurationDirections.find((direction) => direction.id === snapshot.configuration)?.title,
     budgetPreference: mapBudgetPreference(snapshot),
     knownDependencies: unique(snapshot.confirmedDependencies),
     unknowns: unique(snapshot.unknowns),
@@ -122,11 +103,32 @@ export function mapSolutionsDecisionToDiscovery(
   };
 }
 
-export function createStartDiscoveryRouteState(
-  snapshot: DecisionSnapshot,
+/** Final SOLUTIONS exploration carries only context the customer actually chose. */
+export function mapSolutionsExplorationToDiscovery(
+  familyId: SolutionFamilyId,
+  decisionOrigin: SolutionsExplorationStartOrigin = 'USER_DIRECT',
+): StartDiscoveryPrefill {
+  return {
+    version: START_DISCOVERY_PREFILL_VERSION,
+    source: {
+      adapter: 'solutions-exploration',
+      label: 'استكشاف الحلول',
+      referenceId: familyId,
+    },
+    solutionFamilyId: familyId,
+    decisionOrigin,
+  };
+}
+
+export function createStartDiscoveryRouteStateFromExploration(
+  familyId: SolutionFamilyId,
+  decisionOrigin: SolutionsExplorationStartOrigin = 'USER_DIRECT',
 ): StartDiscoveryRouteState {
+  return { discoveryPrefill: mapSolutionsExplorationToDiscovery(familyId, decisionOrigin) };
+}
+
+export function createStartDiscoveryRouteState(snapshot: DecisionSnapshot): StartDiscoveryRouteState {
   return { discoveryPrefill: mapSolutionsDecisionToDiscovery(snapshot) };
 }
 
-// Backward-compatible public export; route-state validation has one canonical implementation.
 export { readStartDiscoveryRouteState } from '../routes/startDiscoveryRouteState';
