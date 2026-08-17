@@ -1,21 +1,32 @@
 name: CI
 
 on:
-  pull_request:
-    branches:
-      - main
-      - codex/implement-visual-reconstruction-for-homepage
-      - controller/gs-home-w05-v2-visual-authority
+  pull_request: {}
   push:
     branches:
       - main
+
+permissions:
+  contents: read
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out exact tested commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify checked out commit
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+
+      - name: Verify pull request diff integrity
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: git diff --check "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
 
       - name: Set up Node 20
         uses: actions/setup-node@v4
