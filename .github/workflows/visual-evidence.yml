@@ -104,7 +104,7 @@ jobs:
         run: npx playwright test --config=tests/visual/public-semantics/playwright.config.ts
 
       - name: Run Reference Projects canonical harness
-        run: npx playwright test --config=tests/visual/reference-projects/playwright.config.ts
+        run: npx playwright test tests/visual/reference-projects/reference-projects.visual.spec.ts --config=tests/visual/reference-projects/playwright.config.ts
 
       - name: Run root route-performance suite
         run: npx playwright test tests/visual/route-performance/route-performance.spec.ts --project=chromium --workers=1
