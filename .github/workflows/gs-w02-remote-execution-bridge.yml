@@ -15,6 +15,11 @@ concurrency:
 jobs:
   w02-remote-execution:
     runs-on: ubuntu-latest
+    env:
+      GIT_AUTHOR_NAME: GS Governance Remote Bridge run ${{ github.run_id }}
+      GIT_AUTHOR_EMAIL: governance-actions@users.noreply.github.com
+      GIT_COMMITTER_NAME: GS Governance Remote Bridge run ${{ github.run_id }}
+      GIT_COMMITTER_EMAIL: governance-actions@users.noreply.github.com
     steps:
       - name: Check out exact bridge commit
         uses: actions/checkout@v4
