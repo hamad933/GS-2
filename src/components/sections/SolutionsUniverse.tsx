@@ -8,6 +8,47 @@ type GlyphProps = {
   familyId: string;
 };
 
+const S02_READABILITY_STYLES = `
+.s02-universe .s02-segment-band span,
+.s02-universe .s02-selected-label,
+.s02-universe .s02-station-copy small,
+.s02-universe .s02-family-detail > p,
+.s02-universe .s02-family-detail li small,
+.s02-universe .s02-context-cue,
+.s02-universe .s02-continuity-title span,
+.s02-universe .s02-continuity-outcomes > span {
+  font-size: 10px;
+}
+
+.s02-universe .s02-segment-band b,
+.s02-universe .s02-station-index,
+.s02-universe .s02-eyebrow span,
+.s02-universe .s02-outcome-icon b,
+.s02-universe .s02-continuity-outcomes i {
+  font-size: 9px;
+}
+
+.s02-universe .s02-family-detail li strong,
+.s02-universe .s02-station-copy strong {
+  font-size: 11px;
+}
+
+.s02-universe .s02-actions a,
+.s02-universe .s02-actions button {
+  min-height: 44px;
+  font-size: 11px;
+}
+
+@media (min-width: 801px) {
+  .s02-universe .s02-family-detail > p,
+  .s02-universe .s02-family-detail li strong,
+  .s02-universe .s02-actions a,
+  .s02-universe .s02-actions button {
+    font-size: 11px;
+  }
+}
+`;
+
 function FamilyGlyph({ familyId }: GlyphProps) {
   const common = {
     viewBox: '0 0 48 48',
@@ -58,6 +99,7 @@ export function SolutionsUniverse() {
       aria-labelledby="solutions-title"
       data-active={active.id}
     >
+      <style>{S02_READABILITY_STYLES}</style>
       <img
         className="s02-environment"
         src={solutionsEnvironment}
@@ -99,7 +141,6 @@ export function SolutionsUniverse() {
                 aria-pressed={selected}
                 aria-controls="s02-family-detail"
                 onPointerEnter={() => setActiveId(family.id)}
-                onFocus={() => setActiveId(family.id)}
                 onClick={() => setActiveId(family.id)}
               >
                 <span className="s02-station-copy">
