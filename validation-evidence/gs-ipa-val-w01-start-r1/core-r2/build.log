@@ -1,0 +1,83 @@
+
+> general-solutions-digital-journey@0.0.1 build
+> vite build
+
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 1712 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                                                            [39m[1m[2m  0.73 kB[22m[1m[22m[2m │ gzip:  0.50 kB[22m
+[2mdist/[22m[2massets/[22m[32mnoto-kufi-arabic-latin-500-normal-B6DUqak9.woff2               [39m[1m[2m 10.57 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mnoto-kufi-arabic-latin-500-normal-BKKDuk0u.woff                [39m[1m[2m 13.47 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-latin-400-normal-CFZh1unN.woff            [39m[1m[2m 17.51 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-latin-700-normal-Cl4F7CZR.woff            [39m[1m[2m 17.78 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-latin-500-normal-BletK1Hp.woff            [39m[1m[2m 18.64 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-latin-600-normal-Dk5eISD_.woff            [39m[1m[2m 18.88 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-latin-400-normal-Bo5KPYvw.woff2           [39m[1m[2m 19.16 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-latin-700-normal-BzSf6GNr.woff2           [39m[1m[2m 19.50 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-latin-500-normal-Cd6jVIg7.woff2           [39m[1m[2m 20.09 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-latin-600-normal-KrqB56Mw.woff2           [39m[1m[2m 20.50 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-arabic-400-normal-CyU-ddYS.woff2          [39m[1m[2m 42.85 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-arabic-400-normal-EA1o-u_Q.woff           [39m[1m[2m 44.14 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-arabic-700-normal-DrtBj6UE.woff2          [39m[1m[2m 44.28 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-arabic-700-normal-9rXc6cUL.woff           [39m[1m[2m 44.36 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-arabic-500-normal-C4MQITzh.woff2          [39m[1m[2m 45.30 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-arabic-600-normal-0pRdybE_.woff2          [39m[1m[2m 45.69 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-arabic-600-normal-MJZ0liF5.woff           [39m[1m[2m 46.78 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mibm-plex-sans-arabic-arabic-500-normal-DPXcppbm.woff           [39m[1m[2m 46.92 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mnoto-kufi-arabic-arabic-500-normal-DrsK1iQh.woff2              [39m[1m[2m 47.40 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mnoto-kufi-arabic-arabic-500-normal-BbXNLbEv.woff               [39m[1m[2m 73.38 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-04-CTX-02-LaJVrbHM.webp                                    [39m[1m[2m102.31 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-02-CTX-02-DLN6OFMC.webp                                    [39m[1m[2m104.84 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-03-CTX-01-DQtIiEsv.webp                                    [39m[1m[2m109.06 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-01-CTX-02-Y0kQ8I5d.webp                                    [39m[1m[2m110.44 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-03-CTX-02-CWzEciiD.webp                                    [39m[1m[2m119.68 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-04-CTX-01-BBEJN_x6.webp                                    [39m[1m[2m124.84 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-05-CTX-02-D7yPbM28.webp                                    [39m[1m[2m130.18 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-05-DIR-02-D_MULef1.webp                                    [39m[1m[2m131.77 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-05-DIR-01-BnoT3_a7.webp                                    [39m[1m[2m140.89 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-05-CTX-01-CZwEI4sk.webp                                    [39m[1m[2m141.85 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-06-CTX-02-DkqW9WM3.webp                                    [39m[1m[2m148.81 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-05-DIR-03-CT601T98.webp                                    [39m[1m[2m151.50 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-02-CTX-01-BasAnn0R.webp                                    [39m[1m[2m152.29 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-06-CTX-01-tTYIuN1Q.webp                                    [39m[1m[2m161.94 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-01-CTX-01-DuKl8Do9.webp                                    [39m[1m[2m170.06 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-05-MSC-01-DmD0CrZO.webp                                    [39m[1m[2m189.42 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32m02_GS_Solutions_Universe_Clean_Production_Asset-DhaCKaMN.webp  [39m[1m[2m206.72 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32m04_GS_System_Anatomy_Clean_Production_Asset-C2DVYQ7A.webp      [39m[1m[2m221.60 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-06-MSC-01-B_AqCyDL.webp                                    [39m[1m[2m225.34 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-06-DIR-01-CCu0HcBX.webp                                    [39m[1m[2m230.19 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-02-MSC-01-DOT8ZRCb.webp                                    [39m[1m[2m231.97 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-04-MSC-01-ydmSjeZk.webp                                    [39m[1m[2m234.78 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-03-MSC-01-BYeo3abj.webp                                    [39m[1m[2m235.16 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32m03_GS_Selected_Work_Clean_Production_Asset-spPSG2lL.webp       [39m[1m[2m239.09 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-06-DIR-03-CWkiMZjX.webp                                    [39m[1m[2m241.00 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-04-DIR-03-DFWEkKVJ.webp                                    [39m[1m[2m241.85 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-02-DIR-01-DibZsoTP.webp                                    [39m[1m[2m250.99 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-04-DIR-02-CFqToZK3.webp                                    [39m[1m[2m251.21 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-03-DIR-02-BCKO9N3J.webp                                    [39m[1m[2m252.00 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-03-DIR-03-DzFlgyx4.webp                                    [39m[1m[2m254.22 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-03-DIR-01-BAPO_ugf.webp                                    [39m[1m[2m254.68 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32m05_GS_Final_Gateway_Clean_Production_Asset-BEygH69f.webp       [39m[1m[2m256.38 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-01-DIR-02-BXIjuJ6_.webp                                    [39m[1m[2m261.00 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-02-DIR-02-DnQSwyiH.webp                                    [39m[1m[2m263.54 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-01-MSC-01-YHJ3JOQW.webp                                    [39m[1m[2m266.83 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-01-DIR-03-DlUn2y5-.webp                                    [39m[1m[2m272.80 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-01-DIR-01-D-42CjrL.webp                                    [39m[1m[2m281.15 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-06-DIR-02-B98wbxjL.webp                                    [39m[1m[2m289.49 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-02-DIR-03-D2tfWkPD.webp                                    [39m[1m[2m292.02 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mFAM-04-DIR-01-Ew0PgEm6.webp                                    [39m[1m[2m319.16 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[35mintegratedPublicPages-BFEJQsXK.css                             [39m[1m[2m  0.14 kB[22m[1m[22m[2m │ gzip:  0.13 kB[22m
+[2mdist/[22m[2massets/[22m[35mReferenceProjectsRoute-CL1JhmBq.css                            [39m[1m[2m 21.08 kB[22m[1m[22m[2m │ gzip:  4.82 kB[22m
+[2mdist/[22m[2massets/[22m[35mHowWeWorkRoute-D5s3dWdI.css                                    [39m[1m[2m 25.81 kB[22m[1m[22m[2m │ gzip:  5.25 kB[22m
+[2mdist/[22m[2massets/[22m[35mStartDiscoveryRoute-C--fqEBd.css                               [39m[1m[2m 44.60 kB[22m[1m[22m[2m │ gzip:  8.31 kB[22m
+[2mdist/[22m[2massets/[22m[35mSolutionsRoute-CdTkkRSj.css                                    [39m[1m[2m 47.04 kB[22m[1m[22m[2m │ gzip:  9.19 kB[22m
+[2mdist/[22m[2massets/[22m[35mindex-CB_PNQ7q.css                                             [39m[1m[2m143.72 kB[22m[1m[22m[2m │ gzip: 28.21 kB[22m
+[2mdist/[22m[2massets/[22m[36mindex-VFpK7aP5.js                                              [39m[1m[2m 11.07 kB[22m[1m[22m[2m │ gzip:  4.87 kB[22m
+[2mdist/[22m[2massets/[22m[36mReferenceProjectsRoute-bINkADHa.js                             [39m[1m[2m 16.20 kB[22m[1m[22m[2m │ gzip:  6.23 kB[22m
+[2mdist/[22m[2massets/[22m[36mHowWeWorkRoute-32SUyCia.js                                     [39m[1m[2m 20.21 kB[22m[1m[22m[2m │ gzip:  8.06 kB[22m
+[2mdist/[22m[2massets/[22m[36mSolutionsRoute-DxDb2ftT.js                                     [39m[1m[2m 42.75 kB[22m[1m[22m[2m │ gzip: 13.24 kB[22m
+[2mdist/[22m[2massets/[22m[36mStartDiscoveryRoute-JyQrBWls.js                                [39m[1m[2m 62.23 kB[22m[1m[22m[2m │ gzip: 19.21 kB[22m
+[2mdist/[22m[2massets/[22m[36mindex-DziB5chA.js                                              [39m[1m[2m245.55 kB[22m[1m[22m[2m │ gzip: 92.52 kB[22m
+[32m✓ built in 3.38s[39m

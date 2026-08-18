@@ -1,0 +1,5 @@
+
+Running 1 test using 1 worker
+
+[1/1] [chromium] › tests/visual/start-discovery/public-handoff.spec.ts:27:1 › public START completes into a truthful local Project Brief without a second main or network submission
+  1 passed (5.2s)

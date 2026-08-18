@@ -1,0 +1,34 @@
+
+Running 30 tests using 1 worker
+
+[1/30] [chromium] › tests/visual/start-discovery/ipa-remediation.spec.ts:35:1 › operational context participates in recommendation and contradictory evidence stays bounded
+[2/30] [chromium] › tests/visual/start-discovery/ipa-remediation.spec.ts:57:1 › Discover transfers focus on entry, guided adoption, question progression, and recommendation
+[3/30] [chromium] › tests/visual/start-discovery/ipa-remediation.spec.ts:80:1 › Payment exposes the external provider consequence without changing the configured budget band by itself
+[4/30] [chromium] › tests/visual/start-discovery/ipa-remediation.spec.ts:92:1 › START has no nested main landmark and Review DOM/visual order is Summary then Blueprint
+[5/30] [chromium] › tests/visual/start-discovery/ipa-remediation.spec.ts:114:1 › Payment remains explicit in Review as an external service while review stays bounded
+[6/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:84:1 › v1 prefill remains compatible while SYSTEM_FINDER identity stays recommendation-only
+[7/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:122:1 › the registry binds all 36 governed START WebPs including the four final contextual assets
+[8/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:133:1 › direct entry exposes exactly three major stages and three keyboard-complete entrances
+[9/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:152:1 › the three entrances provide distinct useful routes inside the same Discover stage
+[10/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:173:1 › Discover explains what was understood and keeps recommendation separate from explicit selection
+[11/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:193:1 › weak input does not silently default to business and instead asks a bounded discriminator
+[12/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:209:1 › valid Solutions v1 recommendation context is visible but is not reinterpreted as adoption
+[13/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:217:1 › Build journey is state-driven, keeps Booking five moments, and maps three real decisions
+[14/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:234:1 › Build and experience radio groups implement roving tabindex and arrow/Home/End activation
+[15/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:260:1 › approved contextual evidence is a bound image and the drawer restores focus without losing state
+[16/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:272:1 › FAM-05 contextual evidence renders the final approved bound image
+[17/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:282:1 › mobile Build keeps one compact Project Pulse and the primary CTA before supporting exploration
+[18/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:315:1 › Review preserves recommendation, customer adoption, experience truth, and final local handoff
+[19/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:333:1 › session restoration retains separate recommendation, selection, decisions, and experience adoption
+[20/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:350:3 › START has no horizontal overflow and keeps the primary action reachable at 1440px
+[21/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:350:3 › START has no horizontal overflow and keeps the primary action reachable at 1024px
+[22/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:350:3 › START has no horizontal overflow and keeps the primary action reachable at 768px
+[23/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:350:3 › START has no horizontal overflow and keeps the primary action reachable at 430px
+[24/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:350:3 › START has no horizontal overflow and keeps the primary action reachable at 390px
+[25/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:359:3 › captures final START Discover Build Review evidence at 1440px
+[26/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:359:3 › captures final START Discover Build Review evidence at 1024px
+[27/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:359:3 › captures final START Discover Build Review evidence at 768px
+[28/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:359:3 › captures final START Discover Build Review evidence at 430px
+[29/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:359:3 › captures final START Discover Build Review evidence at 390px
+[30/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:373:1 › captures the required truth and contextual evidence states
+  30 passed (54.9s)
