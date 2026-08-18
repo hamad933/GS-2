@@ -53,7 +53,7 @@ test('public START completes into a truthful local Project Brief without a secon
   expect(payload.explicitChannels).toHaveProperty('selectedCapabilities');
   expect(payload.explicitChannels).toHaveProperty('optionalCapabilities');
   expect(payload.explicitChannels).toHaveProperty('uncertainCapabilities');
-  expect(payload.explicitChannels).toHaveProperty('dependencies');
+  expect(payload.explicitChannels.dependencies).toContain('مزود دفع خارجي (Payment Provider)');
   expect(payload.explicitChannels).toHaveProperty('unknowns');
   expect(payload.explicitChannels).toHaveProperty('existingSystems');
   expect(payload.explicitChannels).toHaveProperty('integrations');
