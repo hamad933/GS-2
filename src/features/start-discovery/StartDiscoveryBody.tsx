@@ -481,8 +481,11 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
   };
 
   const complete = () => {
+    const completionDraft: StartDiscoveryDraft = externalNeeds.length
+      ? { ...draft, dependencies: unique([...draft.dependencies, ...externalNeeds]) }
+      : draft;
     setCompleted(true);
-    onLocalComplete?.(buildDiscoverySummary(draft), draft);
+    onLocalComplete?.(buildDiscoverySummary(completionDraft), completionDraft);
   };
 
   const carriedFactValues = [
