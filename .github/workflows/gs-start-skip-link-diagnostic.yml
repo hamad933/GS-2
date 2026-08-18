@@ -1,63 +1,594 @@
-name: GS START Skip-Link Diagnostic Metadata Observer
+name: GS START Skip-Link Exact-SHA Diagnostic
 
 on:
-  pull_request:
+  push:
     branches:
-      - governance/gs-deep-review-w08-c-current-baseline
-    paths:
-      - .github/workflows/gs-start-skip-link-diagnostic.yml
+      - governance/gs-start-skip-link-diag-r1
 
 permissions:
   contents: read
 
 jobs:
-  metadata-observer:
-    name: Temporary metadata observer
+  start-skip-link-diagnostic:
+    name: START skip-link exact-SHA diagnostic
     runs-on: ubuntu-latest
-    env:
-      TARGET_WORKFLOW_SHA: 6888e899ae1c33d70c97b18d3f8b6f1c7d21693c
-      BRANCH_NAME: governance/gs-start-skip-link-diag-r1
-      WORKFLOW_PATH: .github/workflows/gs-start-skip-link-diagnostic.yml
+    timeout-minutes: 30
+
     steps:
-      - name: Recover exact diagnostic push run ID
+      - name: Checkout frozen START candidate
+        uses: actions/checkout@v4
+        with:
+          ref: d10cba74a7eb4103be4a2e285fff1c5732959043
+          fetch-depth: 0
+
+      - name: Fail closed on exact HEAD
         shell: bash
         run: |
           set -euo pipefail
-          encoded_branch="$(python3 -c 'import urllib.parse, os; print(urllib.parse.quote(os.environ["BRANCH_NAME"], safe=""))')"
-          runs_json="$RUNNER_TEMP/push-runs.json"
+          mkdir -p gs-start-skip-link-evidence
+          expected='d10cba74a7eb4103be4a2e285fff1c5732959043'
+          actual="$(git rev-parse HEAD)"
+          printf '%s\n' "$actual" > gs-start-skip-link-evidence/exact-sha.txt
+          printf 'expected=%s\nactual=%s\n' "$expected" "$actual" > gs-start-skip-link-evidence/exact-head-check.txt
+          if [[ "$actual" != "$expected" ]]; then
+            printf 'EVIDENCE_INSUFFICIENT\n' > gs-start-skip-link-evidence/verdict.txt
+            echo "Exact-HEAD mismatch: expected $expected, got $actual" >&2
+            exit 1
+          fi
 
-          for _ in $(seq 1 36); do
-            curl -fsSL \
-              "https://api.github.com/repos/hamad933/GS-2/actions/runs?event=push&branch=${encoded_branch}&per_page=30" \
-              -o "$runs_json"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
 
-            if python3 - "$runs_json" "$TARGET_WORKFLOW_SHA" "$WORKFLOW_PATH" <<'PY'
-          import json
-          import sys
+      - name: Install existing dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
 
-          source, target_sha, workflow_path = sys.argv[1:]
-          with open(source, 'r', encoding='utf-8') as handle:
-              payload = json.load(handle)
-          matches = [
-              run for run in payload.get('workflow_runs', [])
-              if run.get('event') == 'push'
-              and run.get('head_sha') == target_sha
-              and run.get('path') == workflow_path
-          ]
-          if len(matches) != 1:
-              raise SystemExit(1)
-          run = matches[0]
-          print(f'TARGET_PUSH_RUN_ID={run["id"]}')
-          print(f'TARGET_PUSH_RUN_STATUS={run.get("status")}')
-          print(f'TARGET_PUSH_RUN_CONCLUSION={run.get("conclusion")}')
-          print(f'TARGET_PUSH_RUN_URL={run.get("html_url")}')
-          print(f'TARGET_PUSH_RUN_ATTEMPT={run.get("run_attempt")}')
-          PY
-            then
-              exit 0
+      - name: Install Chromium for existing Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx playwright install --with-deps chromium
+
+      - name: Run paired START skip-link diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p gs-start-skip-link-evidence/screenshots .gs-start-skip-link-runner
+
+          cat > .gs-start-skip-link-runner/start-skip-link-diagnostic.mjs <<'NODE'
+          import fs from 'node:fs';
+          import os from 'node:os';
+          import path from 'node:path';
+          import { chromium } from '@playwright/test';
+
+          const exactSha = 'd10cba74a7eb4103be4a2e285fff1c5732959043';
+          const baseURL = 'http://127.0.0.1:4176';
+          const evidenceDir = path.resolve('gs-start-skip-link-evidence');
+          const screenshotsDir = path.join(evidenceDir, 'screenshots');
+          const widths = [1440, 768, 430, 390];
+          const heights = new Map([[1440, 900], [768, 1024], [430, 932], [390, 844]]);
+          const requiredStates = ['discover', 'build', 'build-payment', 'review', 'handoff'];
+
+          fs.mkdirSync(screenshotsDir, { recursive: true });
+
+          const records = [];
+          const consoleEvents = [];
+          const pageErrors = [];
+          const requestFailures = [];
+          const flowErrors = [];
+          const controlledProbes = [];
+
+          function writeJson(name, value) {
+            fs.writeFileSync(path.join(evidenceDir, name), `${JSON.stringify(value, null, 2)}\n`);
+          }
+
+          async function settle(page) {
+            await page.evaluate(async () => { await document.fonts.ready; });
+            await page.waitForTimeout(150);
+          }
+
+          async function runtimeState(page) {
+            return page.evaluate(() => {
+              const active = document.activeElement instanceof Element ? document.activeElement : null;
+
+              const elementInfo = (element) => {
+                if (!(element instanceof Element)) return null;
+                const labelledBy = element.getAttribute('aria-labelledby');
+                const labelledByText = labelledBy
+                  ? labelledBy
+                      .split(/\s+/)
+                      .map((id) => document.getElementById(id)?.textContent?.replace(/\s+/g, ' ').trim() ?? '')
+                      .filter(Boolean)
+                      .join(' | ')
+                  : '';
+                const textContent = (element.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 320);
+                const ariaLabel = element.getAttribute('aria-label') ?? '';
+                return {
+                  tagName: element.tagName,
+                  id: element.id || '',
+                  className: element.getAttribute('class') ?? '',
+                  role: element.getAttribute('role') ?? '',
+                  ariaLabel,
+                  ariaLabelledBy: labelledBy ?? '',
+                  ariaLabelledByText: labelledByText,
+                  accessibleIdentifyingText: ariaLabel || labelledByText || textContent,
+                  testId: element.getAttribute('data-testid') ?? '',
+                  textContent,
+                };
+              };
+
+              const skip = document.querySelector('.skip-link');
+              let skipState = { missing: true };
+              if (skip instanceof HTMLElement) {
+                const style = getComputedStyle(skip);
+                const rect = skip.getBoundingClientRect();
+                const intersectionLeft = Math.max(0, rect.left);
+                const intersectionTop = Math.max(0, rect.top);
+                const intersectionRight = Math.min(window.innerWidth, rect.right);
+                const intersectionBottom = Math.min(window.innerHeight, rect.bottom);
+                const intersectionWidth = Math.max(0, intersectionRight - intersectionLeft);
+                const intersectionHeight = Math.max(0, intersectionBottom - intersectionTop);
+                const intersectsViewport = intersectionWidth > 0 && intersectionHeight > 0;
+                const opacity = Number.parseFloat(style.opacity || '1');
+                const runtimeVisible = style.display !== 'none'
+                  && style.visibility !== 'hidden'
+                  && style.visibility !== 'collapse'
+                  && Number.isFinite(opacity)
+                  && opacity > 0
+                  && rect.width > 0
+                  && rect.height > 0
+                  && intersectsViewport;
+
+                skipState = {
+                  missing: false,
+                  isDocumentActiveElement: skip === active,
+                  matchesFocus: skip.matches(':focus'),
+                  matchesFocusVisible: skip.matches(':focus-visible'),
+                  computed: {
+                    transform: style.transform,
+                    display: style.display,
+                    visibility: style.visibility,
+                    opacity: style.opacity,
+                    position: style.position,
+                    top: style.top,
+                    right: style.right,
+                  },
+                  boundingClientRect: {
+                    x: rect.x,
+                    y: rect.y,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height,
+                  },
+                  viewportIntersection: {
+                    intersectsViewport,
+                    left: intersectionLeft,
+                    top: intersectionTop,
+                    right: intersectionRight,
+                    bottom: intersectionBottom,
+                    width: intersectionWidth,
+                    height: intersectionHeight,
+                  },
+                  runtimeVisible,
+                  documentHasFocus: document.hasFocus(),
+                  element: elementInfo(skip),
+                };
+              }
+
+              const stageRoot = document.querySelector('.start-discovery');
+              const visibleHeadings = [...document.querySelectorAll('.start-discovery .sfp-stage-heading h1, .start-discovery .sfp-stage-heading h2')]
+                .filter((heading) => {
+                  const rect = heading.getBoundingClientRect();
+                  const style = getComputedStyle(heading);
+                  return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+                });
+              const activeHeading = visibleHeadings[0] ?? null;
+              const routeFocus = document.querySelector('[data-route-focus]');
+              const focusedTransition = active instanceof Element ? active.closest('.sfp-transition-focus') : null;
+              const buildQuestion = document.querySelector('.sfp-decision h2, .sfp-decision h3, .sfp-build-step h2, .sfp-build-step h3');
+              const handoff = document.querySelector('[data-testid="project-brief-handoff"]');
+
+              return {
+                url: location.href,
+                viewport: { width: window.innerWidth, height: window.innerHeight },
+                documentHasFocus: document.hasFocus(),
+                stage: stageRoot?.getAttribute('data-stage') ?? null,
+                handoffVisible: handoff instanceof HTMLElement
+                  ? (() => {
+                      const rect = handoff.getBoundingClientRect();
+                      const style = getComputedStyle(handoff);
+                      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+                    })()
+                  : false,
+                activeElement: elementInfo(active),
+                skip: skipState,
+                mainStageFocus: {
+                  activeStartHeading: {
+                    element: elementInfo(activeHeading),
+                    isDocumentActiveElement: Boolean(activeHeading && activeHeading === active),
+                  },
+                  activeBuildQuestion: elementInfo(buildQuestion),
+                  routeFocusTarget: {
+                    element: elementInfo(routeFocus),
+                    isDocumentActiveElement: Boolean(routeFocus && routeFocus === active),
+                  },
+                  focusedTransitionSubtree: {
+                    element: elementInfo(focusedTransition),
+                    containsDocumentActiveElement: Boolean(focusedTransition && active && focusedTransition.contains(active)),
+                  },
+                },
+              };
+            });
+          }
+
+          async function capturePair(page, state, width) {
+            await settle(page);
+            const beforeViewport = await runtimeState(page);
+            const viewportFile = `${state}-${width}-viewport.png`;
+            await page.screenshot({ path: path.join(screenshotsDir, viewportFile), fullPage: false });
+            const afterViewport = await runtimeState(page);
+
+            await settle(page);
+            const beforeFullPage = await runtimeState(page);
+            const fullPageFile = `${state}-${width}-fullpage.png`;
+            await page.screenshot({ path: path.join(screenshotsDir, fullPageFile), fullPage: true });
+            const afterFullPage = await runtimeState(page);
+
+            const record = {
+              width,
+              requestedHeight: heights.get(width),
+              state,
+              screenshots: { viewport: viewportFile, fullPage: fullPageFile },
+              beforeViewport,
+              afterViewport,
+              beforeFullPage,
+              afterFullPage,
+            };
+            records.push(record);
+            console.log([
+              '[capture]',
+              `width=${width}`,
+              `state=${state}`,
+              `stage=${beforeViewport.stage}`,
+              `active=${beforeViewport.activeElement?.tagName ?? 'null'}#${beforeViewport.activeElement?.id ?? ''}`,
+              `skipActive=${beforeViewport.skip?.isDocumentActiveElement ?? null}`,
+              `skipFocus=${beforeViewport.skip?.matchesFocus ?? null}`,
+              `skipFocusVisible=${beforeViewport.skip?.matchesFocusVisible ?? null}`,
+              `skipVisible=${beforeViewport.skip?.runtimeVisible ?? null}`,
+              `skipTransform=${beforeViewport.skip?.computed?.transform ?? 'missing'}`,
+              `skipRectY=${beforeViewport.skip?.boundingClientRect?.y ?? 'missing'}`,
+            ].join(' '));
+          }
+
+          async function openFreshStart(page) {
+            await page.goto(`${baseURL}/start`, { waitUntil: 'domcontentloaded' });
+            await page.evaluate(() => {
+              sessionStorage.removeItem('gs-start-frozen-product-v1');
+              sessionStorage.removeItem('gs-start-project-brief-v1');
+            });
+            await page.goto(`${baseURL}/start`, { waitUntil: 'domcontentloaded' });
+            await page.locator('.start-discovery').waitFor({ state: 'visible' });
+            await settle(page);
+          }
+
+          async function completeDiscoverToBuild(page) {
+            await page.getByRole('radio', { name: /ساعدني على اكتشاف ما أحتاج/ }).click();
+            await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+            await page.getByLabel('ما الذي تريد تغييره؟').fill('أريد تنظيم الحجز والمواعيد للعملاء');
+            await page.getByRole('button', { name: /^تابع/ }).click();
+            await page.getByLabel('من سيستخدم هذا الحل؟').fill('العملاء وفريق الخدمة');
+            await page.getByRole('button', { name: /^تابع/ }).click();
+            await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('رحلة حجز أوضح بخطوات أقل');
+            await page.getByRole('button', { name: /^تابع/ }).click();
+            await page.getByLabel('ما السياق التشغيلي الذي يجب أن نعرفه؟').fill('خدمة بمواعيد يديرها فريق خدمة');
+            await page.getByRole('button', { name: /ابنِ اتجاهًا أوليًا/ }).click();
+            await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+            await page.locator('.start-discovery[data-stage="build"]').waitFor({ state: 'visible' });
+            await settle(page);
+          }
+
+          async function advanceToPayment(page) {
+            const paymentHeading = page.getByRole('heading', { name: 'هل تريد تحصيل مبلغ عند الحجز؟' });
+            for (let guard = 0; guard < 20; guard += 1) {
+              if (await paymentHeading.isVisible().catch(() => false)) break;
+              if ((await page.locator('.start-discovery').getAttribute('data-stage')) !== 'build') {
+                throw new Error('Left Build before reaching payment question');
+              }
+              const decision = page.locator('.sfp-decision [role="radio"]').first();
+              if (await decision.count()) await decision.click();
+              await page.getByRole('button', { name: /تابع في الرحلة|احفظ التكوين وتابع/ }).click();
+              await page.waitForTimeout(100);
+            }
+            if (!(await paymentHeading.isVisible().catch(() => false))) {
+              throw new Error('Payment question was not reached within 20 Build transitions');
+            }
+            await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
+            await settle(page);
+          }
+
+          async function finishBuild(page) {
+            let guard = 0;
+            while ((await page.locator('.start-discovery').getAttribute('data-stage')) === 'build') {
+              guard += 1;
+              if (guard > 20) throw new Error('Build progression guard exceeded 20 iterations');
+              const selected = page.locator('.sfp-decision [role="radio"][aria-checked="true"]').first();
+              const decision = page.locator('.sfp-decision [role="radio"]').first();
+              if ((await selected.count()) === 0 && (await decision.count())) await decision.click();
+              await page.getByRole('button', { name: /تابع في الرحلة|احفظ التكوين وتابع/ }).click();
+              await page.waitForTimeout(100);
+            }
+            await page.locator('.start-discovery[data-stage="review"]').waitFor({ state: 'visible' });
+            await settle(page);
+          }
+
+          const browser = await chromium.launch({ headless: true });
+          const playwrightPkg = JSON.parse(fs.readFileSync(path.resolve('node_modules/@playwright/test/package.json'), 'utf8'));
+          writeJson('versions.json', {
+            exactSha,
+            node: process.version,
+            playwrightTest: playwrightPkg.version,
+            chromium: browser.version(),
+            platform: process.platform,
+            architecture: process.arch,
+            runnerOsRelease: os.release(),
+          });
+
+          try {
+            for (const width of widths) {
+              const context = await browser.newContext({
+                viewport: { width, height: heights.get(width) },
+                locale: 'ar-SA',
+              });
+              const page = await context.newPage();
+
+              page.on('console', (message) => {
+                consoleEvents.push({ width, type: message.type(), text: message.text(), location: message.location() });
+              });
+              page.on('pageerror', (error) => {
+                pageErrors.push({ width, name: error.name, message: error.message, stack: error.stack ?? '' });
+              });
+              page.on('requestfailed', (request) => {
+                requestFailures.push({ width, url: request.url(), method: request.method(), failure: request.failure() });
+              });
+
+              try {
+                await openFreshStart(page);
+                await capturePair(page, 'discover', width);
+
+                await completeDiscoverToBuild(page);
+                await capturePair(page, 'build', width);
+
+                await advanceToPayment(page);
+                await capturePair(page, 'build-payment', width);
+
+                await finishBuild(page);
+                await capturePair(page, 'review', width);
+
+                await page.getByRole('button', { name: 'ابدأ المشروع بهذا المخطط' }).click();
+                await page.locator('[data-testid="project-brief-handoff"]').waitFor({ state: 'visible' });
+                await settle(page);
+                await capturePair(page, 'handoff', width);
+
+                if (width === 1440) {
+                  const beforeExplicitFocus = await runtimeState(page);
+                  const skip = page.locator('.skip-link');
+                  if ((await skip.count()) === 1) {
+                    await skip.focus();
+                    await settle(page);
+                    const focused = await runtimeState(page);
+                    const file = 'controlled-skip-focus-1440-viewport.png';
+                    await page.screenshot({ path: path.join(screenshotsDir, file), fullPage: false });
+                    controlledProbes.push({
+                      label: 'EXPLICIT_FOCUS_CONTROLLED_PROBE_ONLY',
+                      width,
+                      beforeExplicitFocus,
+                      focused,
+                      screenshot: file,
+                    });
+                  } else {
+                    controlledProbes.push({
+                      label: 'EXPLICIT_FOCUS_CONTROLLED_PROBE_ONLY',
+                      width,
+                      skipped: true,
+                      reason: 'skip-link missing',
+                    });
+                  }
+                }
+              } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                const stack = error instanceof Error ? error.stack ?? '' : '';
+                flowErrors.push({ width, message, stack });
+                console.error(`[flow-error] width=${width} ${message}`);
+                try {
+                  await page.screenshot({ path: path.join(screenshotsDir, `flow-error-${width}-fullpage.png`), fullPage: true });
+                } catch {
+                  // Preserve the original flow error.
+                }
+              } finally {
+                await context.close();
+              }
+            }
+          } finally {
+            await browser.close();
+          }
+
+          writeJson('console-events.json', consoleEvents);
+          writeJson('page-errors.json', pageErrors);
+          writeJson('request-failures.json', requestFailures);
+          writeJson('flow-errors.json', flowErrors);
+          writeJson('controlled-focus-probe.json', controlledProbes);
+
+          const ordinaryMeasurements = records.flatMap((record) => [
+            { width: record.width, state: record.state, phase: 'beforeViewport', value: record.beforeViewport },
+            { width: record.width, state: record.state, phase: 'beforeFullPage', value: record.beforeFullPage },
+          ]);
+          const postCaptureMeasurements = records.flatMap((record) => [
+            { width: record.width, state: record.state, phase: 'afterViewport', value: record.afterViewport },
+            { width: record.width, state: record.state, phase: 'afterFullPage', value: record.afterFullPage },
+          ]);
+
+          const expectedKeys = new Set(widths.flatMap((width) => requiredStates.map((state) => `${width}:${state}`)));
+          const actualKeys = new Set(records.map((record) => `${record.width}:${record.state}`));
+          const missingRequiredCaptures = [...expectedKeys].filter((key) => !actualKeys.has(key));
+          const anySkipMissing = ordinaryMeasurements.some((entry) => entry.value.skip?.missing !== false);
+          const unexpectedFocus = ordinaryMeasurements.find((entry) => (
+            entry.value.skip?.isDocumentActiveElement === true
+            || entry.value.skip?.matchesFocus === true
+            || entry.value.skip?.matchesFocusVisible === true
+          ));
+          const unexpectedVisibility = ordinaryMeasurements.find((entry) => entry.value.skip?.runtimeVisible === true);
+          const captureChangedRuntime = postCaptureMeasurements.filter((entry) => {
+            const record = records.find((item) => item.width === entry.width && item.state === entry.state);
+            const before = record?.[entry.phase === 'afterViewport' ? 'beforeViewport' : 'beforeFullPage'];
+            if (!before) return false;
+            return before.skip?.isDocumentActiveElement !== entry.value.skip?.isDocumentActiveElement
+              || before.skip?.matchesFocus !== entry.value.skip?.matchesFocus
+              || before.skip?.matchesFocusVisible !== entry.value.skip?.matchesFocusVisible
+              || before.skip?.runtimeVisible !== entry.value.skip?.runtimeVisible
+              || before.skip?.computed?.transform !== entry.value.skip?.computed?.transform
+              || before.skip?.boundingClientRect?.x !== entry.value.skip?.boundingClientRect?.x
+              || before.skip?.boundingClientRect?.y !== entry.value.skip?.boundingClientRect?.y;
+          });
+
+          let verdict = 'SKIP_LINK_RUNTIME_STATE_CLEAN_CAPTURE_ONLY_ARTIFACT';
+          if (flowErrors.length || missingRequiredCaptures.length || anySkipMissing) {
+            verdict = 'EVIDENCE_INSUFFICIENT';
+          } else if (unexpectedFocus) {
+            verdict = 'SKIP_LINK_UNEXPECTED_RUNTIME_FOCUS_CONFIRMED';
+          } else if (unexpectedVisibility) {
+            verdict = 'SKIP_LINK_VISIBILITY_DEFECT_CONFIRMED';
+          }
+
+          const matrix = {
+            workstream: 'GS-IPA-START-SKIP-LINK-DIAG-R1',
+            evidenceClassification: 'REFERENCE_ONLY',
+            exactSha,
+            widths,
+            requiredStates,
+            records,
+            captureChangedRuntime,
+            missingRequiredCaptures,
+            verdict,
+            verdictBasis: {
+              flowErrors: flowErrors.length,
+              anySkipMissing,
+              unexpectedFocus: unexpectedFocus ?? null,
+              unexpectedVisibility: unexpectedVisibility ?? null,
+              note: verdict === 'SKIP_LINK_RUNTIME_STATE_CLEAN_CAPTURE_ONLY_ARTIFACT'
+                ? 'All ordinary pre-capture runtime measurements were clean. Paired viewport/fullPage PNGs are retained for direct visual comparison of capture behavior.'
+                : 'See the first contradictory runtime measurement and paired evidence in this matrix.',
+            },
+          };
+          writeJson('state-matrix.json', matrix);
+          fs.writeFileSync(path.join(evidenceDir, 'verdict.txt'), `${verdict}\n`);
+
+          const tsv = [
+            'width\tstate\tphase\tstage\tdocumentHasFocus\tactiveTag\tactiveId\tactiveClass\tactiveText\tskipActive\tskipFocus\tskipFocusVisible\tskipTransform\tskipDisplay\tskipVisibility\tskipOpacity\tskipPosition\tskipTop\tskipRight\tskipRectX\tskipRectY\tskipRectW\tskipRectH\tskipIntersectsViewport\tskipRuntimeVisible',
+          ];
+          for (const entry of ordinaryMeasurements) {
+            const value = entry.value;
+            const skip = value.skip ?? {};
+            const rect = skip.boundingClientRect ?? {};
+            const computed = skip.computed ?? {};
+            const active = value.activeElement ?? {};
+            tsv.push([
+              entry.width,
+              entry.state,
+              entry.phase,
+              value.stage ?? '',
+              value.documentHasFocus,
+              active.tagName ?? '',
+              active.id ?? '',
+              (active.className ?? '').replace(/\t/g, ' '),
+              (active.accessibleIdentifyingText ?? '').replace(/\t/g, ' '),
+              skip.isDocumentActiveElement ?? '',
+              skip.matchesFocus ?? '',
+              skip.matchesFocusVisible ?? '',
+              computed.transform ?? '',
+              computed.display ?? '',
+              computed.visibility ?? '',
+              computed.opacity ?? '',
+              computed.position ?? '',
+              computed.top ?? '',
+              computed.right ?? '',
+              rect.x ?? '',
+              rect.y ?? '',
+              rect.width ?? '',
+              rect.height ?? '',
+              skip.viewportIntersection?.intersectsViewport ?? '',
+              skip.runtimeVisible ?? '',
+            ].join('\t'));
+          }
+          fs.writeFileSync(path.join(evidenceDir, 'state-summary.tsv'), `${tsv.join('\n')}\n`);
+
+          if (verdict === 'EVIDENCE_INSUFFICIENT') process.exitCode = 2;
+          NODE
+
+          npm run dev -- --host 127.0.0.1 --port 4176 > gs-start-skip-link-evidence/server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; rm -rf .gs-start-skip-link-runner' EXIT
+
+          ready=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4176/start >/dev/null; then
+              ready=1
+              break
             fi
-            sleep 5
+            sleep 1
           done
+          if [[ "$ready" != '1' ]]; then
+            printf 'EVIDENCE_INSUFFICIENT\n' > gs-start-skip-link-evidence/verdict.txt
+            echo 'START dev server did not become ready.' >&2
+            exit 1
+          fi
 
-          echo "No push run found for $TARGET_WORKFLOW_SHA" >&2
-          exit 1
+          node .gs-start-skip-link-runner/start-skip-link-diagnostic.mjs 2>&1 | tee gs-start-skip-link-evidence/diagnostic.log
+
+      - name: Finalize evidence manifest
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p gs-start-skip-link-evidence
+          if [[ ! -f gs-start-skip-link-evidence/verdict.txt ]]; then
+            printf 'EVIDENCE_INSUFFICIENT\n' > gs-start-skip-link-evidence/verdict.txt
+          fi
+          npx playwright --version > gs-start-skip-link-evidence/playwright-cli-version.txt 2>&1 || true
+          node --version > gs-start-skip-link-evidence/node-version.txt 2>&1 || true
+          npm --version > gs-start-skip-link-evidence/npm-version.txt 2>&1 || true
+          {
+            echo 'WORKSTREAM=GS-IPA-START-SKIP-LINK-DIAG-R1'
+            echo 'EVIDENCE_CLASSIFICATION=REFERENCE_ONLY'
+            echo 'FROZEN_CANDIDATE=d10cba74a7eb4103be4a2e285fff1c5732959043'
+            echo "GITHUB_RUN_ID=${GITHUB_RUN_ID}"
+            echo "GITHUB_RUN_ATTEMPT=${GITHUB_RUN_ATTEMPT}"
+            echo "GITHUB_JOB=${GITHUB_JOB}"
+            echo "GITHUB_WORKFLOW=${GITHUB_WORKFLOW}"
+            echo "GITHUB_WORKFLOW_REF=${GITHUB_WORKFLOW_REF}"
+            echo "VERDICT=$(tr -d '\r\n' < gs-start-skip-link-evidence/verdict.txt)"
+            echo 'REQUIRED_WIDTHS=1440,768,430,390'
+            echo 'REQUIRED_STATES=discover,build,build-payment,review,handoff'
+            echo 'CAPTURE_PAIR=viewport(fullPage:false)+fullpage(fullPage:true)'
+            echo 'CONTROLLED_PROBE=explicit skip-link focus only after ordinary evidence at 1440'
+            echo 'NO_PRODUCT_MUTATION=true'
+            echo 'FILES:'
+            find gs-start-skip-link-evidence -type f -printf '%P\n' | sort
+          } > gs-start-skip-link-evidence/manifest.txt
+
+      - name: Upload downloadable diagnostic artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gs-start-skip-link-diag-r1-${{ github.run_id }}
+          path: gs-start-skip-link-evidence/
+          if-no-files-found: error
+          retention-days: 14
