@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - validation/gs-ipa-val-w01-start-r1-evidence
+    paths-ignore:
+      - 'validation-evidence/**'
 
 permissions:
   contents: write
@@ -52,25 +54,18 @@ jobs:
           set +e
           git diff --check 2>&1 | tee evidence/git-diff-check.log
           echo "GIT_DIFF_CHECK=${PIPESTATUS[0]}" >> evidence/status.env
-
           git diff --check "$BASE_SHA...$TARGET_SHA" 2>&1 | tee evidence/git-diff-check-base-head.log
           echo "GIT_DIFF_CHECK_BASE_HEAD=${PIPESTATUS[0]}" >> evidence/status.env
-
           npm ci 2>&1 | tee evidence/npm-ci.log
           echo "NPM_CI=${PIPESTATUS[0]}" >> evidence/status.env
-
           npm run lint 2>&1 | tee evidence/lint.log
           echo "LINT=${PIPESTATUS[0]}" >> evidence/status.env
-
           npm run typecheck 2>&1 | tee evidence/typecheck.log
           echo "TYPECHECK=${PIPESTATUS[0]}" >> evidence/status.env
-
           npm run build 2>&1 | tee evidence/build.log
           echo "BUILD=${PIPESTATUS[0]}" >> evidence/status.env
-
           npx playwright install --with-deps chromium 2>&1 | tee evidence/chromium-install.log
           echo "CHROMIUM_INSTALL=${PIPESTATUS[0]}" >> evidence/status.env
-
           npx playwright --version 2>&1 | tee evidence/playwright-version.txt
           node --input-type=module - <<'NODE' 2>&1 | tee evidence/chromium-version.txt
           import { chromium } from '@playwright/test';
@@ -79,13 +74,11 @@ jobs:
           await browser.close();
           NODE
           echo "CHROMIUM_PROBE=${PIPESTATUS[0]}" >> evidence/status.env
-
           npx playwright test \
             --config=tests/visual/start-discovery/playwright.config.ts \
             --project=chromium \
             --workers=1 2>&1 | tee evidence/start-targeted-playwright.log
           echo "START_TARGETED_PLAYWRIGHT=${PIPESTATUS[0]}" >> evidence/status.env
-
           npx playwright test \
             --config=tests/visual/start-discovery/public-handoff.playwright.config.ts \
             --project=chromium \
