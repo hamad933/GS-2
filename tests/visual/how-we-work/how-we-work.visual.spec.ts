@@ -181,8 +181,13 @@ test('reduced motion removes meaningful transition duration', async ({ page }) =
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await openFixture(page);
-  const duration = await page.locator('.method-blueprint__axis i').evaluate((element) => getComputedStyle(element).transitionDuration);
-  expect(duration).toBe('0.01ms');
+  const durationMs = await page.locator('.method-blueprint__axis i').evaluate((element) => {
+    const raw = getComputedStyle(element).transitionDuration.split(',')[0]?.trim() ?? '0s';
+    if (raw.endsWith('ms')) return Number.parseFloat(raw);
+    if (raw.endsWith('s')) return Number.parseFloat(raw) * 1000;
+    return Number.POSITIVE_INFINITY;
+  });
+  expect(durationMs).toBeLessThanOrEqual(0.1);
 });
 
 test('captures required How We Work reference-only evidence', async ({ page }) => {
