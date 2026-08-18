@@ -7,9 +7,77 @@
   min-width: 0;
 }
 
-/* Review DOM and visual order now agree: Summary first, Blueprint second. */
+.sfp-field-guidance {
+  margin: 0;
+  padding: 12px 14px;
+  border-inline-start: 2px solid rgba(216, 191, 145, .42);
+  background: rgba(216, 191, 145, .045);
+  color: #bcb4a8;
+  font-size: .82rem;
+  line-height: 1.75;
+}
+
+.sfp-discovery-fields label > small {
+  display: inline;
+  color: #aeb3b2;
+  font-size: .75rem;
+  font-weight: 400;
+}
+
+/* Decision-first hierarchy on desktop/tablet; mobile keeps the accepted pulse-first compact composition. */
+@media (min-width: 521px) {
+  .sfp-build-actions {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .sfp-build-support {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 521px) {
+  .sfp-build-workspace > .sfp-pulse {
+    grid-column: 1;
+    grid-row: 4;
+  }
+}
+
+.sfp-build-actions p {
+  max-width: 620px;
+}
+
+.sfp-storage-warning,
+.sfp-storage-error {
+  padding: 11px 13px;
+  border-inline-start: 2px solid currentColor;
+  background: rgba(91, 120, 232, .07);
+  line-height: 1.75;
+}
+
+.sfp-storage-error {
+  color: #efc5b5 !important;
+  background: rgba(155, 70, 45, .12);
+}
+
+/* Review DOM and visual order agree: Summary first, Blueprint second. */
 .sfp-review-layout {
   grid-template-columns: minmax(260px, .62fr) minmax(0, 1.6fr);
+}
+
+.sfp-blueprint-band h3,
+.sfp-review-needs h3,
+.sfp-ready h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.sfp-blueprint-band > header bdi,
+.sfp-blueprint-band header p,
+.sfp-blueprint-nodes small {
+  font-size: 12px;
+  line-height: 1.65;
 }
 
 .start-project-brief-handoff {
@@ -22,6 +90,11 @@
   color: #f2eadf;
   font-family: 'IBM Plex Sans Arabic', sans-serif;
   direction: rtl;
+}
+
+.start-project-brief-handoff[data-handoff-state='stale'] {
+  border-inline-start-color: #8fa5ff;
+  background: rgba(8, 18, 29, .97);
 }
 
 .start-project-brief-handoff__eyebrow {
@@ -69,6 +142,41 @@
   line-height: 1.65;
 }
 
+.start-project-brief-handoff__next {
+  max-width: 920px;
+  padding-block-start: 4px;
+}
+
+.start-project-brief-handoff__next h3 {
+  margin: 0 0 8px;
+  color: #e9ddcc;
+  font-family: 'Noto Kufi Arabic', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.start-project-brief-handoff__next p {
+  margin: 7px 0;
+  color: #b9b1a6;
+  line-height: 1.8;
+}
+
+.start-project-brief-handoff__next a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 9px 15px;
+  border: 1px solid rgba(216, 191, 145, .38);
+  color: #eee5d8;
+  text-decoration: none;
+}
+
+.start-project-brief-handoff__next a:focus-visible {
+  outline: 2px solid #8fa5ff;
+  outline-offset: 4px;
+}
+
 @media (max-width: 1024px) and (min-width: 769px) {
   .sfp-review-layout {
     grid-template-columns: 240px minmax(0, 1fr);
@@ -85,6 +193,12 @@
   .sfp-review-close,
   .sfp-recommendation-main {
     order: initial;
+  }
+
+  .sfp-blueprint-layers-mobile summary small,
+  .sfp-blueprint-layers-mobile article small {
+    font-size: 12px;
+    line-height: 1.65;
   }
 
   .start-project-brief-handoff {
