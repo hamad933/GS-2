@@ -79,42 +79,86 @@ export interface StartRecommendationAssessment {
   reasons: readonly string[];
 }
 
+interface RankedDiscoverySignal {
+  id: StartFamilyId;
+  score: number;
+  matches: string[];
+}
+
+function rankDiscoveryText(text: string): RankedDiscoverySignal[] {
+  const normalized = text.toLocaleLowerCase('ar');
+  return (Object.entries(FAMILY_DISCOVERY_KEYWORDS) as Array<[StartFamilyId, readonly string[]]>)
+    .map(([id, keywords]) => {
+      const matches = keywords.filter((keyword) => normalized.includes(keyword.toLocaleLowerCase('ar')));
+      return { id, score: matches.length, matches: [...matches] };
+    })
+    .sort((left, right) => right.score - left.score || startFamilies.findIndex((family) => family.id === left.id) - startFamilies.findIndex((family) => family.id === right.id));
+}
+
+function uniquePositiveLeader(ranked: readonly RankedDiscoverySignal[]) {
+  const top = ranked[0];
+  if (!top || top.score === 0) return undefined;
+  return ranked.filter((item) => item.score === top.score).length === 1 ? top : undefined;
+}
+
 export function assessStartRecommendation(input: {
   currentProblem: string;
   objective: string;
   intendedUsers: string;
+  domain: string;
 }): StartRecommendationAssessment {
-  const fields = [input.currentProblem, input.objective, input.intendedUsers];
-  const normalized = fields.join(' ').toLocaleLowerCase('ar');
+  const primaryFields = [input.currentProblem, input.objective, input.intendedUsers];
+  const operationalContext = input.domain.trim();
+  const fields = [...primaryFields, operationalContext];
   const substantiveFields = fields.filter((value) => value.trim().length >= 4).length;
-  const ranked = (Object.entries(FAMILY_DISCOVERY_KEYWORDS) as Array<[StartFamilyId, readonly string[]]>)
-    .map(([id, keywords]) => {
-      const matches = keywords.filter((keyword) => normalized.includes(keyword.toLocaleLowerCase('ar')));
-      return { id, score: matches.length, matches };
-    })
-    .sort((left, right) => right.score - left.score || startFamilies.findIndex((family) => family.id === left.id) - startFamilies.findIndex((family) => family.id === right.id));
-  const top = ranked[0];
-  const tied = ranked.filter((item) => item.score === top.score);
+  const primaryRanked = rankDiscoveryText(primaryFields.join(' '));
+  const operationalRanked = rankDiscoveryText(operationalContext);
+  const combinedRanked = rankDiscoveryText(fields.join(' '));
+  const primaryLeader = uniquePositiveLeader(primaryRanked);
+  const operationalLeader = uniquePositiveLeader(operationalRanked);
 
-  if (top.score > 0 && tied.length === 1 && substantiveFields >= 2) {
-    const family = getStartFamily(top.id);
+  if (primaryLeader && operationalLeader && primaryLeader.id !== operationalLeader.id) {
+    const candidates = [
+      primaryLeader.id,
+      operationalLeader.id,
+      ...combinedRanked.filter((item) => item.score > 0).map((item) => item.id),
+    ];
     return {
-      resolution: 'decisive',
-      recommendedId: top.id,
-      candidateIds: [top.id],
+      resolution: 'insufficient',
+      candidateIds: [...new Set(candidates)].slice(0, 3),
       reasons: [
-        `يرتبط وصفك مباشرةً بـ ${top.matches.slice(0, 3).map((term) => `«${term}»`).join(' و')}.`,
-        `هذا الاتجاه ينظم رحلة تبدأ من ${family.operatingLoop[0]} وتصل إلى ${family.operatingLoop[family.operatingLoop.length - 1]}.`,
+        `وصف الحاجة يشير إلى «${getStartFamily(primaryLeader.id).title}»، بينما السياق التشغيلي يشير إلى «${getStartFamily(operationalLeader.id).title}». نحتاج منك تمييز الأولوية قبل أن ننسب توصية إلى GS.`,
       ],
     };
   }
 
-  const positive = ranked.filter((item) => item.score > 0).map((item) => item.id);
+  const top = combinedRanked[0];
+  const tied = combinedRanked.filter((item) => item.score === top.score);
+  if (top.score > 0 && tied.length === 1 && substantiveFields >= 2) {
+    const family = getStartFamily(top.id);
+    const operationalMatch = operationalRanked.find((item) => item.id === top.id && item.score > 0);
+    const reasons = [
+      `يرتبط وصفك مباشرةً بـ ${top.matches.slice(0, 3).map((term) => `«${term}»`).join(' و')}.`,
+      operationalMatch
+        ? `السياق التشغيلي الذي ذكرته يعزز هذا الاتجاه عبر ${operationalMatch.matches.slice(0, 2).map((term) => `«${term}»`).join(' و')}.`
+        : `هذا الاتجاه ينظم رحلة تبدأ من ${family.operatingLoop[0]} وتصل إلى ${family.operatingLoop[family.operatingLoop.length - 1]}.`,
+    ];
+    return {
+      resolution: 'decisive',
+      recommendedId: top.id,
+      candidateIds: [top.id],
+      reasons,
+    };
+  }
+
+  const positive = combinedRanked.filter((item) => item.score > 0).map((item) => item.id);
   const fallback: StartFamilyId[] = ['business', 'booking', 'portals'];
   return {
     resolution: 'insufficient',
     candidateIds: [...new Set([...positive, ...fallback])].slice(0, 3),
-    reasons: ['الوصف الحالي يحتمل أكثر من اتجاه، لذلك نحتاج منك تمييز نوع التغيير قبل أن ننسب توصية إلى GS.'],
+    reasons: [operationalContext
+      ? 'الحاجة والسياق التشغيلي لا يقدمان دليلًا واحدًا كافيًا بعد، لذلك نحتاج منك تمييز نوع التغيير قبل أن ننسب توصية إلى GS.'
+      : 'الوصف الحالي يحتمل أكثر من اتجاه، لذلك نحتاج منك تمييز نوع التغيير قبل أن ننسب توصية إلى GS.'],
   };
 }
 
@@ -254,16 +298,26 @@ export function getRecommendedExperience(familyId: StartFamilyId): StartExperien
   return familyId === 'portals' ? 'connected' : 'focused';
 }
 
+export interface StartDecisionConsequence {
+  customer: string;
+  solution: string;
+  project: string;
+  material: boolean;
+  externalDependency?: string;
+}
+
 export function getDecisionConsequence(
   familyId: StartFamilyId,
   decision: StartDecisionDefinition,
   answer: StartDecisionAnswer,
-) {
+): StartDecisionConsequence {
   const family = getStartFamily(familyId);
   const capability = family.capabilities.find((item) => item.name === decision.capabilityName);
+  const isPaymentDecision = familyId === 'booking' && decision.id === 'booking-payment';
   const material = Boolean(
     answer === 'yes'
       && capability
+      && !isPaymentDecision
       && (capability.classification === 'CONDITIONAL' || capability.classification === 'CUSTOM'),
   );
 
@@ -282,6 +336,16 @@ export function getDecisionConsequence(
       solution: `يبقى «${decision.capabilityName}» مفتوحًا للمراجعة.`,
       project: 'يظهر كبند مراجعة مهم قبل تثبيت النطاق النهائي.',
       material: false,
+    };
+  }
+
+  if (isPaymentDecision) {
+    return {
+      customer: capability?.description ?? 'يظهر الدفع كجزء من رحلة الحجز عند اعتماده.',
+      solution: `يصبح «${decision.capabilityName}» جزءًا من التكوين المبدئي.`,
+      project: 'يتطلب هذا القرار مزود دفع خارجي (Payment Provider) ومراجعة تفاصيل الربط، لكنه وحده لا يغيّر نطاق الميزانية التقريبي الحالي.',
+      material: false,
+      externalDependency: 'مزود دفع خارجي (Payment Provider)',
     };
   }
 
