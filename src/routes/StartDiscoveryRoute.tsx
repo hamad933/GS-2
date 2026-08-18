@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getStartFamily, isStartFamilyId } from '../data/start-discovery/startExperience';
 import { StartDiscoveryBody } from '../features/start-discovery';
@@ -13,6 +13,7 @@ interface StartProjectBriefHandoff {
   version: 1;
   mode: 'LOCAL_PUBLIC_HANDOFF';
   createdAt: string;
+  staleAt?: string;
   summary: DiscoverySummary;
   draft: StartDiscoveryDraft;
   directionTruth: {
@@ -82,12 +83,41 @@ function adoptedFamilyLabel(familyId: string) {
 export default function StartDiscoveryRoute() {
   const location = useLocation();
   const prefill = readStartDiscoveryRouteState(location.state);
-  const [projectBrief, setProjectBrief] = useState<StartProjectBriefHandoff | null>(() => readLocalProjectBrief());
+  const initialProjectBrief = useRef<StartProjectBriefHandoff | null>(readLocalProjectBrief());
+  const [projectBrief, setProjectBrief] = useState<StartProjectBriefHandoff | null>(initialProjectBrief.current);
+  const [projectBriefStale, setProjectBriefStale] = useState(Boolean(initialProjectBrief.current?.staleAt));
+  const draftChangeSeen = useRef(false);
+
+  const handleDraftChange = (nextDraft: StartDiscoveryDraft) => {
+    if (!draftChangeSeen.current) {
+      draftChangeSeen.current = true;
+      return;
+    }
+    if (!projectBrief || projectBriefStale) return;
+
+    const staleBrief: StartProjectBriefHandoff = {
+      ...projectBrief,
+      staleAt: new Date().toISOString(),
+      draft: projectBrief.draft,
+    };
+    setProjectBrief(staleBrief);
+    setProjectBriefStale(true);
+
+    try {
+      window.sessionStorage.setItem(START_PROJECT_BRIEF_SESSION_KEY, JSON.stringify(staleBrief));
+    } catch {
+      // The visible state remains stale even when storage is unavailable.
+      // The completion path owns the truthful recoverable storage error.
+    }
+
+    void nextDraft;
+  };
 
   const handleLocalComplete = (summary: DiscoverySummary, draft: StartDiscoveryDraft) => {
     const handoff = createLocalProjectBrief(summary, draft);
     window.sessionStorage.setItem(START_PROJECT_BRIEF_SESSION_KEY, JSON.stringify(handoff));
     setProjectBrief(handoff);
+    setProjectBriefStale(false);
   };
 
   return (
@@ -96,6 +126,7 @@ export default function StartDiscoveryRoute() {
         <StartDiscoveryBody
           prefill={prefill}
           initialCertainty={prefill ? 'configured' : undefined}
+          onDraftChange={handleDraftChange}
           onLocalComplete={handleLocalComplete}
         />
         {projectBrief ? (
@@ -104,13 +135,26 @@ export default function StartDiscoveryRoute() {
             aria-labelledby="start-project-brief-title"
             data-testid="project-brief-handoff"
             data-handoff-mode="local-public"
+            data-handoff-state={projectBriefStale ? 'stale' : 'current'}
           >
-            <p className="start-project-brief-handoff__eyebrow">موجز المشروع · جاهز للمتابعة المحلية</p>
-            <h2 id="start-project-brief-title">تم حفظ مخططك للخطوة التالية دون إعادة الإدخال</h2>
-            <p>
-              حُفظ هذا الموجز داخل جلسة المتصفح فقط. لم يتم إرسال بيانات إلى خادم أو بريد إلكتروني، ولا يعني ذلك تأكيد تسليم خارجي.
+            <p className="start-project-brief-handoff__eyebrow">
+              {projectBriefStale ? 'موجز المشروع · يحتاج مراجعة جديدة' : 'موجز المشروع · محفوظ داخل هذه الجلسة'}
             </p>
-            <dl>
+            <h2 id="start-project-brief-title">
+              {projectBriefStale
+                ? 'الموجز المحفوظ يعود إلى نسخة سابقة من مخططك'
+                : 'تم حفظ موجز هذه النسخة داخل جلسة المتصفح'}
+            </h2>
+            {projectBriefStale ? (
+              <p role="status">
+                عدّلت المخطط بعد آخر حفظ، لذلك لم نعد نعرض الموجز القديم على أنه الحالة الحالية. أكمل التعديل، ثم عُد إلى المراجعة واحفظ نسخة جديدة.
+              </p>
+            ) : (
+              <p>
+                حُفظ هذا الموجز داخل جلسة المتصفح فقط. لم يتم إرسال بيانات إلى خادم أو بريد إلكتروني، ولم يُنشأ مشروع أو طلب أو عملية شراء.
+              </p>
+            )}
+            <dl aria-label={projectBriefStale ? 'بيانات آخر موجز محفوظ — غير محدثة' : 'بيانات الموجز المحفوظ'}>
               <div>
                 <dt>توصية GS</dt>
                 <dd>{projectBrief.directionTruth.recommendedFamily || 'لا توجد توصية منسوبة.'}</dd>
@@ -134,7 +178,18 @@ export default function StartDiscoveryRoute() {
                 </dd>
               </div>
             </dl>
-            <p role="status">الموجز الكامل والمسودة ومصدر كل اختيار محفوظة محليًا ويمكن لمسار إنتاج لاحق استهلاكها دون طلب البيانات نفسها مرة أخرى.</p>
+            <div className="start-project-brief-handoff__next" aria-labelledby="start-project-brief-next-title">
+              <h3 id="start-project-brief-next-title">الخطوة التالية وملكيتها</h3>
+              {projectBriefStale ? (
+                <p>أنت تملك الخطوة التالية: أكمل التعديل في START، راجع المخطط من جديد، ثم احفظ الموجز المحدث داخل الجلسة.</p>
+              ) : (
+                <>
+                  <p><strong>ما حدث:</strong> حُفظت هذه النسخة محليًا فقط. <strong>ما لم يحدث:</strong> لم تستلم GS طلبًا، ولم يبدأ مشروع، ولم يحدث إرسال أو شراء أو دفع.</p>
+                  <p><strong>ما يمكنك فعله الآن:</strong> راجع النسخة أو عدّلها قبل أي مشاركة خارج هذه الصفحة. أنت أو فريقك تملكون قرار الخطوة الخارجية التالية.</p>
+                  <a href="#start-review-title">ارجع إلى المراجعة أو التعديل</a>
+                </>
+              )}
+            </div>
           </section>
         ) : null}
       </div>
