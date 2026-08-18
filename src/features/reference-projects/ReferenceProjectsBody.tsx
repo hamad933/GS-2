@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useId,
   useRef,
   useState,
@@ -23,7 +24,7 @@ export type ReferenceProjectsBodyProps = {
 
 const pageCopy = {
   ar: {
-    eyebrow: 'GS-PUB-003 / مشروعات مرجعية',
+    eyebrow: 'مشروعات مرجعية',
     titleLead: 'أربع بيئات تشغيل.',
     titleClose: 'حدود واضحة لما تثبته.',
     intro: 'نستخدم هذه المشروعات المستقلة لفهم نوع النظام الذي يناسب الحاجة، لا لادعاء أنها تطبيقات عميل أو وحدات جاهزة داخل GS.',
@@ -55,7 +56,7 @@ const pageCopy = {
     independent: 'مشروع مستقل',
   },
   en: {
-    eyebrow: 'GS-PUB-003 / REFERENCE PROJECTS',
+    eyebrow: 'REFERENCE PROJECTS',
     titleLead: 'Four operating environments.',
     titleClose: 'Clear limits on what they prove.',
     intro: 'We use these independent projects to understand which system class fits a need—not to present them as client implementations or ready-made GS modules.',
@@ -115,7 +116,6 @@ function StateLabel({
   return (
     <span className="rp-state-label" data-state={machineState}>
       <strong>{label}</strong>
-      <small dir="ltr">{machineState}</small>
     </span>
   );
 }
@@ -123,7 +123,12 @@ function StateLabel({
 function CapabilityMap({ project, locale }: { project: ReferenceProject; locale: ReferenceLocale }) {
   return (
     <figure className="rp-capability-map" aria-labelledby={`capability-map-${project.id}`}>
-      <figcaption id={`capability-map-${project.id}`}>{pageCopy[locale].capabilityMap}</figcaption>
+      <figcaption
+        id={`capability-map-${project.id}`}
+        style={{ color: '#aeb2b5', fontSize: '12px', lineHeight: 1.6 }}
+      >
+        {pageCopy[locale].capabilityMap}
+      </figcaption>
       <svg className="rp-capability-map__routes" viewBox="0 0 720 420" preserveAspectRatio="none" aria-hidden="true">
         <path d="M360 210 C286 210 258 90 137 90" />
         <path d="M360 210 C430 210 466 90 585 90" />
@@ -162,12 +167,26 @@ export function ReferenceProjectsBody({
     : 'rp01';
   const [activeId, setActiveId] = useState<ReferenceProjectId>(initialProject);
   const [expanded, setExpanded] = useState(false);
+  const [selectorOrientation, setSelectorOrientation] = useState<'vertical' | 'horizontal'>(() => (
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
+      ? 'horizontal'
+      : 'vertical'
+  ));
   const projectButtons = useRef<Array<HTMLButtonElement | null>>([]);
   const panelId = useId();
   const copy = pageCopy[locale];
   const direction = locale === 'ar' ? 'rtl' : 'ltr';
   const activeIndex = referenceProjects.findIndex((project) => project.id === activeId);
   const active = referenceProjects[activeIndex] ?? referenceProjects[0];
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 900px)');
+    const syncOrientation = () => setSelectorOrientation(mediaQuery.matches ? 'horizontal' : 'vertical');
+
+    syncOrientation();
+    mediaQuery.addEventListener('change', syncOrientation);
+    return () => mediaQuery.removeEventListener('change', syncOrientation);
+  }, []);
 
   const selectProject = (projectId: ReferenceProjectId) => {
     setActiveId(projectId);
@@ -176,18 +195,28 @@ export function ReferenceProjectsBody({
 
   const handleProjectKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const lastIndex = referenceProjects.length - 1;
-    let nextIndex: number | null = null;
+    const nextIndex = index === lastIndex ? 0 : index + 1;
+    const previousIndex = index === 0 ? lastIndex : index - 1;
+    let targetIndex: number | null = null;
 
-    if (event.key === 'Home') nextIndex = 0;
-    if (event.key === 'End') nextIndex = lastIndex;
-    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') nextIndex = index === lastIndex ? 0 : index + 1;
-    if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') nextIndex = index === 0 ? lastIndex : index - 1;
+    if (event.key === 'Home') targetIndex = 0;
+    if (event.key === 'End') targetIndex = lastIndex;
 
-    if (nextIndex !== null) {
+    if (selectorOrientation === 'vertical') {
+      if (event.key === 'ArrowDown') targetIndex = nextIndex;
+      if (event.key === 'ArrowUp') targetIndex = previousIndex;
+    } else {
+      const forwardKey = direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+      const backwardKey = direction === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+      if (event.key === forwardKey) targetIndex = nextIndex;
+      if (event.key === backwardKey) targetIndex = previousIndex;
+    }
+
+    if (targetIndex !== null) {
       event.preventDefault();
-      const nextProject = referenceProjects[nextIndex];
+      const nextProject = referenceProjects[targetIndex];
       selectProject(nextProject.id);
-      projectButtons.current[nextIndex]?.focus();
+      projectButtons.current[targetIndex]?.focus();
     }
   };
 
@@ -218,7 +247,12 @@ export function ReferenceProjectsBody({
             <span>{publicProjectCode(active.code)}</span><i /><span>04 / {String(activeIndex + 1).padStart(2, '0')}</span>
           </div>
 
-          <div className="rp-project-selector" role="tablist" aria-label={copy.selectorLabel} aria-orientation="vertical">
+          <div
+            className="rp-project-selector"
+            role="tablist"
+            aria-label={copy.selectorLabel}
+            aria-orientation={selectorOrientation}
+          >
             {referenceProjects.map((project, index) => {
               const selected = project.id === active.id;
               return (
@@ -318,7 +352,7 @@ export function ReferenceProjectsBody({
                 <span dir="ltr">0{index + 1}</span>
                 <div>
                   <h4>{localized(evidence.label, locale)}</h4>
-                  <p>{localized(evidence.note, locale)}</p>
+                  <p style={{ fontSize: '12px', lineHeight: 1.7 }}>{localized(evidence.note, locale)}</p>
                 </div>
                 <StateLabel
                   label={localized(evidenceStateLabels[evidence.state], locale)}
