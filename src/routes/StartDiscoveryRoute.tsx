@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getStartFamily, isStartFamilyId } from '../data/start-discovery/startExperience';
 import { StartDiscoveryBody } from '../features/start-discovery';
@@ -84,22 +84,26 @@ export default function StartDiscoveryRoute() {
   const location = useLocation();
   const prefill = readStartDiscoveryRouteState(location.state);
   const initialProjectBrief = useRef<StartProjectBriefHandoff | null>(readLocalProjectBrief());
+  const projectBriefRef = useRef<StartProjectBriefHandoff | null>(initialProjectBrief.current);
+  const projectBriefStaleRef = useRef(Boolean(initialProjectBrief.current?.staleAt));
   const [projectBrief, setProjectBrief] = useState<StartProjectBriefHandoff | null>(initialProjectBrief.current);
-  const [projectBriefStale, setProjectBriefStale] = useState(Boolean(initialProjectBrief.current?.staleAt));
+  const [projectBriefStale, setProjectBriefStale] = useState(projectBriefStaleRef.current);
   const draftChangeSeen = useRef(false);
 
-  const handleDraftChange = (nextDraft: StartDiscoveryDraft) => {
+  const handleDraftChange = useCallback(() => {
     if (!draftChangeSeen.current) {
       draftChangeSeen.current = true;
       return;
     }
-    if (!projectBrief || projectBriefStale) return;
+    const currentBrief = projectBriefRef.current;
+    if (!currentBrief || projectBriefStaleRef.current) return;
 
     const staleBrief: StartProjectBriefHandoff = {
-      ...projectBrief,
+      ...currentBrief,
       staleAt: new Date().toISOString(),
-      draft: projectBrief.draft,
     };
+    projectBriefRef.current = staleBrief;
+    projectBriefStaleRef.current = true;
     setProjectBrief(staleBrief);
     setProjectBriefStale(true);
 
@@ -109,16 +113,16 @@ export default function StartDiscoveryRoute() {
       // The visible state remains stale even when storage is unavailable.
       // The completion path owns the truthful recoverable storage error.
     }
+  }, []);
 
-    void nextDraft;
-  };
-
-  const handleLocalComplete = (summary: DiscoverySummary, draft: StartDiscoveryDraft) => {
+  const handleLocalComplete = useCallback((summary: DiscoverySummary, draft: StartDiscoveryDraft) => {
     const handoff = createLocalProjectBrief(summary, draft);
     window.sessionStorage.setItem(START_PROJECT_BRIEF_SESSION_KEY, JSON.stringify(handoff));
+    projectBriefRef.current = handoff;
+    projectBriefStaleRef.current = false;
     setProjectBrief(handoff);
     setProjectBriefStale(false);
-  };
+  }, []);
 
   return (
     <RouteReadySignal>
