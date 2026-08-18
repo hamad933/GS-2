@@ -33,8 +33,10 @@ test('public START completes into a truthful local Project Brief without a secon
   const captureRequest = (request: { url(): string }) => postCompletionRequests.push(request.url());
   page.on('request', captureRequest);
   await page.getByRole('button', { name: 'ابدأ المشروع بهذا المخطط' }).click();
-  await expect(page.locator('[data-testid="project-brief-handoff"]')).toBeVisible();
-  await expect(page.locator('[data-testid="project-brief-handoff"]')).toContainText('حُفظ هذا الموجز داخل جلسة المتصفح فقط');
+  const handoff = page.locator('[data-testid="project-brief-handoff"]');
+  await expect(handoff).toBeVisible();
+  await expect(handoff).toContainText('حُفظ هذا الموجز داخل جلسة المتصفح فقط');
+  await expect(handoff).toContainText('الحجوزات والخدمات');
   page.off('request', captureRequest);
   expect(postCompletionRequests).toEqual([]);
 
@@ -51,12 +53,12 @@ test('public START completes into a truthful local Project Brief without a secon
   expect(payload.draft).toBeTruthy();
   expect(payload.provenance).toHaveProperty('capabilitySelections');
   expect(payload.explicitChannels).toHaveProperty('selectedCapabilities');
-  expect(payload.explicitChannels).toHaveProperty('optionalCapabilities');
+  expect(payload.explicitChannels.optionalCapabilities).toEqual([]);
   expect(payload.explicitChannels).toHaveProperty('uncertainCapabilities');
   expect(payload.explicitChannels.dependencies).toContain('مزود دفع خارجي (Payment Provider)');
-  expect(payload.explicitChannels).toHaveProperty('unknowns');
-  expect(payload.explicitChannels).toHaveProperty('existingSystems');
-  expect(payload.explicitChannels).toHaveProperty('integrations');
+  expect(payload.explicitChannels.unknowns).toEqual([]);
+  expect(payload.explicitChannels.existingSystems).toBe('');
+  expect(payload.explicitChannels.integrations).toBe('');
 
   await page.reload();
   await expect(page.locator('[data-testid="project-brief-handoff"]')).toBeVisible();
