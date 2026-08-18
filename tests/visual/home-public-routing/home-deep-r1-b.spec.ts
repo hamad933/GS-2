@@ -1,5 +1,22 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+const runtimeErrors = new WeakMap<Page, { console: string[]; page: string[] }>();
+
+test.beforeEach(async ({ page }) => {
+  const errors = { console: [] as string[], page: [] as string[] };
+  runtimeErrors.set(page, errors);
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.console.push(message.text());
+  });
+  page.on('pageerror', (error) => errors.page.push(error.message));
+});
+
+test.afterEach(async ({ page }) => {
+  const errors = runtimeErrors.get(page) ?? { console: [], page: [] };
+  expect(errors.console).toEqual([]);
+  expect(errors.page).toEqual([]);
+});
+
 async function openHome(page: Page) {
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
@@ -100,3 +117,14 @@ for (const width of [430, 390]) {
     expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
   });
 }
+
+test('HOME-B scoped interactions preserve reduced-motion behavior', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openHome(page);
+
+  await expect(page.locator('#reference-proof .reference-proof-v2__selectors button').first()).toHaveCSS(
+    'transition-duration',
+    '0.01ms',
+  );
+  await expect(page.locator('#project-gateway .gateway-cta--primary')).toHaveCSS('transition-duration', '0s');
+});
