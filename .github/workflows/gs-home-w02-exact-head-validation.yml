@@ -17,12 +17,12 @@ permissions:
 
 jobs:
   home:
-    name: HOME exact candidate R2
+    name: HOME exact candidate R3
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
-      HOME_SHA: 2c79c03a0f8a855d18a84eca1d2aae64e673393b
-      HOME_R2_PARENT: c93aba57610c4e8b029307dd2474182262b7dace
+      HOME_SHA: 5acba33a23c3424dbdfbfd5ef8bc94a6f7fe494a
+      HOME_R3_PARENT: 2c79c03a0f8a855d18a84eca1d2aae64e673393b
       HOME_BASE: bef381bcebde8199f263e1be465c5b0010058f5d
       EVIDENCE_DIR: /tmp/gs-home-evidence
       VISUAL_EVIDENCE_DIR: /tmp/gs-home-evidence/repo-native
@@ -55,22 +55,22 @@ jobs:
           cat > "$EVIDENCE_DIR/manifest.txt" <<'EOF'
           classification=REFERENCE_ONLY
           workstream=GS-GOV-W11-HOME-W02-EXACT-HEAD-VALIDATION-R1
-          revision=R2
+          revision=R3
           target=HOME
           required_widths=1440,768,430,390
           EOF
 
-      - name: Check out exact HOME R2 candidate
+      - name: Check out exact HOME R3 candidate
         if: github.event_name == 'push'
         id: checkout
         continue-on-error: true
         uses: actions/checkout@v4
         with:
-          ref: 2c79c03a0f8a855d18a84eca1d2aae64e673393b
+          ref: 5acba33a23c3424dbdfbfd5ef8bc94a6f7fe494a
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify HOME identity ancestry R2 delta and cumulative boundary
+      - name: Verify HOME identity ancestry R3 delta and cumulative boundary
         id: home_gate
         if: github.event_name == 'push' && steps.checkout.outcome == 'success'
         continue-on-error: true
@@ -80,26 +80,26 @@ jobs:
           {
             echo "expected_head=$HOME_SHA"
             echo "actual_head=$(git rev-parse HEAD)"
-            echo "expected_r2_parent=$HOME_R2_PARENT"
+            echo "expected_r3_parent=$HOME_R3_PARENT"
             echo "actual_parent=$(git rev-parse HEAD^)"
             echo "frozen_base=$HOME_BASE"
             echo "merge_base=$(git merge-base "$HOME_BASE" "$HOME_SHA")"
           } | tee "$EVIDENCE_DIR/exact-checkout-identity.txt"
 
           test "$(git rev-parse HEAD)" = "$HOME_SHA"
-          test "$(git rev-parse HEAD^)" = "$HOME_R2_PARENT"
+          test "$(git rev-parse HEAD^)" = "$HOME_R3_PARENT"
           test "$(git merge-base "$HOME_BASE" "$HOME_SHA")" = "$HOME_BASE"
-          test "$(git rev-list --count "$HOME_R2_PARENT..$HOME_SHA")" -eq 1
+          test "$(git rev-list --count "$HOME_R3_PARENT..$HOME_SHA")" -eq 1
 
-          cat > "$EVIDENCE_DIR/expected-r2-paths.txt" <<'EOF'
-          tests/visual/home-public-routing/home-public-routing.spec.ts
+          cat > "$EVIDENCE_DIR/expected-r3-paths.txt" <<'EOF'
+          src/components/sections/ReferenceProof.remediation.css
           EOF
-          git diff --name-only "$HOME_R2_PARENT...$HOME_SHA" | sort | tee "$EVIDENCE_DIR/actual-r2-paths.txt"
-          diff -u "$EVIDENCE_DIR/expected-r2-paths.txt" "$EVIDENCE_DIR/actual-r2-paths.txt" | tee "$EVIDENCE_DIR/r2-path-verification.diff"
-          test "$(wc -l < "$EVIDENCE_DIR/actual-r2-paths.txt")" -eq 1
-          git diff --stat "$HOME_R2_PARENT...$HOME_SHA" | tee "$EVIDENCE_DIR/r2-stat.txt"
-          git diff --numstat "$HOME_R2_PARENT...$HOME_SHA" | tee "$EVIDENCE_DIR/r2-numstat.txt"
-          awk 'NF == 3 { if ($1 != 19 || $2 != 3 || $3 != "tests/visual/home-public-routing/home-public-routing.spec.ts") exit 1; seen=1 } END { exit !seen }' "$EVIDENCE_DIR/r2-numstat.txt"
+          git diff --name-only "$HOME_R3_PARENT...$HOME_SHA" | sort | tee "$EVIDENCE_DIR/actual-r3-paths.txt"
+          diff -u "$EVIDENCE_DIR/expected-r3-paths.txt" "$EVIDENCE_DIR/actual-r3-paths.txt" | tee "$EVIDENCE_DIR/r3-path-verification.diff"
+          test "$(wc -l < "$EVIDENCE_DIR/actual-r3-paths.txt")" -eq 1
+          git diff --stat "$HOME_R3_PARENT...$HOME_SHA" | tee "$EVIDENCE_DIR/r3-stat.txt"
+          git diff --numstat "$HOME_R3_PARENT...$HOME_SHA" | tee "$EVIDENCE_DIR/r3-numstat.txt"
+          awk 'NF == 3 { if ($1 != 6 || $2 != 0 || $3 != "src/components/sections/ReferenceProof.remediation.css") exit 1; seen=1 } END { exit !seen }' "$EVIDENCE_DIR/r3-numstat.txt"
 
           cat > "$EVIDENCE_DIR/expected-cumulative-paths.txt" <<'EOF'
           src/components/footer/Footer.remediation.css
@@ -139,7 +139,7 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Execute HOME R2 validation contract
+      - name: Execute HOME R3 validation contract
         id: home_validation
         if: github.event_name == 'push' && steps.home_gate.outcome == 'success' && steps.home_node.outcome == 'success'
         continue-on-error: true
@@ -164,7 +164,7 @@ jobs:
           run_logged lint npm run lint
           run_logged typecheck npm run typecheck
           run_logged build npm run build
-          run_logged playwright-install npx playwright install --with-deps chromium
+          run_logged playwright-install npx playwright install chromium
 
           run_logged home-public-routing npx playwright test \
             tests/visual/home-public-routing/home-public-routing.spec.ts \
@@ -281,7 +281,7 @@ jobs:
               return 1
             fi
 
-            cat > "$RUNNER_TEMP/home-r2-capture.cjs" <<'NODE'
+            cat > "$RUNNER_TEMP/home-r3-capture.cjs" <<'NODE'
           const { chromium } = require('@playwright/test');
           const { writeFile } = require('node:fs/promises');
           const path = require('node:path');
@@ -365,7 +365,7 @@ jobs:
               for (const action of ['رتّب الرحلة حول الهدف', 'وحّد التجربة', 'جرّب المسار']) {
                 await hero.getByRole('button', { name: action, exact: true }).click();
               }
-              await hero.getByLabel('طلبك المختصر', { exact: true }).fill('Exact-head HOME R2 evidence capture');
+              await hero.getByLabel('طلبك المختصر', { exact: true }).fill('Exact-head HOME R3 evidence capture');
               const prepare = hero.getByRole('button', { name: 'جهّز الملخّص', exact: true });
               const legacyPrepareCount = await hero.getByRole('button', { name: 'إرسال الطلب إلى الملخّص', exact: true }).count();
               await prepare.click();
@@ -462,7 +462,7 @@ jobs:
             process.exit(1);
           });
           NODE
-            node "$RUNNER_TEMP/home-r2-capture.cjs"
+            node "$RUNNER_TEMP/home-r3-capture.cjs"
           }
 
           set +e
@@ -489,7 +489,7 @@ jobs:
           {
             echo 'classification=REFERENCE_ONLY'
             echo "tested_sha=$HOME_SHA"
-            echo "r2_parent=$HOME_R2_PARENT"
+            echo "r3_parent=$HOME_R3_PARENT"
             echo "frozen_base=$HOME_BASE"
             echo "checkout=$CHECKOUT_OUTCOME"
             echo "identity_ancestry_delta_boundary=$GATE_OUTCOME"
@@ -504,7 +504,7 @@ jobs:
         if: github.event_name == 'push' && always()
         uses: actions/upload-artifact@v4
         with:
-          name: gs-home-exact-head-reference-only-2c79c03a0f8a855d18a84eca1d2aae64e673393b
+          name: gs-home-exact-head-reference-only-5acba33a23c3424dbdfbfd5ef8bc94a6f7fe494a
           path: /tmp/gs-home-evidence
           if-no-files-found: error
           retention-days: 14
@@ -672,7 +672,7 @@ jobs:
           run_logged lint npm run lint
           run_logged typecheck npm run typecheck
           run_logged build npm run build
-          run_logged playwright-install npx playwright install --with-deps chromium
+          run_logged playwright-install npx playwright install chromium
 
           run_logged solutions-workspace npx playwright test \
             tests/visual/solutions/solutions-workspace.visual.spec.ts \
