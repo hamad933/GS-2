@@ -28,7 +28,7 @@ export function Footer() {
 
         <NavLink to="/start" className="gs-footer__email">
           <span aria-hidden="true">←</span>
-          <span>ابدأ اختيارك</span>
+          <span>انتقل إلى نقطة البدء</span>
         </NavLink>
 
         <div className="gs-footer__base">
