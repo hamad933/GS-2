@@ -710,7 +710,7 @@ export function HowWeWorkBody({
             <h3>{copy.ctaTitle}</h3>
             <p>{copy.ctaBody}</p>
           </div>
-          <a href="/start">{copy.ctaAction}</a>
+          <a href="/start" tabIndex={0}>{copy.ctaAction}</a>
           <small>{copy.ctaBoundary}</small>
         </nav>
       </section>
