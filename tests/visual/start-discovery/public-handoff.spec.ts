@@ -26,9 +26,12 @@ async function reachReview(page: Page) {
 
 async function returnFromBuildToReview(page: Page) {
   while ((await page.locator('.start-discovery').getAttribute('data-stage')) === 'build') {
-    const decision = page.locator('.sfp-decision [role="radio"]').first();
-    if (await decision.count() && !(await decision.isChecked())) await decision.click();
-    await page.getByRole('button', { name: /تابع في الرحلة|احفظ التكوين وتابع/ }).click();
+    const next = page.getByRole('button', { name: /تابع في الرحلة|احفظ التكوين وتابع/ });
+    if (await next.isDisabled()) {
+      const decision = page.locator('.sfp-decision [role="radio"]').first();
+      if (await decision.count()) await decision.click();
+    }
+    await next.click();
   }
   await expect(page.locator('.start-discovery')).toHaveAttribute('data-stage', 'review');
 }
