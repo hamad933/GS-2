@@ -468,7 +468,7 @@ jobs:
             process.exit(1);
           });
           NODE
-            node "$RUNNER_TEMP/home-r3-capture.cjs"
+            NODE_PATH="$GITHUB_WORKSPACE/node_modules" node "$RUNNER_TEMP/home-r3-capture.cjs"
           }
 
           set +e
