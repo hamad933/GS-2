@@ -80,4 +80,4 @@ computing gzip size...
 [2mdist/[22m[2massets/[22m[36mSolutionsRoute-DxDb2ftT.js                                     [39m[1m[2m 42.75 kB[22m[1m[22m[2m │ gzip: 13.24 kB[22m
 [2mdist/[22m[2massets/[22m[36mStartDiscoveryRoute-JyQrBWls.js                                [39m[1m[2m 62.23 kB[22m[1m[22m[2m │ gzip: 19.21 kB[22m
 [2mdist/[22m[2massets/[22m[36mindex-DziB5chA.js                                              [39m[1m[2m245.55 kB[22m[1m[22m[2m │ gzip: 92.52 kB[22m
-[32m✓ built in 3.38s[39m
+[32m✓ built in 2.79s[39m

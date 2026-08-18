@@ -31,4 +31,4 @@ Running 30 tests using 1 worker
 [28/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:359:3 › captures final START Discover Build Review evidence at 430px
 [29/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:359:3 › captures final START Discover Build Review evidence at 390px
 [30/30] [chromium] › tests/visual/start-discovery/start-discovery.spec.ts:373:1 › captures the required truth and contextual evidence states
-  30 passed (54.9s)
+  30 passed (50.9s)
