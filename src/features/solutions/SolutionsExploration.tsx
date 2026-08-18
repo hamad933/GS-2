@@ -28,7 +28,7 @@ const compare = [
   ['ما الذي قد يرفع حجم المشروع؟', 'الموارد والسعات والاستثناءات والدفع أو التقويم عند الحاجة.', 'تعدد الأدوار والموافقات والسجلات والتكاملات وقواعد التشغيل.'],
 ] as const;
 
-function Asset({ familyId, role, alt = '', className }: { familyId: SolutionFamilyId; role: 'MASTER' | 'DIR-01' | 'DIR-02' | 'DIR-03' | 'CTX-01' | 'CTX-02'; alt?: string; className?: string }) {
+function Asset({ familyId, role, alt = '', className }: { familyId: SolutionFamilyId; role: 'MASTER' | 'EMBLEM' | 'COMPARE' | 'DIR-01' | 'DIR-02' | 'DIR-03' | 'CTX-01' | 'CTX-02'; alt?: string; className?: string }) {
   const asset = getFamilyVisualAsset(getFamilyAssetId(familyId, role));
   if (!asset?.runtimeUrl) return null;
   return <img src={asset.runtimeUrl} alt={alt} className={className} data-asset-id={asset.id} data-asset-status="approved-bound" />;
@@ -83,7 +83,7 @@ export function SolutionsExploration({ onStartFamily, onDiscover }: SolutionsExp
           {solutionFamilies.map((item, index) => {
             const active = item.id === familyId;
             return <button key={item.id} ref={(node) => { refs.current[index] = node; }} id={`solutions-family-${item.id}`} type="button" role="tab" aria-selected={active} aria-controls="solutions-selected-family" tabIndex={active ? 0 : -1} className="solutions-family-tab" data-family-id={item.id} onClick={() => choose(item.id)} onKeyDown={(event) => key(event, index)}>
-              <Asset familyId={item.id} role="MASTER" className="solutions-family-tab__image" />
+              <Asset familyId={item.id} role="EMBLEM" className="solutions-family-tab__image" />
               <span className="solutions-family-tab__number" aria-hidden="true">{item.number}</span>
               <span><strong>{item.title}</strong><small>{item.cue}</small></span>
             </button>;
@@ -137,7 +137,7 @@ export function SolutionsExploration({ onStartFamily, onDiscover }: SolutionsExp
       </article>
     </div> : <section className="solutions-compare" aria-labelledby="solutions-compare-title">
       <header className="solutions-compare__header"><div><p className="solutions-eyebrow">COMPARE · داخل SOLUTIONS</p><h2 id="solutions-compare-title">الحجوزات والخدمات أم الأنظمة التشغيلية والبوابات؟</h2><span>السؤال ليس من يملك خصائص أكثر، بل ما الذي يدور حوله النظام أساسًا.</span></div><button type="button" className="solutions-secondary" onClick={closeCompare}>العودة إلى جميع الحلول</button></header>
-      <div className="solutions-compare__visuals" aria-hidden="true"><Asset familyId="booking" role="MASTER" /><div><span>رحلة العميل إلى الخدمة والموعد</span><i /><span>عمل الفريق والطلبات والسجلات</span></div><Asset familyId="portals" role="MASTER" /></div>
+      <div className="solutions-compare__visuals" aria-hidden="true"><Asset familyId="booking" role="COMPARE" /><div><span>رحلة العميل إلى الخدمة والموعد</span><i /><span>عمل الفريق والطلبات والسجلات</span></div><Asset familyId="portals" role="COMPARE" /></div>
       <div className="solutions-compare__desktop" aria-label="مقارنة موجزة بين الاتجاهين"><div className="solutions-compare__title"><strong>الحجوزات والخدمات</strong><span>محورها رحلة العميل إلى الخدمة أو الموعد.</span></div><div className="solutions-compare__title solutions-compare__title--ops"><strong>الأنظمة التشغيلية والبوابات</strong><span>محورها عمل الفريق والطلبات والسجلات الداخلية.</span></div>{compare.map(([question, booking, portals]) => <article className="solutions-compare-row" key={question}><h3>{question}</h3><p>{booking}</p><p>{portals}</p></article>)}</div>
       <div className="solutions-compare__mobile" aria-live="polite">{!summary ? <article className="solutions-compare-step" data-compare-step={compareIndex + 1}><p>سؤال {compareIndex + 1} من {compare.length}</p><h3>{compare[compareIndex][0]}</h3><section><strong>الحجوزات والخدمات</strong><span>{compare[compareIndex][1]}</span></section><section><strong>الأنظمة التشغيلية والبوابات</strong><span>{compare[compareIndex][2]}</span></section><div className="solutions-actions"><button type="button" className="solutions-secondary" disabled={compareIndex === 0} onClick={() => setCompareIndex((value) => Math.max(0, value - 1))}>السابق</button><button type="button" className="solutions-primary" onClick={() => compareIndex === compare.length - 1 ? setSummary(true) : setCompareIndex((value) => value + 1)}>{compareIndex === compare.length - 1 ? 'عرض الخلاصة' : 'السؤال التالي'}</button></div></article> : <article className="solutions-compare-summary"><p>الخلاصة</p><h3>اختر المركز الحقيقي للعمل، لا قائمة الخصائص المشتركة.</h3><span>المستخدمون والإشعارات والإدارة والتكاملات قد توجد في الاتجاهين. الفرق هو ما إذا كان النظام يبدأ من رحلة العميل للخدمة، أم من حركة العمل داخل الفريق.</span></article>}</div>
       <footer className="solutions-compare__actions"><button type="button" className="solutions-primary" onClick={() => onStartFamily?.('booking', 'USER_COMPARE')}>ابدأ من الحجوزات والخدمات</button><button type="button" className="solutions-primary solutions-primary--ops" onClick={() => onStartFamily?.('portals', 'USER_COMPARE')}>ابدأ من الأنظمة التشغيلية والبوابات</button><button type="button" className="solutions-link" onClick={closeCompare}>لم أحسم بعد — ارجع إلى جميع الحلول</button></footer>

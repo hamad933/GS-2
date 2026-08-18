@@ -49,10 +49,23 @@ test('exposes exactly the canonical six families early', async ({ page }) => {
     'الأنظمة التشغيلية والبوابات',
     'التعليم والمعرفة والمحتوى',
   ]);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await openSolutions(page);
   await expect(page.getByRole('tab')).toHaveCount(6);
-  await expect(page.locator('.solutions-family-tab [data-asset-id$="-MSC-01"]')).toHaveCount(6);
+  const recognition = [
+    ['business', 'FAM-01-EMB-01'],
+    ['commerce', 'FAM-02-EMB-01'],
+    ['booking', 'FAM-03-EMB-01'],
+    ['assets', 'FAM-04-EMB-01'],
+    ['portals', 'FAM-05-EMB-01'],
+    ['knowledge', 'FAM-06-EMB-01'],
+  ] as const;
+  for (const [familyId, assetId] of recognition) {
+    await expect(page.locator(`[data-family-id="${familyId}"] [data-asset-id="${assetId}"]`)).toBeVisible();
+  }
+  await expect(page.locator('.solutions-family-tab [data-asset-id$="-EMB-01"]')).toHaveCount(6);
   await expect(page.getByRole('tab', { name: /الحجوزات والخدمات/ })).toHaveAttribute('aria-selected', 'true');
+  await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-recognition-1440.png'), fullPage: true });
 });
 
 test('selected family is product-led and removes configurator semantics', async ({ page }) => {
@@ -65,12 +78,16 @@ test('selected family is product-led and removes configurator semantics', async 
   await expect(panel.getByText('ما الذي يمكن أن يتضمنه؟')).toBeVisible();
   await expect(panel.locator('[data-asset-id="FAM-03-MSC-01"]')).toBeVisible();
   await expect(panel.locator('[data-asset-id^="FAM-03-DIR-"]')).toHaveCount(3);
+  await expect(panel.locator('[data-asset-id="FAM-03-CTX-01"]')).toHaveCount(1);
+  await expect(panel.locator('[data-asset-id="FAM-03-CTX-02"]')).toHaveCount(1);
   await expect(panel.getByText('اتجاهات استكشافية، وليست قوالب أو باقات أو منتجات جاهزة للبيع.')).toBeVisible();
   await expect(panel.getByText(/ليس عرض سعر/)).toBeVisible();
   await expect(panel.locator('.solutions-reference')).toHaveAttribute('data-reference-code', 'RP03');
   await expect(panel.getByText(/RP-03/)).toBeVisible();
   await expect(panel.getByText('حجز يبدأ من احتياج واضح')).toBeVisible();
   await expect(page.getByText(/Capability Builder|Project Pulse|CORE|RECOMMENDED|OPTIONAL/)).toHaveCount(0);
+  for (const detail of await panel.locator('.solutions-proof details').all()) await detail.locator('summary').click();
+  await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-booking-product-directions-context-1440.png'), fullPage: true });
 });
 
 test('selected-family reference surface follows canonical truth across all six families', async ({ page }) => {
@@ -92,6 +109,11 @@ test('selected-family reference surface follows canonical truth across all six f
     await expect(reference).toContainText(title);
     await expect(reference).not.toContainText('REFERENCE_ONLY');
     await expect(reference).not.toContainText('NOT_AVAILABLE');
+    if (familyId === 'business') await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-reference-unavailable-1440.png'), fullPage: true });
+    if (familyId === 'commerce') {
+      await expect(page.getByRole('tabpanel').locator('[data-asset-id="FAM-02-MSC-01"]')).toBeVisible();
+      await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-reference-available-non-booking-commerce-1440.png'), fullPage: true });
+    }
   }
 });
 
@@ -104,6 +126,7 @@ test('family navigation is keyboard operable and retains focus', async ({ page }
   await expect(assets).toBeFocused();
   await expect(assets).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator(EXPLORATION)).toHaveAttribute('data-family', 'assets');
+  await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-keyboard-focus.png'), fullPage: true });
 });
 
 test('exploration to START v1 carries only truthful selected-family context', () => {
@@ -132,19 +155,23 @@ test('selected CTA and escape hatch expose distinct integration intents', async 
   await expect(page.locator('#fixture-transition')).toHaveAttribute('data-kind', 'family');
   await expect(page.locator('#fixture-transition')).toHaveAttribute('data-family', 'booking');
   await expect(page.locator('#fixture-transition')).toHaveAttribute('data-origin', 'USER_DIRECT');
+  await page.locator('#fixture-transition').evaluate((node) => { node.hidden = false; node.textContent = 'START handoff · booking · USER_DIRECT'; });
+  await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-start-direct-handoff.png'), fullPage: true });
   await page.reload();
   await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: 'لست متأكدًا من الاتجاه؟ ساعدني على الاختيار' }).click();
   await expect(page.locator('#fixture-transition')).toHaveAttribute('data-kind', 'discover');
   await expect(page.locator('#fixture-transition')).toHaveAttribute('data-family', 'none');
+  await page.locator('#fixture-transition').evaluate((node) => { node.hidden = false; node.textContent = 'Escape Hatch · START Discover · no fabricated family'; });
+  await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-escape-hatch-handoff.png'), fullPage: true });
 });
 
 test('compare is bounded inside SOLUTIONS and preserves the central distinction', async ({ page }) => {
   await openSolutions(page);
   await openCompare(page);
   await expect(page.getByRole('heading', { name: 'الحجوزات والخدمات أم الأنظمة التشغيلية والبوابات؟' })).toBeVisible();
-  await expect(page.locator('.solutions-compare__visuals [data-asset-id="FAM-03-MSC-01"]')).toBeVisible();
-  await expect(page.locator('.solutions-compare__visuals [data-asset-id="FAM-05-MSC-01"]')).toBeVisible();
+  await expect(page.locator('.solutions-compare__visuals [data-asset-id="FAM-03-CMP-01"]')).toBeVisible();
+  await expect(page.locator('.solutions-compare__visuals [data-asset-id="FAM-05-CMP-01"]')).toBeVisible();
   await expect(page.getByText('رحلة العميل إلى الخدمة والموعد')).toBeVisible();
   await expect(page.getByText('عمل الفريق والطلبات والسجلات')).toBeVisible();
   await expect(page.locator('.solutions-compare-row')).toHaveCount(5);
