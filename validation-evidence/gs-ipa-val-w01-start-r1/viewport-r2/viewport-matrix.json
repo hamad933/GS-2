@@ -1,0 +1,274 @@
+[
+  {
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "beforeBudget": "USD 12,000–25,000",
+    "consoleErrors": [],
+    "pageErrors": [],
+    "postCompletionRequests": [],
+    "metrics": [
+      {
+        "stage": "build-payment",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 1440,
+        "clientWidth": 1440,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": null,
+        "summaryTop": null,
+        "blueprintTop": null
+      },
+      {
+        "stage": "review",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 1440,
+        "clientWidth": 1440,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": -43.8125,
+        "blueprintTop": -43.8125
+      },
+      {
+        "stage": "handoff",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 1440,
+        "clientWidth": 1440,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": -43.8125,
+        "blueprintTop": -43.8125
+      },
+      {
+        "stage": "handoff-reload",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 1440,
+        "clientWidth": 1440,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": 375.1875,
+        "blueprintTop": 375.1875
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 768,
+      "height": 1024
+    },
+    "beforeBudget": "USD 12,000–25,000",
+    "consoleErrors": [],
+    "pageErrors": [],
+    "postCompletionRequests": [],
+    "metrics": [
+      {
+        "stage": "build-payment",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 768,
+        "clientWidth": 768,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": null,
+        "summaryTop": null,
+        "blueprintTop": null
+      },
+      {
+        "stage": "review",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 768,
+        "clientWidth": 768,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": -490.765625,
+        "blueprintTop": 206.125
+      },
+      {
+        "stage": "handoff",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 768,
+        "clientWidth": 768,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": -498.765625,
+        "blueprintTop": 198.125
+      },
+      {
+        "stage": "handoff-reload",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 768,
+        "clientWidth": 768,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": 328.234375,
+        "blueprintTop": 1025.125
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 430,
+      "height": 932
+    },
+    "beforeBudget": "USD 12,000–25,000",
+    "consoleErrors": [],
+    "pageErrors": [],
+    "postCompletionRequests": [],
+    "metrics": [
+      {
+        "stage": "build-payment",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 430,
+        "clientWidth": 430,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": null,
+        "summaryTop": null,
+        "blueprintTop": null
+      },
+      {
+        "stage": "review",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 430,
+        "clientWidth": 430,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": -562.890625,
+        "blueprintTop": 140.84375
+      },
+      {
+        "stage": "handoff",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 430,
+        "clientWidth": 430,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": -1258.890625,
+        "blueprintTop": -555.15625
+      },
+      {
+        "stage": "handoff-reload",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 430,
+        "clientWidth": 430,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": 330.109375,
+        "blueprintTop": 1033.84375
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "beforeBudget": "USD 12,000–25,000",
+    "consoleErrors": [],
+    "pageErrors": [],
+    "postCompletionRequests": [],
+    "metrics": [
+      {
+        "stage": "build-payment",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 390,
+        "clientWidth": 390,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": null,
+        "summaryTop": null,
+        "blueprintTop": null
+      },
+      {
+        "stage": "review",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 390,
+        "clientWidth": 390,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": -645.5,
+        "blueprintTop": 58.234375
+      },
+      {
+        "stage": "handoff",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 390,
+        "clientWidth": 390,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": -1280.5,
+        "blueprintTop": -576.765625
+      },
+      {
+        "stage": "handoff-reload",
+        "htmlDir": "rtl",
+        "computedDirection": "rtl",
+        "maxScrollWidth": 390,
+        "clientWidth": 390,
+        "overflowPixels": 0,
+        "mainCount": 1,
+        "nestedMainCount": 0,
+        "positiveTabIndexCount": 0,
+        "domSummaryFirst": true,
+        "summaryTop": 353.5,
+        "blueprintTop": 1057.234375
+      }
+    ]
+  }
+]

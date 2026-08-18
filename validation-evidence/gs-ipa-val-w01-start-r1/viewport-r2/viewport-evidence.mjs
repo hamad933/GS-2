@@ -1,0 +1,199 @@
+import { chromium } from '@playwright/test';
+import fs from 'node:fs/promises';
+
+const baseURL = 'http://127.0.0.1:4178';
+const viewports = [
+  { width: 1440, height: 1000 },
+  { width: 768, height: 1024 },
+  { width: 430, height: 932 },
+  { width: 390, height: 844 },
+];
+const results = [];
+const ensure = (ok, message) => { if (!ok) throw new Error(message); };
+
+async function writeError(error) {
+  await fs.writeFile('evidence/viewport-error.txt', `${error?.stack ?? error}\n`);
+}
+
+async function metrics(page, stage) {
+  const value = await page.evaluate((stageName) => {
+    const html = document.documentElement;
+    const body = document.body;
+    const start = document.querySelector('.start-discovery');
+    const summary = document.querySelector('[data-testid="project-summary"]');
+    const blueprint = document.querySelector('[data-testid="project-blueprint"]');
+    const maxScrollWidth = Math.max(html.scrollWidth, body.scrollWidth);
+    return {
+      stage: stageName,
+      htmlDir: html.getAttribute('dir') ?? '',
+      computedDirection: start instanceof HTMLElement ? getComputedStyle(start).direction : '',
+      maxScrollWidth,
+      clientWidth: html.clientWidth,
+      overflowPixels: maxScrollWidth - html.clientWidth,
+      mainCount: document.querySelectorAll('main').length,
+      nestedMainCount: document.querySelectorAll('.start-discovery main').length,
+      positiveTabIndexCount: [...document.querySelectorAll('[tabindex]')].filter((node) => Number(node.getAttribute('tabindex')) > 0).length,
+      domSummaryFirst: summary && blueprint ? Boolean(summary.compareDocumentPosition(blueprint) & Node.DOCUMENT_POSITION_FOLLOWING) : null,
+      summaryTop: summary instanceof HTMLElement ? summary.getBoundingClientRect().top : null,
+      blueprintTop: blueprint instanceof HTMLElement ? blueprint.getBoundingClientRect().top : null,
+    };
+  }, stage);
+  ensure(value.computedDirection === 'rtl' || value.htmlDir === 'rtl', `${stage}: RTL not active`);
+  ensure(value.overflowPixels <= 1, `${stage}: horizontal overflow ${value.overflowPixels}px`);
+  ensure(value.nestedMainCount === 0, `${stage}: nested START main found`);
+  ensure(value.positiveTabIndexCount === 0, `${stage}: positive tabindex found`);
+  return value;
+}
+
+async function openClean(page) {
+  await page.goto(`${baseURL}/start`);
+  await page.evaluate(() => {
+    sessionStorage.removeItem('gs-start-frozen-product-v1');
+    sessionStorage.removeItem('gs-start-project-brief-v1');
+  });
+  await page.goto(`${baseURL}/start`);
+  await page.locator('.start-discovery').waitFor({ state: 'visible' });
+  await page.evaluate(() => document.fonts.ready);
+}
+
+async function validateFocusAndKeyboard(page) {
+  await openClean(page);
+  const first = page.locator('[role="radio"]').first();
+  await first.focus();
+  await first.press('ArrowDown');
+  const focused = page.locator('[role="radio"]:focus');
+  ensure(await focused.count() === 1, 'ArrowDown focus left radio group');
+  ensure((await focused.getAttribute('aria-checked')) === 'true', 'ArrowDown did not select focused radio');
+
+  await page.getByRole('radio', { name: /ساعدني على اكتشاف ما أحتاج/ }).click();
+  await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+  ensure(await page.locator('[data-testid="discover-focused-subtree"]').evaluate((el) => el === document.activeElement), 'entry → questions focus transfer failed');
+  await page.getByLabel('ما الذي تريد تغييره؟').fill('أريد تنظيم الحجز والمواعيد للعملاء');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('من سيستخدم هذا الحل؟').fill('العملاء');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('رحلة حجز أوضح');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('ما السياق التشغيلي الذي يجب أن نعرفه؟').fill('خدمة بمواعيد');
+  await page.getByRole('button', { name: /ابنِ اتجاهًا أوليًا/ }).click();
+  ensure(await page.locator('[data-testid="discover-recommendation-state"]').evaluate((el) => el === document.activeElement), 'final question → recommendation focus transfer failed');
+  await page.screenshot({ path: 'evidence/screenshots/discover-recommendation-430.png', fullPage: true });
+
+  await openClean(page);
+  await page.getByRole('radio', { name: /أعرف تقريبًا نوع الحل/ }).click();
+  await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+  await page.locator('.sfp-family-focus-tabs').getByRole('button', { name: /الحجوزات والخدمات/ }).click();
+  await page.getByRole('button', { name: /اعتمد الحجوزات والخدمات كنقطة بداية/ }).click();
+  ensure(await page.locator('[data-testid="direction-entry-confirmation"]').evaluate((el) => el === document.activeElement), 'guided adoption → confirmation focus transfer failed');
+  await page.screenshot({ path: 'evidence/screenshots/guided-confirmation-430.png', fullPage: true });
+}
+
+async function reachBookingPayment(page, width) {
+  await openClean(page);
+  await page.screenshot({ path: `evidence/screenshots/discover-${width}.png`, fullPage: true });
+  await page.getByRole('radio', { name: /أعرف تقريبًا نوع الحل/ }).click();
+  await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+  await page.locator('.sfp-family-focus-tabs').getByRole('button', { name: /الحجوزات والخدمات/ }).click();
+  await page.getByRole('button', { name: /اعتمد الحجوزات والخدمات كنقطة بداية/ }).click();
+  await page.getByLabel('النتيجة المطلوبة').fill('رحلة حجز أوضح بخطوات أقل');
+  await page.getByLabel('المستخدمون الرئيسيون').fill('العملاء وفريق الخدمة');
+  await page.getByLabel('السياق التشغيلي').fill('خدمة بمواعيد يديرها فريق خدمة');
+  await page.getByRole('button', { name: /راجع الاتجاه/ }).click();
+  await page.locator('[data-testid="discover-recommendation-state"]').waitFor();
+  await page.getByRole('button', { name: /تابع مع اختيارك/ }).click();
+  while (!(await page.getByRole('heading', { name: 'هل تريد تحصيل مبلغ عند الحجز؟' }).count())) {
+    const next = page.getByRole('button', { name: /تابع في الرحلة/ });
+    ensure(await next.count() === 1, 'Payment decision was not reachable from booking Build');
+    await next.click();
+  }
+}
+
+async function finishBuild(page) {
+  while ((await page.locator('.start-discovery').getAttribute('data-stage')) === 'build') {
+    const radios = page.locator('.sfp-decision [role="radio"]');
+    if (await radios.count()) {
+      const checked = page.locator('.sfp-decision [role="radio"][aria-checked="true"]');
+      if (!(await checked.count())) await radios.first().click();
+    }
+    await page.getByRole('button', { name: /تابع في الرحلة|احفظ التكوين وتابع/ }).click();
+  }
+  await page.locator('.start-discovery[data-stage="review"]').waitFor();
+}
+
+const browser = await chromium.launch({ headless: true });
+try {
+  const focusContext = await browser.newContext({ viewport: { width: 430, height: 932 } });
+  const focusPage = await focusContext.newPage();
+  await validateFocusAndKeyboard(focusPage);
+  await focusContext.close();
+
+  for (const viewport of viewports) {
+    const context = await browser.newContext({ viewport });
+    const page = await context.newPage();
+    const consoleErrors = [];
+    const pageErrors = [];
+    page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+    page.on('pageerror', (error) => pageErrors.push(String(error)));
+
+    await reachBookingPayment(page, viewport.width);
+    ensure(await page.getByRole('heading', { name: 'كوّن الحل حول طريقة الاستخدام والعمل.' }).count() === 1, 'family-neutral Build copy missing');
+    const buildMetrics = await metrics(page, 'build-payment');
+    const budget = page.locator('[data-testid="project-pulse"]').getByText(/USD/);
+    const beforeBudget = (await budget.textContent()) ?? '';
+    await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
+    const consequence = (await page.locator('[data-testid="decision-consequence"]').textContent()) ?? '';
+    ensure(consequence.includes('Payment Provider'), 'Payment Provider truth missing');
+    ensure(consequence.includes('وحده لا يغيّر نطاق الميزانية التقريبي الحالي'), 'Payment budget truth missing');
+    ensure(((await budget.textContent()) ?? '') === beforeBudget, 'Payment alone changed budget band');
+    await page.screenshot({ path: `evidence/screenshots/build-payment-${viewport.width}.png`, fullPage: true });
+
+    await finishBuild(page);
+    const reviewMetrics = await metrics(page, 'review');
+    ensure(reviewMetrics.mainCount === 1, 'public route must have one main landmark');
+    ensure(reviewMetrics.domSummaryFirst === true, 'Summary must precede Blueprint semantically');
+    ensure(reviewMetrics.summaryTop !== null && reviewMetrics.blueprintTop !== null && reviewMetrics.summaryTop <= reviewMetrics.blueprintTop, 'Summary must precede Blueprint visually');
+    const reviewText = (await page.locator('[data-testid="project-summary"]').textContent()) ?? '';
+    ensure(reviewText.includes('Payment Provider'), 'Payment dependency missing from Review');
+    await page.screenshot({ path: `evidence/screenshots/review-${viewport.width}.png`, fullPage: true });
+
+    const postCompletionRequests = [];
+    const captureRequest = (request) => postCompletionRequests.push(request.url());
+    page.on('request', captureRequest);
+    await page.getByRole('button', { name: 'ابدأ المشروع بهذا المخطط' }).click();
+    page.off('request', captureRequest);
+    await page.locator('[data-testid="project-brief-handoff"]').waitFor({ state: 'visible' });
+    ensure(postCompletionRequests.length === 0, `network submission detected: ${postCompletionRequests.join(', ')}`);
+    const handoffText = (await page.locator('[data-testid="project-brief-handoff"]').textContent()) ?? '';
+    ensure(handoffText.includes('حُفظ هذا الموجز داخل جلسة المتصفح فقط'), 'local-only truth missing');
+    const payload = await page.evaluate(() => JSON.parse(sessionStorage.getItem('gs-start-project-brief-v1') ?? 'null'));
+    ensure(payload?.mode === 'LOCAL_PUBLIC_HANDOFF', 'handoff mode mismatch');
+    ensure(Boolean(payload?.summary) && Boolean(payload?.draft), 'summary or draft missing');
+    ensure(Boolean(payload?.directionTruth), 'directionTruth missing');
+    ensure(Boolean(payload?.provenance?.capabilitySelections), 'provenance missing');
+    ensure(Array.isArray(payload?.explicitChannels?.selectedCapabilities), 'selectedCapabilities missing');
+    ensure(Array.isArray(payload?.explicitChannels?.optionalCapabilities), 'optionalCapabilities missing');
+    ensure(Array.isArray(payload?.explicitChannels?.uncertainCapabilities), 'uncertainCapabilities missing');
+    ensure(Array.isArray(payload?.explicitChannels?.dependencies), 'dependencies missing');
+    ensure(Array.isArray(payload?.explicitChannels?.unknowns), 'unknowns missing');
+    ensure(typeof payload?.explicitChannels?.existingSystems === 'string', 'existingSystems missing');
+    ensure(typeof payload?.explicitChannels?.integrations === 'string', 'integrations missing');
+    ensure(payload.explicitChannels.dependencies.includes('مزود دفع خارجي (Payment Provider)'), 'Payment dependency missing from completion payload');
+    const handoffMetrics = await metrics(page, 'handoff');
+    await page.screenshot({ path: `evidence/screenshots/handoff-${viewport.width}.png`, fullPage: true });
+
+    await page.reload();
+    await page.locator('[data-testid="project-brief-handoff"]').waitFor({ state: 'visible' });
+    const reloadMetrics = await metrics(page, 'handoff-reload');
+    ensure(consoleErrors.length === 0, `console errors: ${consoleErrors.join(' | ')}`);
+    ensure(pageErrors.length === 0, `page errors: ${pageErrors.join(' | ')}`);
+
+    results.push({ viewport, beforeBudget, consoleErrors, pageErrors, postCompletionRequests, metrics: [buildMetrics, reviewMetrics, handoffMetrics, reloadMetrics] });
+    await context.close();
+  }
+  await fs.writeFile('evidence/viewport-matrix.json', JSON.stringify(results, null, 2));
+} catch (error) {
+  await writeError(error);
+  throw error;
+} finally {
+  await browser.close();
+}
