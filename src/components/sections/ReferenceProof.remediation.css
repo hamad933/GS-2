@@ -56,15 +56,15 @@
 
 @media (max-width: 520px) {
   .reference-proof-v2 {
-    height: calc(488px + 131.25vw);
-    min-height: calc(488px + 131.25vw);
-    --theatre-top: 438px;
+    height: calc(525px + 131.25vw);
+    min-height: calc(525px + 131.25vw);
+    --theatre-top: 475px;
   }
 
   .reference-proof-v2__mobile-evidence-boundary {
     position: absolute;
     z-index: 10;
-    top: 368px;
+    top: 400px;
     right: 15px;
     left: 15px;
     display: block;
