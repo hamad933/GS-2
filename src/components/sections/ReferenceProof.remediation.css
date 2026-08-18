@@ -1,14 +1,57 @@
 .reference-proof-v2 .project-media figcaption {
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.6;
 }
 
 .reference-proof-v2 .neutral-project-surface__context {
-  font-size: 8px;
+  font-size: 10px;
+}
+
+.reference-proof-v2__selector-index,
+.reference-proof-v2__eyebrow > span,
+.reference-proof-v2__eyebrow-copy b,
+.reference-proof-v2__eyebrow-copy p,
+.reference-proof-v2__project-heading span,
+.reference-proof-v2__project-heading p,
+.reference-proof-v2__selector-cue,
+.reference-proof-v2__focus li {
+  font-size: 10px;
+}
+
+.reference-proof-v2__selector-title {
+  font-size: 10.5px;
+}
+
+.reference-proof-v2__selector-family {
+  font-size: 12px;
+}
+
+.reference-proof-v2__route {
+  font-size: 11px;
+}
+
+.reference-proof-v2__project-copy > p:last-child {
+  font-size: 10.5px;
+}
+
+.reference-proof-v2__focus li span {
+  font-size: 9px;
 }
 
 .reference-proof-v2__mobile-evidence-boundary {
   display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reference-proof-v2 .reference-proof-v2__selectors button {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 521px) {
+  .reference-proof-v2__selector-family {
+    font-size: 10.5px;
+  }
 }
 
 @media (max-width: 520px) {
@@ -33,6 +76,7 @@
   .reference-proof-v2__project-copy > p:last-child,
   .reference-proof-v2__focus li,
   .reference-proof-v2__project-heading p,
+  .reference-proof-v2__selector-index,
   .reference-proof-v2__selector-title {
     font-size: 10px;
   }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import anatomyObject from '../../assets/gs-home-v2/04_GS_System_Anatomy_Clean_Production_Asset.webp';
 import './SystemAnatomy.v2.css';
+import './SystemAnatomy.remediation.css';
 
 type LayerId = 'discovery' | 'direction' | 'build' | 'integration' | 'launch';
 
