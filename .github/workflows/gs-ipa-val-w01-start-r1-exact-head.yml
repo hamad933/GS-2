@@ -1,4 +1,4 @@
-name: GS IPA START exact-head validation
+name: GS IPA START viewport evidence rerun
 
 on:
   push:
@@ -9,39 +9,26 @@ permissions:
   contents: write
 
 jobs:
-  validate:
+  viewport-r2:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       TARGET_SHA: d10cba74a7eb4103be4a2e285fff1c5732959043
-      BASE_SHA: 19e9096d714cfaa0055cfa1ccc794ca26320a2c5
       VALIDATION_BRANCH: validation/gs-ipa-val-w01-start-r1-evidence
-      PUBLISH_DIR: validation-evidence/gs-ipa-val-w01-start-r1
+      PUBLISH_DIR: validation-evidence/gs-ipa-val-w01-start-r1/viewport-r2
     steps:
       - name: Checkout frozen exact head
         uses: actions/checkout@v4
         with:
           ref: d10cba74a7eb4103be4a2e285fff1c5732959043
-          fetch-depth: 0
 
-      - name: Verify checkout and changed paths
+      - name: Verify exact checkout
         shell: bash
         run: |
           mkdir -p evidence/screenshots
-          {
-            echo "TARGET_SHA=$TARGET_SHA"
-            echo "BASE_SHA=$BASE_SHA"
-            echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
-            echo "MERGE_BASE=$(git merge-base "$BASE_SHA" "$TARGET_SHA")"
-            echo "STATUS_PORCELAIN_BEGIN"
-            git status --porcelain=v1
-            echo "STATUS_PORCELAIN_END"
-            echo "CHANGED_PATHS_BEGIN"
-            git diff --name-only "$BASE_SHA...$TARGET_SHA"
-            echo "CHANGED_PATHS_END"
-          } | tee evidence/checkout.txt
+          echo "TARGET_SHA=$TARGET_SHA" | tee evidence/checkout.txt
+          echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)" | tee -a evidence/checkout.txt
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          test "$(git merge-base "$BASE_SHA" "$TARGET_SHA")" = "$BASE_SHA"
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
@@ -49,68 +36,20 @@ jobs:
           node-version: '22'
           cache: npm
 
-      - name: Run repository validation commands
+      - name: Install runtime
         shell: bash
         run: |
-          set +e
-          git diff --check 2>&1 | tee evidence/git-diff-check.log
-          echo "GIT_DIFF_CHECK=${PIPESTATUS[0]}" >> evidence/status.env
-
-          git diff --check "$BASE_SHA...$TARGET_SHA" 2>&1 | tee evidence/git-diff-check-base-head.log
-          echo "GIT_DIFF_CHECK_BASE_HEAD=${PIPESTATUS[0]}" >> evidence/status.env
-
           npm ci 2>&1 | tee evidence/npm-ci.log
-          echo "NPM_CI=${PIPESTATUS[0]}" >> evidence/status.env
-
-          npm run lint 2>&1 | tee evidence/lint.log
-          echo "LINT=${PIPESTATUS[0]}" >> evidence/status.env
-
-          npm run typecheck 2>&1 | tee evidence/typecheck.log
-          echo "TYPECHECK=${PIPESTATUS[0]}" >> evidence/status.env
-
-          npm run build 2>&1 | tee evidence/build.log
-          echo "BUILD=${PIPESTATUS[0]}" >> evidence/status.env
-          exit 0
-
-      - name: Install and identify Chromium
-        shell: bash
-        run: |
-          set +e
           npx playwright install --with-deps chromium 2>&1 | tee evidence/chromium-install.log
-          echo "CHROMIUM_INSTALL=${PIPESTATUS[0]}" >> evidence/status.env
-          npx playwright --version 2>&1 | tee evidence/playwright-version.txt
-          node --input-type=module - <<'NODE' 2>&1 | tee evidence/chromium-version.txt
+          npx playwright --version | tee evidence/playwright-version.txt
+          node --input-type=module - <<'NODE' | tee evidence/chromium-version.txt
           import { chromium } from '@playwright/test';
           const browser = await chromium.launch({ headless: true });
           console.log(browser.version());
           await browser.close();
           NODE
-          echo "CHROMIUM_VERSION_PROBE=${PIPESTATUS[0]}" >> evidence/status.env
-          exit 0
 
-      - name: Run exact START targeted Playwright command
-        shell: bash
-        run: |
-          set +e
-          npx playwright test \
-            --config=tests/visual/start-discovery/playwright.config.ts \
-            --project=chromium \
-            --workers=1 2>&1 | tee evidence/start-targeted-playwright.log
-          echo "START_TARGETED_PLAYWRIGHT=${PIPESTATUS[0]}" >> evidence/status.env
-          exit 0
-
-      - name: Run exact public handoff Playwright command
-        shell: bash
-        run: |
-          set +e
-          npx playwright test \
-            --config=tests/visual/start-discovery/public-handoff.playwright.config.ts \
-            --project=chromium \
-            --workers=1 2>&1 | tee evidence/public-handoff-playwright.log
-          echo "PUBLIC_HANDOFF_PLAYWRIGHT=${PIPESTATUS[0]}" >> evidence/status.env
-          exit 0
-
-      - name: Generate rendered viewport and runtime evidence
+      - name: Execute public UI viewport matrix
         shell: bash
         run: |
           cat > evidence/viewport-evidence.mjs <<'NODE'
@@ -127,8 +66,12 @@ jobs:
           const results = [];
           const ensure = (ok, message) => { if (!ok) throw new Error(message); };
 
-          async function captureMetrics(page, stage) {
-            const m = await page.evaluate((stageName) => {
+          async function writeError(error) {
+            await fs.writeFile('evidence/viewport-error.txt', `${error?.stack ?? error}\n`);
+          }
+
+          async function metrics(page, stage) {
+            const value = await page.evaluate((stageName) => {
               const html = document.documentElement;
               const body = document.body;
               const start = document.querySelector('.start-discovery');
@@ -150,20 +93,20 @@ jobs:
                 blueprintTop: blueprint instanceof HTMLElement ? blueprint.getBoundingClientRect().top : null,
               };
             }, stage);
-            ensure(m.computedDirection === 'rtl' || m.htmlDir === 'rtl', `${stage}: RTL not active`);
-            ensure(m.overflowPixels <= 1, `${stage}: horizontal overflow ${m.overflowPixels}px`);
-            ensure(m.nestedMainCount === 0, `${stage}: nested START main found`);
-            ensure(m.positiveTabIndexCount === 0, `${stage}: positive tabindex found`);
-            return m;
+            ensure(value.computedDirection === 'rtl' || value.htmlDir === 'rtl', `${stage}: RTL not active`);
+            ensure(value.overflowPixels <= 1, `${stage}: horizontal overflow ${value.overflowPixels}px`);
+            ensure(value.nestedMainCount === 0, `${stage}: nested START main found`);
+            ensure(value.positiveTabIndexCount === 0, `${stage}: positive tabindex found`);
+            return value;
           }
 
-          async function openClean(page, path = '/start') {
-            await page.goto(`${baseURL}${path}`);
+          async function openClean(page) {
+            await page.goto(`${baseURL}/start`);
             await page.evaluate(() => {
               sessionStorage.removeItem('gs-start-frozen-product-v1');
               sessionStorage.removeItem('gs-start-project-brief-v1');
             });
-            await page.goto(`${baseURL}${path}`);
+            await page.goto(`${baseURL}/start`);
             await page.locator('.start-discovery').waitFor({ state: 'visible' });
             await page.evaluate(() => document.fonts.ready);
           }
@@ -173,9 +116,9 @@ jobs:
             const first = page.locator('[role="radio"]').first();
             await first.focus();
             await first.press('ArrowDown');
-            const focusedRadio = page.locator('[role="radio"]:focus');
-            ensure(await focusedRadio.count() === 1, 'ArrowDown focus left radio group');
-            ensure((await focusedRadio.getAttribute('aria-checked')) === 'true', 'ArrowDown did not select focused radio');
+            const focused = page.locator('[role="radio"]:focus');
+            ensure(await focused.count() === 1, 'ArrowDown focus left radio group');
+            ensure((await focused.getAttribute('aria-checked')) === 'true', 'ArrowDown did not select focused radio');
 
             await page.getByRole('radio', { name: /ساعدني على اكتشاف ما أحتاج/ }).click();
             await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
@@ -189,6 +132,7 @@ jobs:
             await page.getByLabel('ما السياق التشغيلي الذي يجب أن نعرفه؟').fill('خدمة بمواعيد');
             await page.getByRole('button', { name: /ابنِ اتجاهًا أوليًا/ }).click();
             ensure(await page.locator('[data-testid="discover-recommendation-state"]').evaluate((el) => el === document.activeElement), 'final question → recommendation focus transfer failed');
+            await page.screenshot({ path: 'evidence/screenshots/discover-recommendation-430.png', fullPage: true });
 
             await openClean(page);
             await page.getByRole('radio', { name: /أعرف تقريبًا نوع الحل/ }).click();
@@ -196,13 +140,27 @@ jobs:
             await page.locator('.sfp-family-focus-tabs').getByRole('button', { name: /الحجوزات والخدمات/ }).click();
             await page.getByRole('button', { name: /اعتمد الحجوزات والخدمات كنقطة بداية/ }).click();
             ensure(await page.locator('[data-testid="direction-entry-confirmation"]').evaluate((el) => el === document.activeElement), 'guided adoption → confirmation focus transfer failed');
+            await page.screenshot({ path: 'evidence/screenshots/guided-confirmation-430.png', fullPage: true });
           }
 
-          async function reachPayment(page) {
-            await openClean(page, '/start?prefill=booking');
-            await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
-            await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
-            await page.getByRole('heading', { name: 'هل تريد تحصيل مبلغ عند الحجز؟' }).waitFor();
+          async function reachBookingPayment(page, width) {
+            await openClean(page);
+            await page.screenshot({ path: `evidence/screenshots/discover-${width}.png`, fullPage: true });
+            await page.getByRole('radio', { name: /أعرف تقريبًا نوع الحل/ }).click();
+            await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+            await page.locator('.sfp-family-focus-tabs').getByRole('button', { name: /الحجوزات والخدمات/ }).click();
+            await page.getByRole('button', { name: /اعتمد الحجوزات والخدمات كنقطة بداية/ }).click();
+            await page.getByLabel('النتيجة المطلوبة').fill('رحلة حجز أوضح بخطوات أقل');
+            await page.getByLabel('المستخدمون الرئيسيون').fill('العملاء وفريق الخدمة');
+            await page.getByLabel('السياق التشغيلي').fill('خدمة بمواعيد يديرها فريق خدمة');
+            await page.getByRole('button', { name: /راجع الاتجاه/ }).click();
+            await page.locator('[data-testid="discover-recommendation-state"]').waitFor();
+            await page.getByRole('button', { name: /تابع مع اختيارك/ }).click();
+            while (!(await page.getByRole('heading', { name: 'هل تريد تحصيل مبلغ عند الحجز؟' }).count())) {
+              const next = page.getByRole('button', { name: /تابع في الرحلة/ });
+              ensure(await next.count() === 1, 'Payment decision was not reachable from booking Build');
+              await next.click();
+            }
           }
 
           async function finishBuild(page) {
@@ -222,7 +180,6 @@ jobs:
             const focusContext = await browser.newContext({ viewport: { width: 430, height: 932 } });
             const focusPage = await focusContext.newPage();
             await validateFocusAndKeyboard(focusPage);
-            await focusPage.screenshot({ path: 'evidence/screenshots/focus-keyboard-430.png', fullPage: true });
             await focusContext.close();
 
             for (const viewport of viewports) {
@@ -233,23 +190,23 @@ jobs:
               page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
               page.on('pageerror', (error) => pageErrors.push(String(error)));
 
-              await reachPayment(page);
-              ensure(await page.getByRole('heading', { name: 'كوّن الحل حول طريقة الاستخدام والعمل.' }).count() === 1, 'family-neutral Build heading missing');
-              const buildMetrics = await captureMetrics(page, 'build-payment');
+              await reachBookingPayment(page, viewport.width);
+              ensure(await page.getByRole('heading', { name: 'كوّن الحل حول طريقة الاستخدام والعمل.' }).count() === 1, 'family-neutral Build copy missing');
+              const buildMetrics = await metrics(page, 'build-payment');
               const budget = page.locator('[data-testid="project-pulse"]').getByText(/USD/);
               const beforeBudget = (await budget.textContent()) ?? '';
               await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
-              const consequenceText = (await page.locator('[data-testid="decision-consequence"]').textContent()) ?? '';
-              ensure(consequenceText.includes('Payment Provider'), 'Payment Provider external dependency truth missing');
-              ensure(consequenceText.includes('وحده لا يغيّر نطاق الميزانية التقريبي الحالي'), 'Payment budget truth missing');
-              ensure(((await budget.textContent()) ?? '') === beforeBudget, 'Payment alone changed the configured budget band');
+              const consequence = (await page.locator('[data-testid="decision-consequence"]').textContent()) ?? '';
+              ensure(consequence.includes('Payment Provider'), 'Payment Provider truth missing');
+              ensure(consequence.includes('وحده لا يغيّر نطاق الميزانية التقريبي الحالي'), 'Payment budget truth missing');
+              ensure(((await budget.textContent()) ?? '') === beforeBudget, 'Payment alone changed budget band');
               await page.screenshot({ path: `evidence/screenshots/build-payment-${viewport.width}.png`, fullPage: true });
 
               await finishBuild(page);
-              const reviewMetrics = await captureMetrics(page, 'review');
-              ensure(reviewMetrics.mainCount === 1, 'public route does not have exactly one main landmark');
-              ensure(reviewMetrics.domSummaryFirst === true, 'Summary does not precede Blueprint semantically');
-              ensure(reviewMetrics.summaryTop !== null && reviewMetrics.blueprintTop !== null && reviewMetrics.summaryTop <= reviewMetrics.blueprintTop, 'Summary does not precede Blueprint visually');
+              const reviewMetrics = await metrics(page, 'review');
+              ensure(reviewMetrics.mainCount === 1, 'public route must have one main landmark');
+              ensure(reviewMetrics.domSummaryFirst === true, 'Summary must precede Blueprint semantically');
+              ensure(reviewMetrics.summaryTop !== null && reviewMetrics.blueprintTop !== null && reviewMetrics.summaryTop <= reviewMetrics.blueprintTop, 'Summary must precede Blueprint visually');
               const reviewText = (await page.locator('[data-testid="project-summary"]').textContent()) ?? '';
               ensure(reviewText.includes('Payment Provider'), 'Payment dependency missing from Review');
               await page.screenshot({ path: `evidence/screenshots/review-${viewport.width}.png`, fullPage: true });
@@ -260,118 +217,76 @@ jobs:
               await page.getByRole('button', { name: 'ابدأ المشروع بهذا المخطط' }).click();
               page.off('request', captureRequest);
               await page.locator('[data-testid="project-brief-handoff"]').waitFor({ state: 'visible' });
-              ensure(postCompletionRequests.length === 0, `completion made network requests: ${postCompletionRequests.join(', ')}`);
+              ensure(postCompletionRequests.length === 0, `network submission detected: ${postCompletionRequests.join(', ')}`);
               const handoffText = (await page.locator('[data-testid="project-brief-handoff"]').textContent()) ?? '';
-              ensure(handoffText.includes('حُفظ هذا الموجز داخل جلسة المتصفح فقط'), 'truthful local-only handoff copy missing');
+              ensure(handoffText.includes('حُفظ هذا الموجز داخل جلسة المتصفح فقط'), 'local-only truth missing');
               const payload = await page.evaluate(() => JSON.parse(sessionStorage.getItem('gs-start-project-brief-v1') ?? 'null'));
-              ensure(payload?.mode === 'LOCAL_PUBLIC_HANDOFF', 'mode is not LOCAL_PUBLIC_HANDOFF');
-              ensure(Boolean(payload?.summary), 'summary missing');
-              ensure(Boolean(payload?.draft), 'full draft missing');
+              ensure(payload?.mode === 'LOCAL_PUBLIC_HANDOFF', 'handoff mode mismatch');
+              ensure(Boolean(payload?.summary) && Boolean(payload?.draft), 'summary or draft missing');
               ensure(Boolean(payload?.directionTruth), 'directionTruth missing');
-              ensure(Boolean(payload?.provenance?.capabilitySelections), 'provenance/capabilitySelections missing');
-              ensure(Array.isArray(payload?.explicitChannels?.selectedCapabilities), 'selectedCapabilities channel missing');
-              ensure(Array.isArray(payload?.explicitChannels?.optionalCapabilities), 'optionalCapabilities channel missing');
-              ensure(Array.isArray(payload?.explicitChannels?.uncertainCapabilities), 'uncertainCapabilities channel missing');
-              ensure(Array.isArray(payload?.explicitChannels?.dependencies), 'dependencies channel missing');
-              ensure(Array.isArray(payload?.explicitChannels?.unknowns), 'unknowns channel missing');
-              ensure(typeof payload?.explicitChannels?.existingSystems === 'string', 'existingSystems channel missing');
-              ensure(typeof payload?.explicitChannels?.integrations === 'string', 'integrations channel missing');
+              ensure(Boolean(payload?.provenance?.capabilitySelections), 'provenance missing');
+              ensure(Array.isArray(payload?.explicitChannels?.selectedCapabilities), 'selectedCapabilities missing');
+              ensure(Array.isArray(payload?.explicitChannels?.optionalCapabilities), 'optionalCapabilities missing');
+              ensure(Array.isArray(payload?.explicitChannels?.uncertainCapabilities), 'uncertainCapabilities missing');
+              ensure(Array.isArray(payload?.explicitChannels?.dependencies), 'dependencies missing');
+              ensure(Array.isArray(payload?.explicitChannels?.unknowns), 'unknowns missing');
+              ensure(typeof payload?.explicitChannels?.existingSystems === 'string', 'existingSystems missing');
+              ensure(typeof payload?.explicitChannels?.integrations === 'string', 'integrations missing');
               ensure(payload.explicitChannels.dependencies.includes('مزود دفع خارجي (Payment Provider)'), 'Payment dependency missing from completion payload');
-              const handoffMetrics = await captureMetrics(page, 'handoff');
+              const handoffMetrics = await metrics(page, 'handoff');
               await page.screenshot({ path: `evidence/screenshots/handoff-${viewport.width}.png`, fullPage: true });
 
               await page.reload();
               await page.locator('[data-testid="project-brief-handoff"]').waitFor({ state: 'visible' });
-              const reloadMetrics = await captureMetrics(page, 'handoff-reload');
+              const reloadMetrics = await metrics(page, 'handoff-reload');
               ensure(consoleErrors.length === 0, `console errors: ${consoleErrors.join(' | ')}`);
               ensure(pageErrors.length === 0, `page errors: ${pageErrors.join(' | ')}`);
 
               results.push({ viewport, beforeBudget, consoleErrors, pageErrors, postCompletionRequests, metrics: [buildMetrics, reviewMetrics, handoffMetrics, reloadMetrics] });
               await context.close();
             }
+            await fs.writeFile('evidence/viewport-matrix.json', JSON.stringify(results, null, 2));
+          } catch (error) {
+            await writeError(error);
+            throw error;
           } finally {
             await browser.close();
           }
-
-          await fs.writeFile('evidence/viewport-matrix.json', JSON.stringify(results, null, 2));
-          console.log(JSON.stringify(results, null, 2));
           NODE
 
           npm run dev -- --host 127.0.0.1 --port 4178 > evidence/viewport-vite.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          ready=0
           for i in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:4178/start >/dev/null; then ready=1; break; fi
+            if curl -fsS http://127.0.0.1:4178/start >/dev/null; then break; fi
             sleep 1
           done
-          if [ "$ready" -ne 1 ]; then
-            echo "Viewport evidence server failed to become ready" | tee evidence/viewport-evidence.log
-            echo "VIEWPORT_EVIDENCE=1" >> evidence/status.env
-            exit 0
-          fi
           set +e
           node evidence/viewport-evidence.mjs 2>&1 | tee evidence/viewport-evidence.log
-          echo "VIEWPORT_EVIDENCE=${PIPESTATUS[0]}" >> evidence/status.env
+          code=${PIPESTATUS[0]}
+          echo "VIEWPORT_R2=$code" | tee evidence/status.txt
           exit 0
 
-      - name: Write validation summary
+      - name: Persist viewport evidence on validation branch
         if: always()
         shell: bash
         run: |
-          {
-            echo "TARGET_SHA=$TARGET_SHA"
-            echo "BASE_SHA=$BASE_SHA"
-            echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
-            echo "STATUS_BEGIN"
-            cat evidence/status.env 2>/dev/null || true
-            echo "STATUS_END"
-          } | tee evidence/validation-summary.txt
-
-      - name: Upload exact-head validation evidence artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gs-ipa-val-w01-start-r1-exact-head-evidence
-          path: |
-            evidence/
-            test-results/
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Persist evidence on validation branch
-        if: always()
-        shell: bash
-        run: |
-          cp -a evidence /tmp/gs-validation-evidence
+          cp -a evidence /tmp/gs-viewport-r2
           git reset --hard
           git clean -fdx
           git fetch origin "$VALIDATION_BRANCH"
           git checkout -B "$VALIDATION_BRANCH" "origin/$VALIDATION_BRANCH"
           rm -rf "$PUBLISH_DIR"
           mkdir -p "$PUBLISH_DIR"
-          cp -a /tmp/gs-validation-evidence/. "$PUBLISH_DIR/"
+          cp -a /tmp/gs-viewport-r2/. "$PUBLISH_DIR/"
           git config user.name "gs-exact-head-validation"
           git config user.email "gs-exact-head-validation@users.noreply.github.com"
-          git add "$PUBLISH_DIR"
-          git commit -m "chore(validation): persist START exact-head execution evidence" || true
+          git add -f "$PUBLISH_DIR"
+          git commit -m "chore(validation): persist START viewport evidence r2" || true
           git push origin "HEAD:$VALIDATION_BRANCH"
 
-      - name: Fail if required validation failed
+      - name: Fail on viewport defect
         if: always()
         shell: bash
         run: |
-          status_file="$PUBLISH_DIR/status.env"
-          if [ ! -f "$status_file" ]; then
-            echo "Missing persisted status file"
-            exit 1
-          fi
-          fail=0
-          while IFS='=' read -r key value; do
-            case "$key" in
-              GIT_DIFF_CHECK|GIT_DIFF_CHECK_BASE_HEAD|NPM_CI|LINT|TYPECHECK|BUILD|CHROMIUM_INSTALL|CHROMIUM_VERSION_PROBE|START_TARGETED_PLAYWRIGHT|PUBLIC_HANDOFF_PLAYWRIGHT|VIEWPORT_EVIDENCE)
-                if [ "${value:-1}" != "0" ]; then echo "$key failed with $value"; fail=1; fi
-                ;;
-            esac
-          done < "$status_file"
-          exit "$fail"
+          grep -q '^VIEWPORT_R2=0$' "$PUBLISH_DIR/status.txt"
