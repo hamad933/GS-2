@@ -379,7 +379,7 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
     const dependency = getDecisionConsequence(activeFamilyId, decision, answer).externalDependency;
     return dependency ? [dependency] : [];
   }));
-  const budgetBand = formatBudgetBand(materialEffect);
+  const budgetBand = formatBudgetBand(local.stage !== 'discover' || materialEffect);
   const recommendedExperienceDirection = startConfigurationDirections.find((item) => item.id === local.recommendedExperience) ?? startConfigurationDirections[0];
   const selectedExperienceDirection = startConfigurationDirections.find((item) => item.id === local.selectedExperience);
   const reviewNeeds = unique([
