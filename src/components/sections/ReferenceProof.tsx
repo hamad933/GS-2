@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProjectMedia } from '../project/ProjectMedia';
 import { referenceProjects, type ReferenceProject } from '../../data/homeShowcase';
@@ -41,14 +41,13 @@ export function ReferenceProof() {
     )?.focus();
   }, [activeId]);
 
-  const selectProject = (projectId: string, keyboardSelection: boolean) => {
-    const nextFocusId = keyboardSelection
+  const selectProject = (projectId: string, preserveKeyboardFocus: boolean) => {
+    const nextFocusId = preserveKeyboardFocus
       ? referenceProjects.find((project) => project.id !== projectId)?.id ?? null
       : null;
 
     setActiveId(projectId);
     setFocusedSelectorId(nextFocusId);
-
     pendingKeyboardFocusId.current = nextFocusId;
   };
 
@@ -100,16 +99,9 @@ export function ReferenceProof() {
             className={focusedSelectorId === project.id ? 'is-keyboard-focus' : undefined}
             data-project-selector={project.id}
             type="button"
-            aria-pressed="false"
             aria-label={`اختيار ${project.index} — ${project.family}`}
-            onClick={(event: MouseEvent<HTMLButtonElement>) => {
-              if (event.detail > 0) selectProject(project.id, false);
-            }}
-            onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                selectProject(project.id, true);
-              }
+            onClick={(event) => {
+              selectProject(project.id, event.currentTarget.matches(':focus-visible'));
             }}
             onFocus={() => setFocusedSelectorId(project.id)}
             onBlur={() => setFocusedSelectorId((current) => current === project.id ? null : current)}
