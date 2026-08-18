@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { getStartFamily, isStartFamilyId } from '../data/start-discovery/startExperience';
 import { StartDiscoveryBody } from '../features/start-discovery';
 import type { DiscoverySummary, StartDiscoveryDraft } from '../types/start-discovery';
 import { RouteReadySignal } from './RouteReadySignal';
@@ -74,6 +75,10 @@ function createLocalProjectBrief(summary: DiscoverySummary, draft: StartDiscover
   };
 }
 
+function adoptedFamilyLabel(familyId: string) {
+  return isStartFamilyId(familyId) ? getStartFamily(familyId).title : 'لم يُعتمد اتجاه بعد.';
+}
+
 export default function StartDiscoveryRoute() {
   const location = useLocation();
   const prefill = readStartDiscoveryRouteState(location.state);
@@ -112,7 +117,7 @@ export default function StartDiscoveryRoute() {
               </div>
               <div>
                 <dt>الاتجاه الذي اعتمدته</dt>
-                <dd>{projectBrief.directionTruth.adoptedFamilyId || 'لم يُعتمد اتجاه بعد.'}</dd>
+                <dd>{adoptedFamilyLabel(projectBrief.directionTruth.adoptedFamilyId)}</dd>
               </div>
               <div>
                 <dt>مصدر السياق</dt>
