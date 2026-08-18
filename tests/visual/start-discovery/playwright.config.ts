@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: '.',
-  testMatch: ['start-discovery.spec.ts', 'ipa-remediation.spec.ts'],
+  testMatch: ['start-discovery.spec.ts', 'ipa-remediation.spec.ts', 'deep-remediation.spec.ts'],
   workers: 1,
   retries: 0,
   reporter: 'line',
