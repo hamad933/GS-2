@@ -36,9 +36,9 @@ jobs:
           api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${OBSERVED_HEAD}&event=push&per_page=20"
           for _ in $(seq 1 30); do
             json="$(curl -fsSL -H 'Accept: application/vnd.github+json' "$api")"
-            match="$(printf '%s' "$json" | jq -r --arg sha "$OBSERVED_HEAD" '.workflow_runs[] | select(.name == "GS HOME + W02 Exact-Head Validation" and .event == "push" and .head_sha == $sha) | "id=\(.id) status=\(.status) conclusion=\(.conclusion // \"pending\") head_sha=\(.head_sha) event=\(.event) html_url=\(.html_url)"' | head -n 1)"
+            match="$(printf '%s' "$json" | jq -r --arg sha "$OBSERVED_HEAD" '.workflow_runs[] | select(.name == "GS HOME + W02 Exact-Head Validation" and .event == "push" and .head_sha == $sha) | [.id, .status, (.conclusion // "pending"), .head_sha, .event, .html_url] | @tsv' | head -n 1)"
             if [[ -n "$match" ]]; then
-              echo "$match"
+              echo "push_run=${match}"
               exit 0
             fi
             sleep 2
