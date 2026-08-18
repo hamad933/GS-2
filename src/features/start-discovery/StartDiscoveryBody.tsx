@@ -441,6 +441,14 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
     const order = START_MAJOR_STAGES.map((item) => item.id);
     setLocal((current) => ({ ...current, stage, furthest: order.indexOf(stage) > order.indexOf(current.furthest) ? stage : current.furthest }));
   };
+  const changeStage = (stage: StartStageId) => {
+    if (local.stage === 'review' && stage !== 'review') {
+      setCompleted(false);
+      setCompletionError('');
+      onDraftChange?.(draft);
+    }
+    setStage(stage);
+  };
   const requestDiscoverFocus = (target: DiscoverFocusTarget) => { pendingDiscoverFocus.current = target; };
 
   const chooseFamily = (familyId: StartFamilyId, origin: StartDiscoveryDraft['decisionOrigin'] = 'USER_DIRECT') => {
@@ -520,10 +528,7 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
   };
 
   const editReview = () => {
-    setCompleted(false);
-    setCompletionError('');
-    onDraftChange?.(draft);
-    setStage(draft.unknowns.length ? 'discover' : 'build');
+    changeStage(draft.unknowns.length ? 'discover' : 'build');
   };
 
   const carriedFactValues = [
@@ -652,7 +657,7 @@ export function StartDiscoveryBody({ prefill, initialCertainty, className = '', 
   return (
     <div className={`start-discovery sfp-start ${className}`.trim()} dir="rtl" data-stage={local.stage} data-major-stage-count="3" data-prefilled={prefill ? 'true' : 'false'} data-certainty={prefill ? 'configured' : local.intent ? 'exploring' : 'unselected'} data-recommended-family={local.recommended ?? ''} data-selected-family={local.selected ?? ''} data-family-code={`FAM-${familyCode}`}>
       <input type="hidden" id="sd-objective" readOnly value={draft.objective || draft.capturedFacts?.outcome || draft.currentProblem} />
-      <div className="sfp-shell"><StageRail current={local.stage} furthest={local.furthest} onChange={setStage} />{local.stage === 'discover' ? discover : null}{local.stage === 'build' ? build : null}{local.stage === 'review' ? review : null}</div>
+      <div className="sfp-shell"><StageRail current={local.stage} furthest={local.furthest} onChange={changeStage} />{local.stage === 'discover' ? discover : null}{local.stage === 'build' ? build : null}{local.stage === 'review' ? review : null}</div>
     </div>
   );
 }
