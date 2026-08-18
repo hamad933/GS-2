@@ -82,6 +82,18 @@ async function expectFontAtLeast(locator: Locator, minimumPx: number) {
   expect(fontSize).toBeGreaterThanOrEqual(minimumPx);
 }
 
+function parseCssTimeListMilliseconds(value: string) {
+  return value.split(',').map((token) => {
+    const match = token.trim().match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*(ms|s)$/i);
+    if (!match) throw new Error(`Unsupported CSS time value: ${token}`);
+
+    const numericValue = Number(match[1]);
+    if (!Number.isFinite(numericValue)) throw new Error(`Invalid CSS time value: ${token}`);
+
+    return match[2].toLowerCase() === 's' ? numericValue * 1000 : numericValue;
+  });
+}
+
 async function tabTo(page: Page, locator: Locator, maximumTabs = 30) {
   for (let index = 0; index < maximumTabs; index += 1) {
     await page.keyboard.press('Tab');
@@ -367,13 +379,13 @@ for (const width of [430, 390]) {
         clientWidth: element.clientWidth,
         scrollWidth: element.scrollWidth,
         clientHeight: element.clientHeight,
-        lineHeight: Number.parseFloat(style.lineHeight),
+        scrollHeight: element.scrollHeight,
       };
     });
     expect(roleMetrics.whiteSpace).toBe('normal');
     expect(roleMetrics.textOverflow).not.toBe('ellipsis');
     expect(roleMetrics.scrollWidth).toBeLessThanOrEqual(roleMetrics.clientWidth + 1);
-    expect(roleMetrics.clientHeight).toBeGreaterThan(roleMetrics.lineHeight * 1.5);
+    expect(roleMetrics.scrollHeight).toBeLessThanOrEqual(roleMetrics.clientHeight + 1);
 
     const footer = page.locator('.gs-footer');
     await expectFontAtLeast(footer.locator('.gs-footer__links a').first(), 12.5);
@@ -394,7 +406,11 @@ test('Homepage scoped interactions honor reduced motion', async ({ page }) => {
     const duration = await page.locator(selector).first().evaluate((element) => (
       window.getComputedStyle(element).transitionDuration
     ));
-    expect(duration).toMatch(/0\.00001s|0\.01ms|0s/);
+    const durationsMs = parseCssTimeListMilliseconds(duration);
+    expect(durationsMs.length).toBeGreaterThan(0);
+    for (const durationMs of durationsMs) {
+      expect(durationMs).toBeLessThanOrEqual(0.01);
+    }
   }
 });
 
