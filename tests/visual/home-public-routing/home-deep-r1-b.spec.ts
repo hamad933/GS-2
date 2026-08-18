@@ -29,6 +29,12 @@ for (const width of [1440, 768]) {
     await rp02.press('Enter');
     await expect(proof).toHaveAttribute('data-project', 'rp02');
 
+    const rp01 = proof.locator('[data-project-selector="rp01"]');
+    await rp01.focus();
+    await expect(proof).toHaveAttribute('data-project', 'rp02');
+    await rp01.press('Space');
+    await expect(proof).toHaveAttribute('data-project', 'rp01');
+
     await proof.locator('[data-project-selector="rp04"]').click();
     await expect(proof).toHaveAttribute('data-project', 'rp04');
 
@@ -46,21 +52,21 @@ for (const width of [430, 390]) {
 
     const proof = page.locator('#reference-proof');
     const disclosure = proof.locator('[data-visible-evidence-boundary]');
-    const projectCopy = proof.locator('.reference-proof-v2__project-copy');
+    const narrative = proof.locator('.reference-proof-v2__narrative');
     const theatre = proof.locator('.project-media');
 
     await expect(disclosure).toBeVisible();
     await expect(disclosure).toContainText('توضيحية وغير توثيقية');
 
-    const [disclosureBox, projectCopyBox, theatreBox] = await Promise.all([
+    const [disclosureBox, narrativeBox, theatreBox] = await Promise.all([
       disclosure.boundingBox(),
-      projectCopy.boundingBox(),
+      narrative.boundingBox(),
       theatre.boundingBox(),
     ]);
     expect(disclosureBox).not.toBeNull();
-    expect(projectCopyBox).not.toBeNull();
+    expect(narrativeBox).not.toBeNull();
     expect(theatreBox).not.toBeNull();
-    expect((projectCopyBox?.y ?? 0) + (projectCopyBox?.height ?? 0)).toBeLessThanOrEqual((disclosureBox?.y ?? 0) + 1);
+    expect((narrativeBox?.y ?? 0) + (narrativeBox?.height ?? 0)).toBeLessThanOrEqual((disclosureBox?.y ?? 0) + 1);
     expect((disclosureBox?.y ?? 0) + (disclosureBox?.height ?? 0)).toBeLessThanOrEqual((theatreBox?.y ?? 0) + 1);
 
     await expectFontAtLeast(disclosure, 11);
