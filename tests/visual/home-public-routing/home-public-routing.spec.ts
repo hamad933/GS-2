@@ -82,6 +82,28 @@ async function expectFontAtLeast(locator: Locator, minimumPx: number) {
   expect(fontSize).toBeGreaterThanOrEqual(minimumPx);
 }
 
+async function tabTo(page: Page, locator: Locator, maximumTabs = 30) {
+  for (let index = 0; index < maximumTabs; index += 1) {
+    await page.keyboard.press('Tab');
+    const focused = await locator.evaluate((element) => element === document.activeElement).catch(() => false);
+    if (focused) return;
+  }
+  throw new Error(`Unable to reach ${await locator.getAttribute('aria-label') ?? await locator.textContent() ?? 'target'} by Tab`);
+}
+
+async function expectNoVisibleTabbables(locator: Locator) {
+  const count = await locator.evaluateAll((elements) => elements.filter((element) => {
+    const htmlElement = element as HTMLElement;
+    const style = window.getComputedStyle(htmlElement);
+    return htmlElement.tabIndex >= 0
+      && !htmlElement.hasAttribute('disabled')
+      && style.display !== 'none'
+      && style.visibility !== 'hidden'
+      && htmlElement.getClientRects().length > 0;
+  }).length);
+  expect(count).toBe(0);
+}
+
 async function expectVisibleFocus(page: Page, selector: string, label: string) {
   const link = page.locator(selector).getByRole('link', { name: label, exact: true });
   await expect(link).toHaveCount(1);
@@ -133,6 +155,63 @@ for (const route of homepageRoutes) {
   });
 }
 
+test('Hero keyboard journey contains inactive controls and advances Need to Direction to Build to Launch', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page);
+
+  const hero = page.locator('#hero');
+  const wall = hero.locator('.e2-operating-wall');
+  const needButtons = hero.locator('.e2-need-selector button');
+  const directionButtons = hero.locator('.e2-direction-selector button');
+
+  await expect(wall).toHaveAttribute('aria-label', 'اختيار احتياج المشروع');
+  await expect(needButtons.first()).toBeVisible();
+  await expectNoVisibleTabbables(directionButtons);
+
+  const firstNeed = hero.getByRole('button', { name: 'إطلاق خدمة رقمية', exact: true });
+  await tabTo(page, firstNeed);
+  await expect(firstNeed).toBeFocused();
+  await firstNeed.press('Enter');
+
+  await expect(hero).toHaveAttribute('data-stage', 'direction');
+  await expect(wall).toHaveAttribute('aria-label', 'اختيار اتجاه الحل');
+  await expectNoVisibleTabbables(needButtons);
+  const firstDirection = hero.getByRole('button', { name: 'خطوة رئيسية واحدة' });
+  await expect(firstDirection).not.toHaveClass(/preview/);
+  await tabTo(page, firstDirection);
+  await expect(firstDirection).toBeFocused();
+  await firstDirection.press('Enter');
+
+  await expect(hero).toHaveAttribute('data-stage', 'build');
+  await expect(wall).toHaveAttribute('aria-label', 'إعداد ملخّص المشروع');
+  await expectNoVisibleTabbables(needButtons);
+  await expectNoVisibleTabbables(directionButtons);
+
+  for (const action of ['رتّب الرحلة حول الهدف', 'وحّد التجربة', 'جرّب المسار']) {
+    const button = hero.getByRole('button', { name: action, exact: true });
+    await tabTo(page, button);
+    await expect(button).toBeFocused();
+    await button.press('Enter');
+  }
+
+  const brief = hero.getByLabel('طلبك المختصر', { exact: true });
+  await tabTo(page, brief);
+  await brief.fill('طلب توضيحي لمسار البداية');
+  await page.keyboard.press('Tab');
+  const prepare = hero.getByRole('button', { name: 'جهّز الملخّص', exact: true });
+  await expect(prepare).toBeFocused();
+  await expect(hero.getByRole('button', { name: 'إرسال الطلب إلى الملخّص', exact: true })).toHaveCount(0);
+  await prepare.press('Enter');
+
+  await expect(hero).toHaveAttribute('data-stage', 'launch');
+  await expect(wall).toHaveAttribute('aria-label', 'مراجعة ملخّص الإطلاق');
+  await expectNoVisibleTabbables(needButtons);
+  await expectNoVisibleTabbables(directionButtons);
+  await expect(hero.locator('.e2-build-workbench button, .e2-build-workbench input')).toHaveCount(0);
+  await expect(hero).toContainText('لم يُرسل شيء بعد');
+  await expect(hero).toContainText('لن يُرسل شيء تلقائيًا');
+});
+
 test('Homepage interactions remain functional across Hero, S02, S03, and S04', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openHome(page);
@@ -157,7 +236,7 @@ test('Homepage interactions remain functional across Hero, S02, S03, and S04', a
     await page.getByRole('button', { name: action, exact: true }).click();
   }
   await page.getByLabel('طلبك المختصر', { exact: true }).fill('طلب توضيحي لمسار البداية');
-  await page.getByRole('button', { name: 'إرسال الطلب إلى الملخّص', exact: true }).click();
+  await page.getByRole('button', { name: 'جهّز الملخّص', exact: true }).click();
   await expect(hero).toHaveAttribute('data-stage', 'launch');
   await expect(hero).toContainText('لن يُرسل شيء تلقائيًا');
   await expect(hero).not.toContainText('فتح رسالة المشروع');
@@ -167,8 +246,11 @@ test('Homepage interactions remain functional across Hero, S02, S03, and S04', a
   await expect(solutions).toHaveAttribute('data-active', 'commerce');
   const portalStation = solutions.locator('.s02-station-5');
   await portalStation.focus();
+  await expect(solutions).toHaveAttribute('data-active', 'commerce');
+  await expect(portalStation).toHaveAttribute('aria-pressed', 'false');
   await portalStation.press('Enter');
   await expect(solutions).toHaveAttribute('data-active', 'portals');
+  await expect(portalStation).toHaveAttribute('aria-pressed', 'true');
 
   const proof = page.locator('#reference-proof');
   await proof.locator('[data-project-selector="rp04"]').click();
@@ -214,8 +296,35 @@ test('Homepage entry metadata and deliberate RTL/LTR direction are preserved', a
   expect(entryHtml).not.toContain('/vite.svg');
 });
 
+for (const width of [1440, 768]) {
+  test(`S02, ReferenceProof, and Footer keep practical readable type at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width === 768 ? 1024 : 900 });
+    await openHome(page);
+
+    const solutions = page.locator('#solutions-universe');
+    await expectFontAtLeast(solutions.locator('.s02-segment-band span').first(), 10);
+    await expectFontAtLeast(solutions.locator('.s02-station-1 .s02-station-copy strong'), 11);
+    await expectFontAtLeast(solutions.locator('.s02-selected-label'), 10);
+    await expectFontAtLeast(solutions.locator('.s02-family-detail > p'), 10);
+    await expectFontAtLeast(solutions.locator('.s02-actions a[href="/solutions"]'), 11);
+    await expectFontAtLeast(solutions.getByRole('button', { name: 'المجال التالي', exact: true }), 11);
+
+    const proof = page.locator('#reference-proof');
+    await expectFontAtLeast(proof.locator('.reference-proof-v2__selector-index').first(), 10);
+    await expectFontAtLeast(proof.locator('.reference-proof-v2__selector-family').first(), 10.5);
+    await expectFontAtLeast(proof.locator('.reference-proof-v2__selector-title').first(), 10.5);
+    await expectFontAtLeast(proof.locator('.reference-proof-v2__route'), 11);
+    await expectFontAtLeast(proof.locator('.reference-proof-v2__focus li').first(), 10);
+
+    const footer = page.locator('.gs-footer');
+    await expectFontAtLeast(footer.locator('.gs-footer__links a').first(), 12.5);
+    await expectFontAtLeast(footer.locator('.gs-footer__email'), 12.5);
+    await expectFontAtLeast(footer.locator('.gs-footer__intro'), 12);
+  });
+}
+
 for (const width of [430, 390]) {
-  test(`Homepage primary mobile controls remain readable and menu target is at least 44px at ${width}px`, async ({ page }) => {
+  test(`Homepage primary mobile controls and active Anatomy role remain readable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await openHome(page);
 
@@ -242,10 +351,52 @@ for (const width of [430, 390]) {
 
     const proof = page.locator('#reference-proof');
     await expectFontAtLeast(proof.locator('.reference-proof-v2__route'), 11);
+    await expectFontAtLeast(proof.locator('.reference-proof-v2__selector-index').first(), 10);
     await expectFontAtLeast(proof.locator('.reference-proof-v2__selector-title').first(), 10);
     await expectFontAtLeast(proof.locator('.reference-proof-v2__selector-family').first(), 10);
+
+    const anatomy = page.locator('#system-anatomy');
+    await anatomy.getByRole('button', { name: 'التكامل', exact: true }).click();
+    const activeRole = anatomy.locator('.anatomy-stages button.is-active .stage-copy small');
+    await expect(activeRole).toBeVisible();
+    const roleMetrics = await activeRole.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        whiteSpace: style.whiteSpace,
+        textOverflow: style.textOverflow,
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        clientHeight: element.clientHeight,
+        lineHeight: Number.parseFloat(style.lineHeight),
+      };
+    });
+    expect(roleMetrics.whiteSpace).toBe('normal');
+    expect(roleMetrics.textOverflow).not.toBe('ellipsis');
+    expect(roleMetrics.scrollWidth).toBeLessThanOrEqual(roleMetrics.clientWidth + 1);
+    expect(roleMetrics.clientHeight).toBeGreaterThan(roleMetrics.lineHeight * 1.5);
+
+    const footer = page.locator('.gs-footer');
+    await expectFontAtLeast(footer.locator('.gs-footer__links a').first(), 12.5);
+    await expectFontAtLeast(footer.locator('.gs-footer__email'), 12.5);
   });
 }
+
+test('Homepage scoped interactions honor reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openHome(page);
+
+  for (const selector of [
+    '#hero .e2-threshold-light',
+    '#solutions-universe .s02-connector',
+    '#reference-proof .reference-proof-v2__selectors button',
+    '#system-anatomy .anatomy-stages button',
+  ]) {
+    const duration = await page.locator(selector).first().evaluate((element) => (
+      window.getComputedStyle(element).transitionDuration
+    ));
+    expect(duration).toMatch(/0\.00001s|0\.01ms|0s/);
+  }
+});
 
 for (const width of [1440, 1024, 768, 430, 390]) {
   test(`Homepage route affordances have no horizontal overflow at ${width}px`, async ({ page }) => {
