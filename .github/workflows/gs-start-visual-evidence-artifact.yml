@@ -4,12 +4,18 @@ on:
   push:
     branches:
       - governance/gs-start-visual-evidence-artifact-r1
+  pull_request:
+    branches:
+      - governance/gs-deep-review-w08-c-current-baseline
+    paths:
+      - .github/workflows/gs-start-visual-evidence-artifact.yml
 
 permissions:
   contents: read
 
 jobs:
   package-existing-start-visual-evidence:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       PRODUCT_TARGET_SHA: d10cba74a7eb4103be4a2e285fff1c5732959043
@@ -161,3 +167,55 @@ jobs:
             packaging-manifest.txt
           if-no-files-found: error
           compression-level: 0
+
+  metadata-observer:
+    if: github.event_name == 'pull_request'
+    name: Temporary metadata observer
+    runs-on: ubuntu-latest
+    env:
+      TARGET_WORKFLOW_SHA: 95a001676b7019852401a5be9d11a105825c735d
+      BRANCH_NAME: governance/gs-start-visual-evidence-artifact-r1
+      WORKFLOW_PATH: .github/workflows/gs-start-visual-evidence-artifact.yml
+    steps:
+      - name: Recover exact packaging push run ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          encoded_branch="$(python3 -c 'import urllib.parse, os; print(urllib.parse.quote(os.environ["BRANCH_NAME"], safe=""))')"
+          runs_json="$RUNNER_TEMP/push-runs.json"
+
+          for _ in $(seq 1 24); do
+            curl -fsSL \
+              "https://api.github.com/repos/hamad933/GS-2/actions/runs?event=push&branch=${encoded_branch}&per_page=30" \
+              -o "$runs_json"
+
+            if python3 - "$runs_json" "$TARGET_WORKFLOW_SHA" "$WORKFLOW_PATH" <<'PY'
+          import json
+          import sys
+
+          source, target_sha, workflow_path = sys.argv[1:]
+          with open(source, 'r', encoding='utf-8') as handle:
+              payload = json.load(handle)
+          matches = [
+              run for run in payload.get('workflow_runs', [])
+              if run.get('event') == 'push'
+              and run.get('head_sha') == target_sha
+              and run.get('path') == workflow_path
+          ]
+          if len(matches) != 1:
+              raise SystemExit(1)
+          run = matches[0]
+          print(f'TARGET_PUSH_RUN_ID={run["id"]}')
+          print(f'TARGET_PUSH_RUN_STATUS={run.get("status")}')
+          print(f'TARGET_PUSH_RUN_CONCLUSION={run.get("conclusion")}')
+          print(f'TARGET_PUSH_RUN_URL={run.get("html_url")}')
+          print(f'TARGET_PUSH_RUN_ATTEMPT={run.get("run_attempt")}')
+          PY
+            then
+              exit 0
+            fi
+            sleep 5
+          done
+
+          echo "No push run found for $TARGET_WORKFLOW_SHA" >&2
+          exit 1
