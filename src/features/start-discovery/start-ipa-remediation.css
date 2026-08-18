@@ -1,0 +1,110 @@
+.sfp-transition-focus:focus-visible {
+  outline: 2px solid #8fa5ff;
+  outline-offset: 6px;
+}
+
+.sfp-recommendation-main {
+  min-width: 0;
+}
+
+/* Review DOM and visual order now agree: Summary first, Blueprint second. */
+.sfp-review-layout {
+  grid-template-columns: minmax(260px, .62fr) minmax(0, 1.6fr);
+}
+
+.start-project-brief-handoff {
+  width: min(1380px, calc(100% - 48px));
+  margin: -38px auto 72px;
+  padding: 26px 30px;
+  border: 1px solid rgba(216, 191, 145, .28);
+  border-inline-start: 3px solid #d8bf91;
+  background: rgba(7, 19, 27, .96);
+  color: #f2eadf;
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  direction: rtl;
+}
+
+.start-project-brief-handoff__eyebrow {
+  margin: 0 0 8px;
+  color: #d8bf91;
+  font-size: 12px;
+}
+
+.start-project-brief-handoff h2 {
+  margin: 0;
+  font-family: 'Noto Kufi Arabic', sans-serif;
+  font-size: clamp(1.2rem, 2.3vw, 1.8rem);
+  font-weight: 500;
+}
+
+.start-project-brief-handoff > p:not(.start-project-brief-handoff__eyebrow) {
+  max-width: 900px;
+  color: #b9b1a6;
+  line-height: 1.8;
+}
+
+.start-project-brief-handoff dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 22px 0;
+  background: rgba(216, 191, 145, .18);
+}
+
+.start-project-brief-handoff dl > div {
+  min-width: 0;
+  padding: 15px;
+  background: #09141b;
+}
+
+.start-project-brief-handoff dt {
+  color: #8f989b;
+  font-size: 12px;
+}
+
+.start-project-brief-handoff dd {
+  margin: 6px 0 0;
+  color: #eee5d8;
+  font-size: .86rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .sfp-review-layout {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .sfp-review-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sfp-project-summary,
+  .sfp-blueprint,
+  .sfp-review-close,
+  .sfp-recommendation-main {
+    order: initial;
+  }
+
+  .start-project-brief-handoff {
+    width: min(100% - 32px, 720px);
+    margin-top: -28px;
+  }
+
+  .start-project-brief-handoff dl {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .start-project-brief-handoff {
+    width: calc(100% - 24px);
+    margin-top: -24px;
+    padding: 20px 16px;
+  }
+
+  .start-project-brief-handoff dl {
+    grid-template-columns: 1fr;
+  }
+}
