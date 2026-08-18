@@ -370,7 +370,7 @@
 
 @media (max-width: 720px) {
   .project-gateway {
-    min-height: 56rem;
+    min-height: clamp(44rem, 175vw, 48rem);
     aspect-ratio: auto;
   }
 
@@ -380,7 +380,7 @@
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: linear-gradient(180deg, transparent 0 43%, rgba(4, 6, 9, 0.7) 57%, rgba(4, 6, 9, 0.94) 82%);
+    background: linear-gradient(180deg, transparent 0 34%, rgba(4, 6, 9, 0.7) 50%, rgba(4, 6, 9, 0.94) 80%);
   }
 
   .project-gateway::after {
@@ -406,17 +406,17 @@
   }
 
   .gateway-narrative {
-    inset-block-start: 49%;
+    inset-block-start: 38%;
     inset-inline: 1.35rem;
     width: auto;
   }
 
   .gateway-eyebrow {
-    margin-block-end: 1rem;
+    margin-block-end: 0.85rem;
   }
 
   .gateway-narrative h2 {
-    font-size: clamp(2.35rem, 11vw, 3rem);
+    font-size: clamp(2.2rem, 10.2vw, 2.8rem);
     line-height: 1.22;
   }
 
@@ -428,7 +428,7 @@
   .gateway-actions {
     width: 100%;
     flex-direction: column;
-    margin-block-start: 1.55rem;
+    margin-block-start: 1.25rem;
   }
 
   .gateway-cta,
@@ -440,7 +440,7 @@
 
   .gateway-continuity {
     inset-inline: 1.35rem;
-    inset-block-end: 0.4rem;
+    inset-block-end: 0.3rem;
     height: 2.65rem;
   }
 
