@@ -28,6 +28,13 @@ async function expectFontAtLeast(locator: Locator, minimumPx: number) {
   expect(fontSize).toBeGreaterThanOrEqual(minimumPx);
 }
 
+function cssTimeToMilliseconds(value: string) {
+  const normalized = value.trim().toLowerCase();
+  if (normalized.endsWith('ms')) return Number.parseFloat(normalized);
+  if (normalized.endsWith('s')) return Number.parseFloat(normalized) * 1000;
+  throw new Error(`Unsupported CSS time value: ${value}`);
+}
+
 for (const width of [1440, 768]) {
   test(`S03 preserves explicit pointer, keyboard, focus-only, and programmatic activation at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 768 ? 1024 : 900 });
@@ -122,9 +129,16 @@ test('HOME-B scoped interactions preserve reduced-motion behavior', async ({ pag
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openHome(page);
 
-  await expect(page.locator('#reference-proof .reference-proof-v2__selectors button').first()).toHaveCSS(
-    'transition-duration',
-    '0.01ms',
-  );
-  await expect(page.locator('#project-gateway .gateway-cta--primary')).toHaveCSS('transition-duration', '0s');
+  for (const selector of [
+    '#reference-proof .reference-proof-v2__selectors button',
+    '#project-gateway .gateway-cta--primary',
+  ]) {
+    const durations = await page.locator(selector).first().evaluate((element) => (
+      window.getComputedStyle(element).transitionDuration.split(',')
+    ));
+    expect(durations.length).toBeGreaterThan(0);
+    for (const duration of durations) {
+      expect(cssTimeToMilliseconds(duration)).toBeLessThanOrEqual(0.01);
+    }
+  }
 });
