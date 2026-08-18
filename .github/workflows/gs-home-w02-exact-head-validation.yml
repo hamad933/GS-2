@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - governance/gs-home-w02-exact-head-validation-r1
+  # Metadata-only observer. HOME/W02 validation remains push-only.
+  pull_request:
+    types: [synchronize]
+    branches:
+      - governance/gs-deep-review-w08-c-current-baseline
+    paths:
+      - .github/workflows/gs-home-w02-exact-head-validation.yml
 
 permissions:
   contents: read
@@ -19,11 +26,33 @@ jobs:
       EVIDENCE_DIR: /tmp/gs-home-evidence
       VISUAL_EVIDENCE_DIR: /tmp/gs-home-evidence/repo-native
     steps:
+      - name: Observe corresponding push validation run
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          OBSERVED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${OBSERVED_HEAD}&event=push&per_page=20"
+          for _ in $(seq 1 30); do
+            json="$(curl -fsSL -H 'Accept: application/vnd.github+json' "$api")"
+            match="$(printf '%s' "$json" | jq -r --arg sha "$OBSERVED_HEAD" '.workflow_runs[] | select(.name == "GS HOME + W02 Exact-Head Validation" and .event == "push" and .head_sha == $sha) | "id=\(.id) status=\(.status) conclusion=\(.conclusion // \"pending\") head_sha=\(.head_sha) event=\(.event) html_url=\(.html_url)"' | head -n 1)"
+            if [[ -n "$match" ]]; then
+              echo "$match"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Matching push validation run was not observed.' >&2
+          exit 1
+
       - name: Initialize HOME evidence
+        if: github.event_name == 'push'
         shell: bash
         run: mkdir -p "$EVIDENCE_DIR/logs" "$EVIDENCE_DIR/screenshots" "$EVIDENCE_DIR/repo-native"
 
       - name: Check out exact HOME candidate
+        if: github.event_name == 'push'
         id: checkout
         continue-on-error: true
         uses: actions/checkout@v4
@@ -34,7 +63,7 @@ jobs:
 
       - name: Verify HOME identity and seven-path boundary
         id: home_gate
-        if: steps.checkout.outcome == 'success'
+        if: github.event_name == 'push' && steps.checkout.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
@@ -45,7 +74,6 @@ jobs:
             echo "frozen_base=$HOME_BASE"
           } | tee "$EVIDENCE_DIR/exact-checkout-identity.txt"
           test "$(git rev-parse HEAD)" = "$HOME_SHA"
-
           cat > "$EVIDENCE_DIR/expected-changed-paths.txt" <<'EOF'
           src/components/footer/Footer.remediation.css
           src/components/hero/LivingSystemHero.tsx
@@ -65,7 +93,7 @@ jobs:
 
       - name: Set up Node 20 for HOME
         id: home_node
-        if: steps.home_gate.outcome == 'success'
+        if: github.event_name == 'push' && steps.home_gate.outcome == 'success'
         continue-on-error: true
         uses: actions/setup-node@v4
         with:
@@ -74,13 +102,12 @@ jobs:
 
       - name: Execute HOME validation contract
         id: home_validation
-        if: steps.home_gate.outcome == 'success' && steps.home_node.outcome == 'success'
+        if: github.event_name == 'push' && steps.home_gate.outcome == 'success' && steps.home_node.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
           : > "$EVIDENCE_DIR/command-status.txt"
-
           run_logged() {
             local label="$1"
             shift
@@ -91,14 +118,12 @@ jobs:
             echo "${label}=${rc}" >> "$EVIDENCE_DIR/command-status.txt"
             LAST_RC=$rc
           }
-
           run_logged git-diff-check git diff --check "$HOME_BASE" "$HOME_SHA"
           run_logged npm-ci npm ci
           run_logged lint npm run lint
           run_logged typecheck npm run typecheck
           run_logged build npm run build
           run_logged playwright-install npx playwright install --with-deps chromium
-
           run_logged home-public-routing npx playwright test \
             tests/visual/home-public-routing/home-public-routing.spec.ts \
             --config=playwright.config.ts \
@@ -113,7 +138,6 @@ jobs:
               --workers=1 \
               --trace=retain-on-failure
           fi
-
           if [[ -f tests/visual/home-public-routing/gs-pages-w08-b-home-truth.spec.ts ]]; then
             run_logged w08b-home-truth npx playwright test \
               tests/visual/home-public-routing/gs-pages-w08-b-home-truth.spec.ts \
@@ -124,13 +148,11 @@ jobs:
             echo 'w08b-home-truth=127' >> "$EVIDENCE_DIR/command-status.txt"
             echo 'Required repo-native W08-B regression is missing.' > "$EVIDENCE_DIR/logs/w08b-home-truth.log"
           fi
-
           run_logged public-site-integration npx playwright test \
             tests/visual/public-site.integration.spec.ts \
             --project=chromium \
             --workers=1 \
             --trace=retain-on-failure
-
           capture_home() {
             npm run preview -- --host 127.0.0.1 --port 4173 > "$EVIDENCE_DIR/logs/home-preview.log" 2>&1 &
             local pid=$!
@@ -139,130 +161,73 @@ jobs:
               curl -fsS http://127.0.0.1:4173/ >/dev/null && break || sleep 1
             done
             curl -fsS http://127.0.0.1:4173/ >/dev/null
-
             cat > "$RUNNER_TEMP/home-capture.cjs" <<'NODE'
           const { createRequire } = require('node:module');
           const { writeFile } = require('node:fs/promises');
           const path = require('node:path');
           const req = createRequire(path.join(process.cwd(), 'package.json'));
           const { chromium } = req('@playwright/test');
-
           (async () => {
             const out = process.env.EVIDENCE_DIR;
             const browser = await chromium.launch({ headless: true });
             const report = [];
             let failed = false;
-
             for (const width of [1440, 768, 430, 390]) {
               const height = width === 768 ? 1024 : width <= 430 ? 844 : 1000;
-              const context = await browser.newContext({
-                viewport: { width, height },
-                reducedMotion: 'reduce',
-              });
+              const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
               const page = await context.newPage();
               const errors = [];
-              page.on('console', (message) => {
-                if (message.type() === 'error') errors.push(`console: ${message.text()}`);
-              });
-              page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
-
+              page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
+              page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
               await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
               await page.evaluate(() => document.fonts.ready);
-
               const state = await page.evaluate(() => ({
                 dir: getComputedStyle(document.documentElement).direction,
                 clientWidth: document.documentElement.clientWidth,
                 scrollWidth: document.documentElement.scrollWidth,
                 reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
               }));
-
               const hero = page.locator('#hero');
               const wall = hero.locator('.e2-operating-wall');
-              const stages = [{
-                stage: await hero.getAttribute('data-stage'),
-                label: await wall.getAttribute('aria-label'),
-              }];
-
-              await page.screenshot({
-                path: path.join(out, 'screenshots', `home-${width}-full.png`),
-                fullPage: true,
-              });
-
-              const surfaces = {
-                hero: '#hero',
-                s02: '#solutions-universe',
-                referenceProof: '#reference-proof',
-                systemAnatomy: '#system-anatomy',
-                footer: '.gs-footer',
-              };
-              for (const [name, selector] of Object.entries(surfaces)) {
-                await page.locator(selector).screenshot({
-                  path: path.join(out, 'screenshots', `home-${width}-${name}.png`),
-                });
+              const stages = [{ stage: await hero.getAttribute('data-stage'), label: await wall.getAttribute('aria-label') }];
+              await page.screenshot({ path: path.join(out, 'screenshots', `home-${width}-full.png`), fullPage: true });
+              for (const [name, selector] of Object.entries({ hero: '#hero', s02: '#solutions-universe', referenceProof: '#reference-proof', systemAnatomy: '#system-anatomy', footer: '.gs-footer' })) {
+                await page.locator(selector).screenshot({ path: path.join(out, 'screenshots', `home-${width}-${name}.png`) });
               }
-
               await hero.getByRole('button', { name: 'إطلاق خدمة رقمية', exact: true }).click();
-              stages.push({
-                stage: await hero.getAttribute('data-stage'),
-                label: await wall.getAttribute('aria-label'),
-              });
+              stages.push({ stage: await hero.getAttribute('data-stage'), label: await wall.getAttribute('aria-label') });
               await hero.screenshot({ path: path.join(out, 'screenshots', `home-${width}-hero-direction.png`) });
-
               await hero.getByRole('button', { name: 'خطوة رئيسية واحدة' }).click();
-              stages.push({
-                stage: await hero.getAttribute('data-stage'),
-                label: await wall.getAttribute('aria-label'),
-              });
+              stages.push({ stage: await hero.getAttribute('data-stage'), label: await wall.getAttribute('aria-label') });
               await hero.screenshot({ path: path.join(out, 'screenshots', `home-${width}-hero-build.png`) });
-
               for (const action of ['رتّب الرحلة حول الهدف', 'وحّد التجربة', 'جرّب المسار']) {
                 await hero.getByRole('button', { name: action, exact: true }).click();
               }
               await hero.getByLabel('طلبك المختصر', { exact: true }).fill('Exact-head HOME evidence capture');
               await hero.getByRole('button', { name: 'جهّز الملخّص', exact: true }).click();
-              stages.push({
-                stage: await hero.getAttribute('data-stage'),
-                label: await wall.getAttribute('aria-label'),
-              });
+              stages.push({ stage: await hero.getAttribute('data-stage'), label: await wall.getAttribute('aria-label') });
               await hero.screenshot({ path: path.join(out, 'screenshots', `home-${width}-hero-launch.png`) });
-
               report.push({ width, height, ...state, stages, errors });
-              if (
-                state.dir !== 'rtl'
-                || state.scrollWidth > state.clientWidth + 1
-                || !state.reducedMotion
-                || errors.length
-              ) failed = true;
-
+              if (state.dir !== 'rtl' || state.scrollWidth > state.clientWidth + 1 || !state.reducedMotion || errors.length) failed = true;
               await context.close();
             }
-
             await writeFile(path.join(out, 'viewport-evidence.json'), JSON.stringify(report, null, 2));
             await browser.close();
             if (failed) process.exit(1);
-          })().catch((error) => {
-            console.error(error);
-            process.exit(1);
-          });
+          })().catch((error) => { console.error(error); process.exit(1); });
           NODE
-
             node "$RUNNER_TEMP/home-capture.cjs"
           }
-
           set +e
           capture_home 2>&1 | tee "$EVIDENCE_DIR/logs/home-temporary-capture.log"
           CAPTURE_RC=${PIPESTATUS[0]}
           set -e
           echo "home-temporary-capture=${CAPTURE_RC}" >> "$EVIDENCE_DIR/command-status.txt"
-
-          if [[ -d test-results ]]; then
-            cp -a test-results "$EVIDENCE_DIR/test-results"
-          fi
-
+          if [[ -d test-results ]]; then cp -a test-results "$EVIDENCE_DIR/test-results"; fi
           ! grep -Eq '=[1-9][0-9]*$' "$EVIDENCE_DIR/command-status.txt"
 
       - name: Summarize HOME outcomes
-        if: always()
+        if: github.event_name == 'push' && always()
         shell: bash
         env:
           CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
@@ -282,7 +247,7 @@ jobs:
           } > "$EVIDENCE_DIR/summary.txt"
 
       - name: Upload HOME reference-only evidence
-        if: always()
+        if: github.event_name == 'push' && always()
         uses: actions/upload-artifact@v4
         with:
           name: gs-home-exact-head-reference-only-c93aba57610c4e8b029307dd2474182262b7dace
@@ -291,7 +256,7 @@ jobs:
           retention-days: 14
 
       - name: Enforce HOME job conclusion
-        if: always()
+        if: github.event_name == 'push' && always()
         shell: bash
         env:
           CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
@@ -306,6 +271,7 @@ jobs:
 
   w02:
     name: W02 M01 exact candidate
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -341,7 +307,6 @@ jobs:
           } | tee "$EVIDENCE_DIR/exact-checkout-identity.txt"
           test "$(git rev-parse HEAD)" = "$W02_SHA"
           test "$(git rev-parse HEAD^)" = "$W02_PARENT"
-
           cat > "$EVIDENCE_DIR/expected-changed-paths.txt" <<'EOF'
           src/data/visual/familyVisualAssets.ts
           src/features/solutions/SolutionsExploration.tsx
@@ -353,7 +318,6 @@ jobs:
           test "$(wc -l < "$EVIDENCE_DIR/actual-changed-paths.txt")" -eq 3
           git diff --stat "$W02_PARENT" "$W02_SHA" | tee "$EVIDENCE_DIR/changed-path-stat.txt"
           git diff --numstat "$W02_PARENT" "$W02_SHA" | tee "$EVIDENCE_DIR/changed-path-numstat.txt"
-
           if git diff --numstat "$W02_PARENT" "$W02_SHA" | awk '$1 == "-" && $2 == "-" { found=1 } END { exit !found }'; then
             echo 'Binary mutation detected.' >&2
             exit 1
@@ -362,7 +326,6 @@ jobs:
             echo 'Asset-binary path mutation detected.' >&2
             exit 1
           fi
-
           echo 'zero_asset_binary_mutation=verified' > "$EVIDENCE_DIR/asset-binary-verification.txt"
           test -f tests/visual/solutions/playwright.config.ts
           sha256sum tests/visual/solutions/playwright.config.ts | tee "$EVIDENCE_DIR/repo-native-solutions-playwright-config.sha256"
@@ -384,7 +347,6 @@ jobs:
         run: |
           set -euo pipefail
           : > "$EVIDENCE_DIR/command-status.txt"
-
           run_logged() {
             local label="$1"
             shift
@@ -395,14 +357,12 @@ jobs:
             echo "${label}=${rc}" >> "$EVIDENCE_DIR/command-status.txt"
             LAST_RC=$rc
           }
-
           run_logged git-diff-check git diff --check "$W02_PARENT" "$W02_SHA"
           run_logged npm-ci npm ci
           run_logged lint npm run lint
           run_logged typecheck npm run typecheck
           run_logged build npm run build
           run_logged playwright-install npx playwright install --with-deps chromium
-
           run_logged solutions-workspace npx playwright test \
             tests/visual/solutions/solutions-workspace.visual.spec.ts \
             --config=tests/visual/solutions/playwright.config.ts \
@@ -417,11 +377,9 @@ jobs:
               --workers=1 \
               --trace=retain-on-failure
           fi
-
           if [[ -d tests/visual/solutions/evidence/final-public-w02 ]]; then
             cp -a tests/visual/solutions/evidence/final-public-w02/. "$EVIDENCE_DIR/screenshots/"
           fi
-
           required=(
             w02-recognition-1440.png
             w02-booking-product-directions-context-1440.png
@@ -440,134 +398,71 @@ jobs:
             w02-390-compare.png
           )
           SCREENSHOT_RC=0
-          for file in "${required[@]}"; do
-            test -s "$EVIDENCE_DIR/screenshots/$file" || SCREENSHOT_RC=1
-          done
+          for file in "${required[@]}"; do test -s "$EVIDENCE_DIR/screenshots/$file" || SCREENSHOT_RC=1; done
           printf '%s\n' "${required[@]}" > "$EVIDENCE_DIR/required-screenshot-index.txt"
           echo "verify-w02-screenshots=${SCREENSHOT_RC}" >> "$EVIDENCE_DIR/command-status.txt"
-
-          audit_w02_runtime() {
+          audit_runtime() {
             npx vite tests/visual/fixtures/solutions --host 127.0.0.1 --port 4182 > "$EVIDENCE_DIR/logs/w02-fixture-server.log" 2>&1 &
             local pid=$!
             trap 'kill "$pid" 2>/dev/null || true' RETURN
-            for _ in $(seq 1 40); do
-              curl -fsS http://127.0.0.1:4182/ >/dev/null && break || sleep 1
-            done
+            for _ in $(seq 1 40); do curl -fsS http://127.0.0.1:4182/ >/dev/null && break || sleep 1; done
             curl -fsS http://127.0.0.1:4182/ >/dev/null
-
             cat > "$RUNNER_TEMP/w02-runtime-audit.cjs" <<'NODE'
           const { createRequire } = require('node:module');
           const { writeFile } = require('node:fs/promises');
           const path = require('node:path');
           const req = createRequire(path.join(process.cwd(), 'package.json'));
           const { chromium } = req('@playwright/test');
-
-          const initialAssets = [
-            'FAM-01-EMB-01', 'FAM-02-EMB-01', 'FAM-03-EMB-01',
-            'FAM-04-EMB-01', 'FAM-05-EMB-01', 'FAM-06-EMB-01',
-            'FAM-03-MSC-01',
-            'FAM-03-DIR-01', 'FAM-03-DIR-02', 'FAM-03-DIR-03',
-            'FAM-03-CTX-01', 'FAM-03-CTX-02',
-          ];
-          const compareAssets = ['FAM-03-CMP-01', 'FAM-05-CMP-01'];
-
-          async function inspectAsset(page, id) {
-            const locator = page.locator(`[data-asset-id="${id}"]`).first();
-            if (!await locator.count()) return { id, ok: false, reason: 'missing' };
-            return locator.evaluate((element, assetId) => {
-              const image = element instanceof HTMLImageElement ? element : element.querySelector('img');
-              if (!image) return { id: assetId, ok: false, reason: 'no-image' };
-              return {
-                id: assetId,
-                ok: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0,
-                src: image.currentSrc || image.src,
-                naturalWidth: image.naturalWidth,
-                naturalHeight: image.naturalHeight,
-              };
+          const initial = ['FAM-01-EMB-01','FAM-02-EMB-01','FAM-03-EMB-01','FAM-04-EMB-01','FAM-05-EMB-01','FAM-06-EMB-01','FAM-03-MSC-01','FAM-03-DIR-01','FAM-03-DIR-02','FAM-03-DIR-03','FAM-03-CTX-01','FAM-03-CTX-02'];
+          const compare = ['FAM-03-CMP-01','FAM-05-CMP-01'];
+          async function inspect(page, id) {
+            const loc = page.locator(`[data-asset-id="${id}"]`).first();
+            if (!await loc.count()) return { id, ok: false, reason: 'missing' };
+            return loc.evaluate((el, assetId) => {
+              const img = el instanceof HTMLImageElement ? el : el.querySelector('img');
+              if (!img) return { id: assetId, ok: false, reason: 'no-image' };
+              return { id: assetId, ok: img.complete && img.naturalWidth > 0 && img.naturalHeight > 0, src: img.currentSrc || img.src, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight };
             }, id);
           }
-
           (async () => {
             const out = process.env.EVIDENCE_DIR;
             const browser = await chromium.launch({ headless: true });
             const report = { viewports: [], assets: [] };
             let failed = false;
-
-            for (const width of [1440, 768, 430, 390]) {
+            for (const width of [1440,768,430,390]) {
               const height = width === 768 ? 1024 : width <= 430 ? 844 : 1000;
               const context = await browser.newContext({ viewport: { width, height } });
               const page = await context.newPage();
               const errors = [];
-              page.on('console', (message) => {
-                if (message.type() === 'error') errors.push(`console: ${message.text()}`);
-              });
-              page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
-              page.on('requestfailed', (request) => {
-                errors.push(`requestfailed: ${request.url()} ${request.failure()?.errorText || ''}`);
-              });
-              page.on('response', (response) => {
-                if (response.status() >= 400) errors.push(`http-${response.status()}: ${response.url()}`);
-              });
-
+              page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
+              page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+              page.on('requestfailed', (r) => errors.push(`requestfailed: ${r.url()} ${r.failure()?.errorText || ''}`));
+              page.on('response', (r) => { if (r.status() >= 400) errors.push(`http-${r.status()}: ${r.url()}`); });
               await page.goto('http://127.0.0.1:4182/', { waitUntil: 'networkidle' });
               await page.evaluate(() => document.fonts.ready);
-
-              const state = await page.evaluate(() => {
-                const root = document.documentElement;
-                const exploration = document.querySelector('#solutions-exploration');
-                return {
-                  direction: exploration ? getComputedStyle(exploration).direction : null,
-                  clientWidth: root.clientWidth,
-                  scrollWidth: root.scrollWidth,
-                };
-              });
+              const state = await page.evaluate(() => ({ direction: getComputedStyle(document.querySelector('#solutions-exploration')).direction, clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth }));
               report.viewports.push({ width, height, ...state, errors });
-              if (state.direction !== 'rtl' || state.scrollWidth > state.clientWidth + 1 || errors.length) {
-                failed = true;
-              }
-
+              if (state.direction !== 'rtl' || state.scrollWidth > state.clientWidth + 1 || errors.length) failed = true;
               if (width === 1440) {
-                for (const id of initialAssets) {
-                  const result = await inspectAsset(page, id);
-                  report.assets.push(result);
-                  if (!result.ok) failed = true;
-                }
+                for (const id of initial) { const result = await inspect(page, id); report.assets.push(result); if (!result.ok) failed = true; }
                 await page.getByRole('button', { name: 'قارن الحجوزات بالتشغيل' }).click();
-                for (const id of compareAssets) {
-                  const result = await inspectAsset(page, id);
-                  report.assets.push(result);
-                  if (!result.ok) failed = true;
-                }
+                for (const id of compare) { const result = await inspect(page, id); report.assets.push(result); if (!result.ok) failed = true; }
               }
-
               await context.close();
             }
-
-            await writeFile(
-              path.join(out, 'runtime-asset-and-viewport-audit.json'),
-              JSON.stringify(report, null, 2),
-            );
+            await writeFile(path.join(out, 'runtime-asset-and-viewport-audit.json'), JSON.stringify(report, null, 2));
             await browser.close();
             if (failed) process.exit(1);
-          })().catch((error) => {
-            console.error(error);
-            process.exit(1);
-          });
+          })().catch((error) => { console.error(error); process.exit(1); });
           NODE
-
             node "$RUNNER_TEMP/w02-runtime-audit.cjs"
           }
-
           set +e
-          audit_w02_runtime 2>&1 | tee "$EVIDENCE_DIR/logs/w02-runtime-audit.log"
+          audit_runtime 2>&1 | tee "$EVIDENCE_DIR/logs/w02-runtime-audit.log"
           RUNTIME_RC=${PIPESTATUS[0]}
           set -e
           echo "w02-runtime-audit=${RUNTIME_RC}" >> "$EVIDENCE_DIR/command-status.txt"
-
-          if [[ -d test-results ]]; then
-            cp -a test-results "$EVIDENCE_DIR/test-results"
-          fi
-
+          if [[ -d test-results ]]; then cp -a test-results "$EVIDENCE_DIR/test-results"; fi
           ! grep -Eq '=[1-9][0-9]*$' "$EVIDENCE_DIR/command-status.txt"
 
       - name: Summarize W02 outcomes
