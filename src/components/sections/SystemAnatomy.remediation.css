@@ -1,0 +1,39 @@
+.system-anatomy-v2 .anatomy-stages button.is-active {
+  block-size: auto;
+  min-block-size: clamp(74px, 7.8vw, 84px);
+}
+
+.system-anatomy-v2 .anatomy-stages button.is-active .stage-copy small {
+  overflow: visible;
+  color: rgba(237, 232, 223, 0.8);
+  font-size: clamp(0.7rem, 0.78vw, 0.8rem);
+  line-height: 1.55;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+@media (max-width: 900px) {
+  .system-anatomy-v2 .anatomy-stages button.is-active {
+    min-block-size: 80px;
+  }
+
+  .system-anatomy-v2 .anatomy-stages button.is-active .stage-copy small {
+    font-size: 0.72rem;
+    line-height: 1.58;
+  }
+}
+
+@media (max-width: 520px) {
+  .system-anatomy-v2 .anatomy-stages {
+    gap: 0.42rem;
+  }
+
+  .system-anatomy-v2 .anatomy-stages button.is-active {
+    min-block-size: 88px;
+  }
+
+  .system-anatomy-v2 .anatomy-stages button.is-active .stage-copy small {
+    font-size: 0.72rem;
+    line-height: 1.6;
+  }
+}
