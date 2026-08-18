@@ -43,8 +43,8 @@ const pageCopy = {
     notProve: 'ما لا يثبته هذا المرجع',
     evidenceState: 'حالة التحقق',
     routeSlot: 'مسار المصدر المستقل',
-    routeMissing: 'لم يُضبط رابط موثوق للمصدر المستقل في هذا المستودع.',
-    routeState: 'الرابط المرجعي غير مهيأ بعد',
+    routeMissing: 'لا يتوفر حاليًا رابط موثوق إلى المصدر المستقل.',
+    routeState: 'المسار الخارجي الموثوق غير متاح حاليًا',
     compareEyebrow: 'مقارنة مضبوطة',
     compareTitle: 'أربع نقاط بداية، وليست أربعة قوالب جاهزة.',
     compareIntro: 'المقارنة هنا تختصر المجال وفئة القدرة وحالة المصدر. اختيار نقطة بداية لا يضيف وظائف أو أدلة غير متحققة.',
@@ -75,8 +75,8 @@ const pageCopy = {
     notProve: 'What this reference does not prove',
     evidenceState: 'Verification state',
     routeSlot: 'Independent source route',
-    routeMissing: 'No verified independent-source URL is configured in this repository.',
-    routeState: 'Reference route not configured yet',
+    routeMissing: 'No verified route to the independent source is currently available.',
+    routeState: 'Verified outbound route currently unavailable',
     compareEyebrow: 'Controlled comparison',
     compareTitle: 'Four starting points—not four ready-made templates.',
     compareIntro: 'This comparison is limited to domain, capability class, and source state. Choosing a starting point adds no unverified feature or proof.',
@@ -109,12 +109,22 @@ function publicProjectCode(code: ReferenceProject['code']): string {
 function StateLabel({
   label,
   machineState,
+  accessibilityLabel,
+  comparisonField,
 }: {
   label: string;
   machineState: EvidenceState | typeof routeMachineState;
+  accessibilityLabel?: string;
+  comparisonField?: 'state' | 'route';
 }) {
   return (
-    <span className="rp-state-label" data-state={machineState}>
+    <span
+      className="rp-state-label"
+      data-state={machineState}
+      data-comparison-field={comparisonField}
+      role={accessibilityLabel ? 'group' : undefined}
+      aria-label={accessibilityLabel}
+    >
       <strong>{label}</strong>
     </span>
   );
@@ -378,7 +388,7 @@ export function ReferenceProjectsBody({
           <span>{copy.compareIntro}</span>
         </header>
 
-        <div className="rp-comparison__legend" aria-hidden="true">
+        <div className="rp-comparison__legend">
           <span>{copy.project}</span>
           <span>{copy.domain}</span>
           <span>{copy.capability}</span>
@@ -386,18 +396,55 @@ export function ReferenceProjectsBody({
           <span>{copy.route}</span>
         </div>
         <ol className="rp-comparison__rows">
-          {referenceProjects.map((project) => (
-            <li key={project.id} data-project-row={project.id}>
-              <div><span dir="ltr">{publicProjectCode(project.code)}</span><strong dir="ltr">{project.name}</strong></div>
-              <p>{localized(project.domain, locale)}</p>
-              <p>{localized(project.capabilityClass, locale)}</p>
-              <StateLabel
-                label={localized(evidenceStateLabels.REFERENCE_ONLY, locale)}
-                machineState="REFERENCE_ONLY"
-              />
-              <StateLabel label={copy.routeState} machineState={routeMachineState} />
-            </li>
-          ))}
+          {referenceProjects.map((project) => {
+            const publicCode = publicProjectCode(project.code);
+            const domain = localized(project.domain, locale);
+            const capability = localized(project.capabilityClass, locale);
+            const summaryState = localized(evidenceStateLabels.REFERENCE_ONLY, locale);
+
+            return (
+              <li
+                key={project.id}
+                data-project-row={project.id}
+                aria-label={`${copy.project}: ${publicCode} ${project.name}`}
+              >
+                <div
+                  role="group"
+                  aria-label={`${copy.project}: ${publicCode} ${project.name}`}
+                  data-comparison-field="project"
+                >
+                  <span dir="ltr">{publicCode}</span>
+                  <strong dir="ltr">{project.name}</strong>
+                </div>
+                <p
+                  role="group"
+                  aria-label={`${copy.domain}: ${domain}`}
+                  data-comparison-field="domain"
+                >
+                  {domain}
+                </p>
+                <p
+                  role="group"
+                  aria-label={`${copy.capability}: ${capability}`}
+                  data-comparison-field="capability"
+                >
+                  {capability}
+                </p>
+                <StateLabel
+                  label={summaryState}
+                  machineState="REFERENCE_ONLY"
+                  accessibilityLabel={`${copy.state}: ${summaryState}`}
+                  comparisonField="state"
+                />
+                <StateLabel
+                  label={copy.routeState}
+                  machineState={routeMachineState}
+                  accessibilityLabel={`${copy.route}: ${copy.routeState}`}
+                  comparisonField="route"
+                />
+              </li>
+            );
+          })}
         </ol>
       </section>
     </div>

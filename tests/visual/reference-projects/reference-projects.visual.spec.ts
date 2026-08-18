@@ -42,7 +42,7 @@ test('all four references support pointer focus and contextual expansion', async
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('.rp-ledger')).toHaveClass(/is-open/);
-  await expect(page.getByText('الرابط المرجعي غير مهيأ بعد').first()).toBeVisible();
+  await expect(page.getByText('المسار الخارجي الموثوق غير متاح حاليًا').first()).toBeVisible();
   await expect(page.getByText('ROUTE_NOT_CONFIGURED')).toHaveCount(0);
 });
 
@@ -112,7 +112,54 @@ test('machine/control states remain internal while localized truth stays visible
   expect(publicText).not.toContain('UNAVAILABLE');
   expect(publicText).not.toContain('ROUTE_NOT_CONFIGURED');
   expect(publicText).toContain('مرجع سياقي فقط');
-  expect(publicText).toContain('الرابط المرجعي غير مهيأ بعد');
+  expect(publicText).toContain('المسار الخارجي الموثوق غير متاح حاليًا');
+});
+
+test('comparison exposes project identity and all field meanings programmatically for every row', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openFixture(page);
+
+  const rows = page.locator('[data-project-row]');
+  await expect(rows).toHaveCount(4);
+
+  const fieldLabels = [
+    ['project', 'المشروع'],
+    ['domain', 'المجال التشغيلي'],
+    ['capability', 'القدرة التي يوضحها'],
+    ['state', 'حالة الملخص'],
+    ['route', 'المسار الخارجي'],
+  ] as const;
+
+  for (let index = 0; index < 4; index += 1) {
+    const row = rows.nth(index);
+    await expect(row).toHaveAccessibleName(new RegExp(`^المشروع: RP-0${index + 1} `));
+
+    for (const [field, label] of fieldLabels) {
+      const value = row.locator(`[data-comparison-field="${field}"]`);
+      await expect(value).toHaveCount(1);
+      await expect(value).toHaveAccessibleName(new RegExp(`^${label}: .+`));
+    }
+  }
+});
+
+test('public route copy avoids repository implementation wording while preserving unavailable-route truth', async ({ page }) => {
+  await openFixture(page, 'ar');
+  let publicText = await page.locator(BODY).innerText();
+  expect(publicText).not.toContain('المستودع');
+  expect(publicText.toLowerCase()).not.toContain('repository');
+  expect(publicText).toContain('المسار الخارجي الموثوق غير متاح حاليًا');
+
+  await page.getByRole('button', { name: /سجل الحدود والتحقق/ }).click();
+  await expect(page.getByText('لا يتوفر حاليًا رابط موثوق إلى المصدر المستقل.')).toBeVisible();
+
+  await openFixture(page, 'en');
+  publicText = await page.locator(BODY).innerText();
+  expect(publicText).not.toContain('المستودع');
+  expect(publicText.toLowerCase()).not.toContain('repository');
+  expect(publicText).toContain('Verified outbound route currently unavailable');
+
+  await page.getByRole('button', { name: /boundaries and verification ledger/i }).click();
+  await expect(page.getByText('No verified route to the independent source is currently available.')).toBeVisible();
 });
 
 test('capability-map disclaimer has production-readable type and contrast treatment', async ({ page }) => {
@@ -142,6 +189,21 @@ for (const width of [430, 390]) {
     await expectNoHorizontalOverflow(page);
   });
 }
+
+test('reduced motion preserves selector and expanded-ledger behavior', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await openFixture(page);
+
+  await page.locator('[data-project-selector="rp01"]').focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator(BODY)).toHaveAttribute('data-active-project', 'rp02');
+
+  const toggle = page.getByRole('button', { name: /سجل الحدود والتحقق/ });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('.rp-ledger')).toHaveClass(/is-open/);
+});
 
 for (const width of [1440, 1024, 768, 430, 390]) {
   test(`reference body has no overflow or runtime errors at ${width}px`, async ({ page }) => {
