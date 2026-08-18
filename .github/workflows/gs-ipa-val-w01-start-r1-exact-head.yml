@@ -1,0 +1,383 @@
+name: GS IPA START exact-head validation
+
+on:
+  push:
+    branches:
+      - validation/gs-ipa-val-w01-start-r1-evidence
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TARGET_SHA: d10cba74a7eb4103be4a2e285fff1c5732959043
+      BASE_SHA: 19e9096d714cfaa0055cfa1ccc794ca26320a2c5
+    steps:
+      - name: Checkout frozen exact head
+        uses: actions/checkout@v4
+        with:
+          ref: d10cba74a7eb4103be4a2e285fff1c5732959043
+          fetch-depth: 0
+
+      - name: Prepare evidence directory and verify checkout
+        shell: bash
+        run: |
+          mkdir -p evidence/screenshots
+          {
+            echo "TARGET_SHA=$TARGET_SHA"
+            echo "BASE_SHA=$BASE_SHA"
+            echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
+            echo "MERGE_BASE=$(git merge-base "$BASE_SHA" "$TARGET_SHA")"
+            echo "STATUS_PORCELAIN_BEGIN"
+            git status --porcelain=v1
+            echo "STATUS_PORCELAIN_END"
+            echo "CHANGED_PATHS_BEGIN"
+            git diff --name-only "$BASE_SHA...$TARGET_SHA"
+            echo "CHANGED_PATHS_END"
+          } | tee evidence/checkout.txt
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(git merge-base "$BASE_SHA" "$TARGET_SHA")" = "$BASE_SHA"
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: git diff --check
+        shell: bash
+        run: |
+          set +e
+          git diff --check 2>&1 | tee evidence/git-diff-check.log
+          code=${PIPESTATUS[0]}
+          echo "GIT_DIFF_CHECK=$code" >> evidence/status.env
+          git diff --check "$BASE_SHA...$TARGET_SHA" 2>&1 | tee evidence/git-diff-check-base-head.log
+          code2=${PIPESTATUS[0]}
+          echo "GIT_DIFF_CHECK_BASE_HEAD=$code2" >> evidence/status.env
+          exit 0
+
+      - name: npm ci
+        shell: bash
+        run: |
+          set +e
+          npm ci 2>&1 | tee evidence/npm-ci.log
+          code=${PIPESTATUS[0]}
+          echo "NPM_CI=$code" >> evidence/status.env
+          exit 0
+
+      - name: npm run lint
+        shell: bash
+        run: |
+          set +e
+          npm run lint 2>&1 | tee evidence/lint.log
+          code=${PIPESTATUS[0]}
+          echo "LINT=$code" >> evidence/status.env
+          exit 0
+
+      - name: npm run typecheck
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck 2>&1 | tee evidence/typecheck.log
+          code=${PIPESTATUS[0]}
+          echo "TYPECHECK=$code" >> evidence/status.env
+          exit 0
+
+      - name: npm run build
+        shell: bash
+        run: |
+          set +e
+          npm run build 2>&1 | tee evidence/build.log
+          code=${PIPESTATUS[0]}
+          echo "BUILD=$code" >> evidence/status.env
+          exit 0
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set +e
+          npx playwright install --with-deps chromium 2>&1 | tee evidence/chromium-install.log
+          code=${PIPESTATUS[0]}
+          echo "CHROMIUM_INSTALL=$code" >> evidence/status.env
+          npx playwright --version | tee evidence/playwright-version.txt
+          node --input-type=module - <<'NODE' | tee evidence/chromium-version.txt
+          import { chromium } from '@playwright/test';
+          const browser = await chromium.launch({ headless: true });
+          console.log(browser.version());
+          await browser.close();
+          NODE
+          exit 0
+
+      - name: START exact-head targeted Playwright
+        shell: bash
+        run: |
+          set +e
+          npx playwright test \
+            --config=tests/visual/start-discovery/playwright.config.ts \
+            --project=chromium \
+            --workers=1 2>&1 | tee evidence/start-targeted-playwright.log
+          code=${PIPESTATUS[0]}
+          echo "START_TARGETED_PLAYWRIGHT=$code" >> evidence/status.env
+          exit 0
+
+      - name: Public handoff exact-head Playwright
+        shell: bash
+        run: |
+          set +e
+          npx playwright test \
+            --config=tests/visual/start-discovery/public-handoff.playwright.config.ts \
+            --project=chromium \
+            --workers=1 2>&1 | tee evidence/public-handoff-playwright.log
+          code=${PIPESTATUS[0]}
+          echo "PUBLIC_HANDOFF_PLAYWRIGHT=$code" >> evidence/status.env
+          exit 0
+
+      - name: Render viewport and runtime evidence
+        shell: bash
+        run: |
+          cat > evidence/viewport-evidence.mjs <<'NODE'
+          import { chromium } from '@playwright/test';
+          import fs from 'node:fs/promises';
+
+          const baseURL = 'http://127.0.0.1:4178';
+          const viewports = [
+            { width: 1440, height: 1000 },
+            { width: 768, height: 1024 },
+            { width: 430, height: 932 },
+            { width: 390, height: 844 },
+          ];
+          const results = [];
+
+          function ensure(condition, message) {
+            if (!condition) throw new Error(message);
+          }
+
+          async function metrics(page, stage) {
+            const value = await page.evaluate((stageName) => {
+              const html = document.documentElement;
+              const body = document.body;
+              const start = document.querySelector('.start-discovery');
+              const summary = document.querySelector('[data-testid="project-summary"]');
+              const blueprint = document.querySelector('[data-testid="project-blueprint"]');
+              const maxScrollWidth = Math.max(html.scrollWidth, body.scrollWidth);
+              const clientWidth = html.clientWidth;
+              return {
+                stage: stageName,
+                htmlDir: html.getAttribute('dir') ?? '',
+                computedDirection: start instanceof HTMLElement ? getComputedStyle(start).direction : '',
+                maxScrollWidth,
+                clientWidth,
+                overflowPixels: maxScrollWidth - clientWidth,
+                mainCount: document.querySelectorAll('main').length,
+                nestedMainCount: document.querySelectorAll('.start-discovery main').length,
+                positiveTabIndexCount: [...document.querySelectorAll('[tabindex]')].filter((node) => Number(node.getAttribute('tabindex')) > 0).length,
+                summaryTop: summary instanceof HTMLElement ? summary.getBoundingClientRect().top : null,
+                blueprintTop: blueprint instanceof HTMLElement ? blueprint.getBoundingClientRect().top : null,
+                domSummaryFirst: summary && blueprint ? Boolean(summary.compareDocumentPosition(blueprint) & Node.DOCUMENT_POSITION_FOLLOWING) : null,
+              };
+            }, stage);
+            ensure(value.computedDirection === 'rtl' || value.htmlDir === 'rtl', `${stage}: RTL not active`);
+            ensure(value.overflowPixels <= 1, `${stage}: horizontal overflow ${value.overflowPixels}px`);
+            ensure(value.nestedMainCount === 0, `${stage}: nested START main found`);
+            ensure(value.positiveTabIndexCount === 0, `${stage}: positive tabindex breaks normal keyboard order`);
+            return value;
+          }
+
+          async function openClean(page, path = '/start') {
+            await page.goto(`${baseURL}${path}`);
+            await page.evaluate(() => {
+              sessionStorage.removeItem('gs-start-frozen-product-v1');
+              sessionStorage.removeItem('gs-start-project-brief-v1');
+            });
+            await page.goto(`${baseURL}${path}`);
+            await page.locator('.start-discovery').waitFor({ state: 'visible' });
+            await page.evaluate(() => document.fonts.ready);
+          }
+
+          async function focusAndKeyboardEvidence(page) {
+            await openClean(page);
+            const radios = page.locator('[role="radio"]');
+            const first = radios.first();
+            await first.focus();
+            await first.press('ArrowDown');
+            const focused = page.locator('[role="radio"]:focus');
+            ensure(await focused.count() === 1, 'radio ArrowDown did not keep focus inside group');
+            ensure((await focused.getAttribute('aria-checked')) === 'true', 'radio ArrowDown did not select focused option');
+
+            await page.getByRole('radio', { name: /ساعدني على اكتشاف ما أحتاج/ }).click();
+            await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+            ensure(await page.locator('[data-testid="discover-focused-subtree"]').evaluate((el) => el === document.activeElement), 'entry → questions focus transfer failed');
+            await page.getByLabel('ما الذي تريد تغييره؟').fill('أريد تنظيم الحجز والمواعيد للعملاء');
+            await page.getByRole('button', { name: /^تابع/ }).click();
+            await page.getByLabel('من سيستخدم هذا الحل؟').fill('العملاء');
+            await page.getByRole('button', { name: /^تابع/ }).click();
+            await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('رحلة حجز أوضح');
+            await page.getByRole('button', { name: /^تابع/ }).click();
+            await page.getByLabel('ما السياق التشغيلي الذي يجب أن نعرفه؟').fill('خدمة بمواعيد');
+            await page.getByRole('button', { name: /ابنِ اتجاهًا أوليًا/ }).click();
+            ensure(await page.locator('[data-testid="discover-recommendation-state"]').evaluate((el) => el === document.activeElement), 'final question → recommendation focus transfer failed');
+
+            await openClean(page);
+            await page.getByRole('radio', { name: /أعرف تقريبًا نوع الحل/ }).click();
+            await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+            await page.locator('.sfp-family-focus-tabs').getByRole('button', { name: /الحجوزات والخدمات/ }).click();
+            await page.getByRole('button', { name: /اعتمد الحجوزات والخدمات كنقطة بداية/ }).click();
+            ensure(await page.locator('[data-testid="direction-entry-confirmation"]').evaluate((el) => el === document.activeElement), 'guided adoption → confirmation focus transfer failed');
+          }
+
+          async function reachPayment(page) {
+            await openClean(page, '/start?prefill=booking');
+            await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+            await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
+            await page.getByRole('heading', { name: 'هل تريد تحصيل مبلغ عند الحجز؟' }).waitFor();
+          }
+
+          async function finishBuild(page) {
+            while ((await page.locator('.start-discovery').getAttribute('data-stage')) === 'build') {
+              const radios = page.locator('.sfp-decision [role="radio"]');
+              if (await radios.count()) {
+                const checked = page.locator('.sfp-decision [role="radio"][aria-checked="true"]');
+                if (!(await checked.count())) await radios.first().click();
+              }
+              await page.getByRole('button', { name: /تابع في الرحلة|احفظ التكوين وتابع/ }).click();
+            }
+            await page.locator('.start-discovery[data-stage="review"]').waitFor();
+          }
+
+          const browser = await chromium.launch({ headless: true });
+          try {
+            const focusContext = await browser.newContext({ viewport: { width: 430, height: 932 } });
+            const focusPage = await focusContext.newPage();
+            await focusAndKeyboardEvidence(focusPage);
+            await focusPage.screenshot({ path: 'evidence/screenshots/focus-keyboard-430.png', fullPage: true });
+            await focusContext.close();
+
+            for (const viewport of viewports) {
+              const context = await browser.newContext({ viewport });
+              const page = await context.newPage();
+              const consoleErrors = [];
+              const pageErrors = [];
+              page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+              page.on('pageerror', (error) => pageErrors.push(String(error)));
+
+              await reachPayment(page);
+              ensure((await page.getByText('كوّن الحل حول طريقة الاستخدام والعمل.', { exact: true }).count()) >= 1, 'family-neutral Build copy missing');
+              const discoverOrBuildMetrics = await metrics(page, 'build-payment');
+              const budget = page.locator('[data-testid="project-pulse"]').getByText(/USD/);
+              const beforeBudget = (await budget.textContent()) ?? '';
+              await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
+              const consequence = page.locator('[data-testid="decision-consequence"]');
+              ensure((await consequence.textContent())?.includes('Payment Provider'), 'Payment Provider external dependency truth missing');
+              ensure((await consequence.textContent())?.includes('وحده لا يغيّر نطاق الميزانية التقريبي الحالي'), 'Payment budget disclaimer missing');
+              ensure(((await budget.textContent()) ?? '') === beforeBudget, 'Payment alone changed budget band');
+              await page.screenshot({ path: `evidence/screenshots/build-payment-${viewport.width}.png`, fullPage: true });
+
+              await finishBuild(page);
+              const reviewMetrics = await metrics(page, 'review');
+              ensure(reviewMetrics.mainCount === 1, 'public page should expose exactly one main landmark');
+              ensure(reviewMetrics.domSummaryFirst === true, 'Summary does not precede Blueprint in DOM');
+              ensure(reviewMetrics.summaryTop !== null && reviewMetrics.blueprintTop !== null && reviewMetrics.summaryTop <= reviewMetrics.blueprintTop, 'Summary does not precede Blueprint visually');
+              const summaryText = (await page.locator('[data-testid="project-summary"]').textContent()) ?? '';
+              ensure(summaryText.includes('Payment Provider'), 'Payment dependency missing from Review');
+              await page.screenshot({ path: `evidence/screenshots/review-${viewport.width}.png`, fullPage: true });
+
+              const postCompletionRequests = [];
+              const onRequest = (request) => postCompletionRequests.push(request.url());
+              page.on('request', onRequest);
+              await page.getByRole('button', { name: 'ابدأ المشروع بهذا المخطط' }).click();
+              page.off('request', onRequest);
+              await page.locator('[data-testid="project-brief-handoff"]').waitFor({ state: 'visible' });
+              ensure(postCompletionRequests.length === 0, `completion caused network requests: ${postCompletionRequests.join(', ')}`);
+              const payload = await page.evaluate(() => JSON.parse(sessionStorage.getItem('gs-start-project-brief-v1') ?? 'null'));
+              ensure(payload?.mode === 'LOCAL_PUBLIC_HANDOFF', 'handoff mode is not LOCAL_PUBLIC_HANDOFF');
+              ensure(Boolean(payload?.summary), 'handoff summary missing');
+              ensure(Boolean(payload?.draft), 'handoff draft missing');
+              ensure(Boolean(payload?.directionTruth), 'handoff directionTruth missing');
+              ensure(Boolean(payload?.provenance?.capabilitySelections), 'handoff provenance/capabilitySelections missing');
+              ensure(Array.isArray(payload?.explicitChannels?.selectedCapabilities), 'selectedCapabilities channel missing');
+              ensure(Array.isArray(payload?.explicitChannels?.optionalCapabilities), 'optionalCapabilities channel missing');
+              ensure(Array.isArray(payload?.explicitChannels?.uncertainCapabilities), 'uncertainCapabilities channel missing');
+              ensure(Array.isArray(payload?.explicitChannels?.dependencies), 'dependencies channel missing');
+              ensure(Array.isArray(payload?.explicitChannels?.unknowns), 'unknowns channel missing');
+              ensure(typeof payload?.explicitChannels?.existingSystems === 'string', 'existingSystems channel missing');
+              ensure(typeof payload?.explicitChannels?.integrations === 'string', 'integrations channel missing');
+              ensure(payload.explicitChannels.dependencies.includes('مزود دفع خارجي (Payment Provider)'), 'Payment dependency missing from completion payload');
+              const handoffMetrics = await metrics(page, 'handoff');
+              await page.screenshot({ path: `evidence/screenshots/handoff-${viewport.width}.png`, fullPage: true });
+
+              await page.reload();
+              await page.locator('[data-testid="project-brief-handoff"]').waitFor({ state: 'visible' });
+              const reloadMetrics = await metrics(page, 'handoff-reload');
+              ensure(consoleErrors.length === 0, `console errors: ${consoleErrors.join(' | ')}`);
+              ensure(pageErrors.length === 0, `page errors: ${pageErrors.join(' | ')}`);
+
+              results.push({ viewport, beforeBudget, consoleErrors, pageErrors, postCompletionRequests, metrics: [discoverOrBuildMetrics, reviewMetrics, handoffMetrics, reloadMetrics] });
+              await context.close();
+            }
+          } finally {
+            await browser.close();
+          }
+
+          await fs.writeFile('evidence/viewport-matrix.json', JSON.stringify(results, null, 2));
+          console.log(JSON.stringify(results, null, 2));
+          NODE
+
+          npm run dev -- --host 127.0.0.1 --port 4178 > evidence/viewport-vite.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4178/start >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "Viewport evidence server failed to become ready" | tee evidence/viewport-evidence.log
+            echo "VIEWPORT_EVIDENCE=1" >> evidence/status.env
+            exit 0
+          fi
+          set +e
+          node evidence/viewport-evidence.mjs 2>&1 | tee evidence/viewport-evidence.log
+          code=${PIPESTATUS[0]}
+          echo "VIEWPORT_EVIDENCE=$code" >> evidence/status.env
+          exit 0
+
+      - name: Summarize validation status
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "VALIDATION_STATUS_BEGIN"
+            cat evidence/status.env 2>/dev/null || true
+            echo "VALIDATION_STATUS_END"
+            echo "TARGET_SHA=$TARGET_SHA"
+            echo "BASE_SHA=$BASE_SHA"
+            echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
+          } | tee evidence/validation-summary.txt
+
+      - name: Upload exact-head validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gs-ipa-val-w01-start-r1-exact-head-evidence
+          path: |
+            evidence/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Fail workflow if required validation failed
+        if: always()
+        shell: bash
+        run: |
+          fail=0
+          while IFS='=' read -r key value; do
+            case "$key" in
+              GIT_DIFF_CHECK|GIT_DIFF_CHECK_BASE_HEAD|NPM_CI|LINT|TYPECHECK|BUILD|CHROMIUM_INSTALL|START_TARGETED_PLAYWRIGHT|PUBLIC_HANDOFF_PLAYWRIGHT|VIEWPORT_EVIDENCE)
+                if [ "${value:-1}" != "0" ]; then echo "$key failed with $value"; fail=1; fi
+                ;;
+            esac
+          done < evidence/status.env
+          exit "$fail"
