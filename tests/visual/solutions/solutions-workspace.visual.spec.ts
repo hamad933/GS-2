@@ -173,7 +173,7 @@ test('compare is bounded inside SOLUTIONS and preserves the central distinction'
   await expect(page.locator('.solutions-compare__visuals [data-asset-id="FAM-03-CMP-01"]')).toBeVisible();
   await expect(page.locator('.solutions-compare__visuals [data-asset-id="FAM-05-CMP-01"]')).toBeVisible();
   await expect(page.getByText('رحلة العميل إلى الخدمة والموعد')).toBeVisible();
-  await expect(page.getByText('عمل الفريق والطلبات والسجلات')).toBeVisible();
+  await expect(page.getByText('عمل الفريق والطلبات والسجلات', { exact: true })).toBeVisible();
   await expect(page.locator('.solutions-compare-row')).toHaveCount(5);
 });
 
