@@ -1,0 +1,181 @@
+import { chromium } from '@playwright/test';
+import fs from 'node:fs/promises';
+
+const baseURL = 'http://127.0.0.1:4178';
+const viewports = [
+  { width: 1440, height: 1000 },
+  { width: 768, height: 1024 },
+  { width: 430, height: 932 },
+  { width: 390, height: 844 },
+];
+const results = [];
+const ensure = (ok, message) => { if (!ok) throw new Error(message); };
+
+async function captureMetrics(page, stage) {
+  const m = await page.evaluate((stageName) => {
+    const html = document.documentElement;
+    const body = document.body;
+    const start = document.querySelector('.start-discovery');
+    const summary = document.querySelector('[data-testid="project-summary"]');
+    const blueprint = document.querySelector('[data-testid="project-blueprint"]');
+    const maxScrollWidth = Math.max(html.scrollWidth, body.scrollWidth);
+    return {
+      stage: stageName,
+      htmlDir: html.getAttribute('dir') ?? '',
+      computedDirection: start instanceof HTMLElement ? getComputedStyle(start).direction : '',
+      maxScrollWidth,
+      clientWidth: html.clientWidth,
+      overflowPixels: maxScrollWidth - html.clientWidth,
+      mainCount: document.querySelectorAll('main').length,
+      nestedMainCount: document.querySelectorAll('.start-discovery main').length,
+      positiveTabIndexCount: [...document.querySelectorAll('[tabindex]')].filter((node) => Number(node.getAttribute('tabindex')) > 0).length,
+      domSummaryFirst: summary && blueprint ? Boolean(summary.compareDocumentPosition(blueprint) & Node.DOCUMENT_POSITION_FOLLOWING) : null,
+      summaryTop: summary instanceof HTMLElement ? summary.getBoundingClientRect().top : null,
+      blueprintTop: blueprint instanceof HTMLElement ? blueprint.getBoundingClientRect().top : null,
+    };
+  }, stage);
+  ensure(m.computedDirection === 'rtl' || m.htmlDir === 'rtl', `${stage}: RTL not active`);
+  ensure(m.overflowPixels <= 1, `${stage}: horizontal overflow ${m.overflowPixels}px`);
+  ensure(m.nestedMainCount === 0, `${stage}: nested START main found`);
+  ensure(m.positiveTabIndexCount === 0, `${stage}: positive tabindex found`);
+  return m;
+}
+
+async function openClean(page, path = '/start') {
+  await page.goto(`${baseURL}${path}`);
+  await page.evaluate(() => {
+    sessionStorage.removeItem('gs-start-frozen-product-v1');
+    sessionStorage.removeItem('gs-start-project-brief-v1');
+  });
+  await page.goto(`${baseURL}${path}`);
+  await page.locator('.start-discovery').waitFor({ state: 'visible' });
+  await page.evaluate(() => document.fonts.ready);
+}
+
+async function validateFocusAndKeyboard(page) {
+  await openClean(page);
+  const first = page.locator('[role="radio"]').first();
+  await first.focus();
+  await first.press('ArrowDown');
+  const focusedRadio = page.locator('[role="radio"]:focus');
+  ensure(await focusedRadio.count() === 1, 'ArrowDown focus left radio group');
+  ensure((await focusedRadio.getAttribute('aria-checked')) === 'true', 'ArrowDown did not select focused radio');
+
+  await page.getByRole('radio', { name: /ساعدني على اكتشاف ما أحتاج/ }).click();
+  await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+  ensure(await page.locator('[data-testid="discover-focused-subtree"]').evaluate((el) => el === document.activeElement), 'entry → questions focus transfer failed');
+  await page.getByLabel('ما الذي تريد تغييره؟').fill('أريد تنظيم الحجز والمواعيد للعملاء');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('من سيستخدم هذا الحل؟').fill('العملاء');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('ما النتيجة التي تريد الوصول إليها؟').fill('رحلة حجز أوضح');
+  await page.getByRole('button', { name: /^تابع/ }).click();
+  await page.getByLabel('ما السياق التشغيلي الذي يجب أن نعرفه؟').fill('خدمة بمواعيد');
+  await page.getByRole('button', { name: /ابنِ اتجاهًا أوليًا/ }).click();
+  ensure(await page.locator('[data-testid="discover-recommendation-state"]').evaluate((el) => el === document.activeElement), 'final question → recommendation focus transfer failed');
+
+  await openClean(page);
+  await page.getByRole('radio', { name: /أعرف تقريبًا نوع الحل/ }).click();
+  await page.getByRole('button', { name: /ابدأ بهذا المدخل/ }).click();
+  await page.locator('.sfp-family-focus-tabs').getByRole('button', { name: /الحجوزات والخدمات/ }).click();
+  await page.getByRole('button', { name: /اعتمد الحجوزات والخدمات كنقطة بداية/ }).click();
+  ensure(await page.locator('[data-testid="direction-entry-confirmation"]').evaluate((el) => el === document.activeElement), 'guided adoption → confirmation focus transfer failed');
+}
+
+async function reachPayment(page) {
+  await openClean(page, '/start?prefill=booking');
+  await page.getByRole('button', { name: /اختر هذا الاتجاه/ }).click();
+  await page.getByRole('button', { name: /تابع في الرحلة/ }).click();
+  await page.getByRole('heading', { name: 'هل تريد تحصيل مبلغ عند الحجز؟' }).waitFor();
+}
+
+async function finishBuild(page) {
+  while ((await page.locator('.start-discovery').getAttribute('data-stage')) === 'build') {
+    const radios = page.locator('.sfp-decision [role="radio"]');
+    if (await radios.count()) {
+      const checked = page.locator('.sfp-decision [role="radio"][aria-checked="true"]');
+      if (!(await checked.count())) await radios.first().click();
+    }
+    await page.getByRole('button', { name: /تابع في الرحلة|احفظ التكوين وتابع/ }).click();
+  }
+  await page.locator('.start-discovery[data-stage="review"]').waitFor();
+}
+
+const browser = await chromium.launch({ headless: true });
+try {
+  const focusContext = await browser.newContext({ viewport: { width: 430, height: 932 } });
+  const focusPage = await focusContext.newPage();
+  await validateFocusAndKeyboard(focusPage);
+  await focusPage.screenshot({ path: 'evidence/screenshots/focus-keyboard-430.png', fullPage: true });
+  await focusContext.close();
+
+  for (const viewport of viewports) {
+    const context = await browser.newContext({ viewport });
+    const page = await context.newPage();
+    const consoleErrors = [];
+    const pageErrors = [];
+    page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+    page.on('pageerror', (error) => pageErrors.push(String(error)));
+
+    await reachPayment(page);
+    ensure(await page.getByRole('heading', { name: 'كوّن الحل حول طريقة الاستخدام والعمل.' }).count() === 1, 'family-neutral Build heading missing');
+    const buildMetrics = await captureMetrics(page, 'build-payment');
+    const budget = page.locator('[data-testid="project-pulse"]').getByText(/USD/);
+    const beforeBudget = (await budget.textContent()) ?? '';
+    await page.getByRole('radio', { name: /نعم، دفع أو عربون/ }).click();
+    const consequenceText = (await page.locator('[data-testid="decision-consequence"]').textContent()) ?? '';
+    ensure(consequenceText.includes('Payment Provider'), 'Payment Provider external dependency truth missing');
+    ensure(consequenceText.includes('وحده لا يغيّر نطاق الميزانية التقريبي الحالي'), 'Payment budget truth missing');
+    ensure(((await budget.textContent()) ?? '') === beforeBudget, 'Payment alone changed the configured budget band');
+    await page.screenshot({ path: `evidence/screenshots/build-payment-${viewport.width}.png`, fullPage: true });
+
+    await finishBuild(page);
+    const reviewMetrics = await captureMetrics(page, 'review');
+    ensure(reviewMetrics.mainCount === 1, 'public route does not have exactly one main landmark');
+    ensure(reviewMetrics.domSummaryFirst === true, 'Summary does not precede Blueprint semantically');
+    ensure(reviewMetrics.summaryTop !== null && reviewMetrics.blueprintTop !== null && reviewMetrics.summaryTop <= reviewMetrics.blueprintTop, 'Summary does not precede Blueprint visually');
+    const reviewText = (await page.locator('[data-testid="project-summary"]').textContent()) ?? '';
+    ensure(reviewText.includes('Payment Provider'), 'Payment dependency missing from Review');
+    await page.screenshot({ path: `evidence/screenshots/review-${viewport.width}.png`, fullPage: true });
+
+    const postCompletionRequests = [];
+    const captureRequest = (request) => postCompletionRequests.push(request.url());
+    page.on('request', captureRequest);
+    await page.getByRole('button', { name: 'ابدأ المشروع بهذا المخطط' }).click();
+    page.off('request', captureRequest);
+    await page.locator('[data-testid="project-brief-handoff"]').waitFor({ state: 'visible' });
+    ensure(postCompletionRequests.length === 0, `completion made network requests: ${postCompletionRequests.join(', ')}`);
+    const handoffText = (await page.locator('[data-testid="project-brief-handoff"]').textContent()) ?? '';
+    ensure(handoffText.includes('حُفظ هذا الموجز داخل جلسة المتصفح فقط'), 'truthful local-only handoff copy missing');
+    const payload = await page.evaluate(() => JSON.parse(sessionStorage.getItem('gs-start-project-brief-v1') ?? 'null'));
+    ensure(payload?.mode === 'LOCAL_PUBLIC_HANDOFF', 'mode is not LOCAL_PUBLIC_HANDOFF');
+    ensure(Boolean(payload?.summary), 'summary missing');
+    ensure(Boolean(payload?.draft), 'full draft missing');
+    ensure(Boolean(payload?.directionTruth), 'directionTruth missing');
+    ensure(Boolean(payload?.provenance?.capabilitySelections), 'provenance/capabilitySelections missing');
+    ensure(Array.isArray(payload?.explicitChannels?.selectedCapabilities), 'selectedCapabilities channel missing');
+    ensure(Array.isArray(payload?.explicitChannels?.optionalCapabilities), 'optionalCapabilities channel missing');
+    ensure(Array.isArray(payload?.explicitChannels?.uncertainCapabilities), 'uncertainCapabilities channel missing');
+    ensure(Array.isArray(payload?.explicitChannels?.dependencies), 'dependencies channel missing');
+    ensure(Array.isArray(payload?.explicitChannels?.unknowns), 'unknowns channel missing');
+    ensure(typeof payload?.explicitChannels?.existingSystems === 'string', 'existingSystems channel missing');
+    ensure(typeof payload?.explicitChannels?.integrations === 'string', 'integrations channel missing');
+    ensure(payload.explicitChannels.dependencies.includes('مزود دفع خارجي (Payment Provider)'), 'Payment dependency missing from completion payload');
+    const handoffMetrics = await captureMetrics(page, 'handoff');
+    await page.screenshot({ path: `evidence/screenshots/handoff-${viewport.width}.png`, fullPage: true });
+
+    await page.reload();
+    await page.locator('[data-testid="project-brief-handoff"]').waitFor({ state: 'visible' });
+    const reloadMetrics = await captureMetrics(page, 'handoff-reload');
+    ensure(consoleErrors.length === 0, `console errors: ${consoleErrors.join(' | ')}`);
+    ensure(pageErrors.length === 0, `page errors: ${pageErrors.join(' | ')}`);
+
+    results.push({ viewport, beforeBudget, consoleErrors, pageErrors, postCompletionRequests, metrics: [buildMetrics, reviewMetrics, handoffMetrics, reloadMetrics] });
+    await context.close();
+  }
+} finally {
+  await browser.close();
+}
+
+await fs.writeFile('evidence/viewport-matrix.json', JSON.stringify(results, null, 2));
+console.log(JSON.stringify(results, null, 2));
