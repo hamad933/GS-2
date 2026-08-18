@@ -1,0 +1,163 @@
+name: GS START exact-head visual evidence packaging
+
+on:
+  push:
+    branches:
+      - governance/gs-start-visual-evidence-artifact-r1
+
+permissions:
+  contents: read
+
+jobs:
+  package-existing-start-visual-evidence:
+    runs-on: ubuntu-latest
+    env:
+      PRODUCT_TARGET_SHA: d10cba74a7eb4103be4a2e285fff1c5732959043
+      PRODUCT_BASE_SHA: 19e9096d714cfaa0055cfa1ccc794ca26320a2c5
+      EVIDENCE_SOURCE_SHA: 9a12fb3bc2f9edd0dcff3a2c6f60a3501f3ef1f3
+      EVIDENCE_ROOT: validation-evidence/gs-ipa-val-w01-start-r1
+      SCREENSHOT_DIR: validation-evidence/gs-ipa-val-w01-start-r1/viewport-r2/screenshots
+      ARTIFACT_NAME: gs-start-exact-head-visual-evidence-d10cba74a7eb4103be4a2e285fff1c5732959043
+
+    steps:
+      - name: Checkout immutable existing evidence source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EVIDENCE_SOURCE_SHA }}
+          fetch-depth: 0
+
+      - name: Verify evidence binding and build packaging manifest
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          actual_sha="$(git rev-parse HEAD)"
+          if [[ "$actual_sha" != "$EVIDENCE_SOURCE_SHA" ]]; then
+            echo "Expected immutable evidence source $EVIDENCE_SOURCE_SHA, got $actual_sha" >&2
+            exit 1
+          fi
+
+          git merge-base --is-ancestor "$PRODUCT_TARGET_SHA" "$EVIDENCE_SOURCE_SHA"
+
+          root_checkout="$EVIDENCE_ROOT/checkout.txt"
+          core_checkout="$EVIDENCE_ROOT/core-r2/checkout.txt"
+          core_status="$EVIDENCE_ROOT/core-r2/status.env"
+          viewport_checkout="$EVIDENCE_ROOT/viewport-r2/checkout.txt"
+          viewport_status="$EVIDENCE_ROOT/viewport-r2/status.txt"
+          viewport_matrix="$EVIDENCE_ROOT/viewport-r2/viewport-matrix.json"
+
+          for required_file in \
+            "$root_checkout" \
+            "$core_checkout" \
+            "$core_status" \
+            "$viewport_checkout" \
+            "$viewport_status" \
+            "$viewport_matrix"; do
+            test -f "$required_file"
+          done
+
+          grep -Fxq "TARGET_SHA=$PRODUCT_TARGET_SHA" "$root_checkout"
+          grep -Fxq "BASE_SHA=$PRODUCT_BASE_SHA" "$root_checkout"
+          grep -Fxq "CHECKED_OUT_SHA=$PRODUCT_TARGET_SHA" "$root_checkout"
+
+          grep -Fxq "TARGET_SHA=$PRODUCT_TARGET_SHA" "$core_checkout"
+          grep -Fxq "BASE_SHA=$PRODUCT_BASE_SHA" "$core_checkout"
+          grep -Fxq "CHECKED_OUT_SHA=$PRODUCT_TARGET_SHA" "$core_checkout"
+
+          grep -Fxq "TARGET_SHA=$PRODUCT_TARGET_SHA" "$viewport_checkout"
+          grep -Fxq "CHECKED_OUT_SHA=$PRODUCT_TARGET_SHA" "$viewport_checkout"
+
+          if grep -Ev '^[A-Z0-9_]+=0$|^$' "$core_status" | grep -q .; then
+            echo "core-r2/status.env contains a non-zero or malformed status" >&2
+            exit 1
+          fi
+          grep -Fxq 'VIEWPORT_R2=0' "$viewport_status"
+
+          python3 - "$viewport_matrix" <<'PY'
+          import json
+          import sys
+
+          matrix_path = sys.argv[1]
+          with open(matrix_path, "r", encoding="utf-8") as handle:
+              matrix = json.load(handle)
+
+          widths = {entry.get("viewport", {}).get("width") for entry in matrix}
+          required_widths = {1440, 768, 430, 390}
+          missing = sorted(required_widths - widths)
+          if missing:
+              raise SystemExit(f"viewport-matrix missing required widths: {missing}")
+          PY
+
+          required_pngs=(
+            discover-1440.png
+            discover-768.png
+            discover-430.png
+            discover-390.png
+            build-payment-1440.png
+            build-payment-768.png
+            build-payment-430.png
+            build-payment-390.png
+            review-1440.png
+            review-768.png
+            review-430.png
+            review-390.png
+            handoff-1440.png
+            handoff-768.png
+            handoff-430.png
+            handoff-390.png
+            discover-recommendation-430.png
+            guided-confirmation-430.png
+          )
+
+          for png in "${required_pngs[@]}"; do
+            test -f "$SCREENSHOT_DIR/$png"
+          done
+
+          mapfile -d '' pngs < <(find "$SCREENSHOT_DIR" -type f -name '*.png' -print0 | sort -z)
+          if (( ${#pngs[@]} < ${#required_pngs[@]} )); then
+            echo "Expected at least ${#required_pngs[@]} PNG screenshots, found ${#pngs[@]}" >&2
+            exit 1
+          fi
+
+          manifest="$GITHUB_WORKSPACE/packaging-manifest.txt"
+          viewport_matrix_sha256="$(sha256sum "$viewport_matrix" | awk '{print $1}')"
+          viewport_status_sha256="$(sha256sum "$viewport_status" | awk '{print $1}')"
+          packaging_timestamp="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+          {
+            echo 'FORMAT=GS_START_EVIDENCE_PACKAGING_MANIFEST_V1'
+            echo "PRODUCT_TARGET_SHA=$PRODUCT_TARGET_SHA"
+            echo "PRODUCT_BASE_SHA=$PRODUCT_BASE_SHA"
+            echo "EVIDENCE_SOURCE_SHA=$EVIDENCE_SOURCE_SHA"
+            echo "WORKFLOW_SHA=$GITHUB_SHA"
+            echo "GITHUB_RUN_ID=$GITHUB_RUN_ID"
+            echo "GITHUB_RUN_ATTEMPT=$GITHUB_RUN_ATTEMPT"
+            echo "PACKAGING_TIMESTAMP_UTC=$packaging_timestamp"
+            echo "VIEWPORT_MATRIX_SHA256=$viewport_matrix_sha256"
+            echo "VIEWPORT_STATUS_SHA256=$viewport_status_sha256"
+            echo "SCREENSHOT_COUNT=${#pngs[@]}"
+            echo 'SCREENSHOTS_BEGIN'
+            printf 'FILENAME\tSIZE_BYTES\tSHA256\n'
+            for png in "${pngs[@]}"; do
+              filename="$(basename "$png")"
+              size_bytes="$(stat -c '%s' "$png")"
+              sha256="$(sha256sum "$png" | awk '{print $1}')"
+              printf '%s\t%s\t%s\n' "$filename" "$size_bytes" "$sha256"
+            done
+            echo 'SCREENSHOTS_END'
+          } > "$manifest"
+
+          echo "screenshot_count=${#pngs[@]}" >> "$GITHUB_OUTPUT"
+          echo "manifest_sha256=$(sha256sum "$manifest" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Upload frozen START visual evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: |
+            ${{ env.EVIDENCE_ROOT }}/
+            packaging-manifest.txt
+          if-no-files-found: error
+          compression-level: 0
