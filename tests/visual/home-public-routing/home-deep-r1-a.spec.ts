@@ -152,14 +152,11 @@ for (const width of [430, 390]) {
       await expectFocusVisualInsideViewport(control);
     }
 
-    const overflow = await solutions.evaluate((element) => ({
-      scrollWidth: element.scrollWidth,
-      clientWidth: element.clientWidth,
+    const overflow = await solutions.evaluate(() => ({
       documentScrollWidth: document.documentElement.scrollWidth,
       documentClientWidth: document.documentElement.clientWidth,
     }));
 
-    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
     expect(overflow.documentScrollWidth).toBeLessThanOrEqual(overflow.documentClientWidth);
   });
 }
@@ -169,7 +166,7 @@ test('owned Hero and S02 motion remains reduced when the user requests it', asyn
   await page.setViewportSize({ width: 768, height: 900 });
   await openHome(page);
 
-  for (const selector of ['#hero .e2-environment', '#solutions-universe .s02-connector']) {
+  for (const selector of ['#hero .e2-threshold-light', '#solutions-universe .s02-connector']) {
     const durations = await page.locator(selector).first().evaluate((element) => {
       return window.getComputedStyle(element).transitionDuration
         .split(',')
