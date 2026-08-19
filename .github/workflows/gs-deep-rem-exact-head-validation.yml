@@ -7,13 +7,47 @@ on:
     paths:
       - .github/workflows/gs-deep-rem-exact-head-validation.yml
   workflow_dispatch:
+  pull_request:
+    types: [synchronize]
+    branches:
+      - governance/gs-deep-review-w08-c-current-baseline
+    paths:
+      - .github/workflows/gs-deep-rem-exact-head-validation.yml
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
+  observe_push:
+    name: Observe matching push validation
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Locate SHA-matching push run
+        shell: bash
+        env:
+          OBSERVED_HEAD: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${OBSERVED_HEAD}&event=push&per_page=50"
+          for _ in $(seq 1 10); do
+            json="$(curl -fsSL               -H "Authorization: Bearer ${GH_TOKEN}"               -H "Accept: application/vnd.github+json"               "$api")"
+            match="$(printf '%s' "$json" | jq -r --arg sha "$OBSERVED_HEAD"               '.workflow_runs[] | select(.name == "GS Deep Rem Exact-Head Validation" and .head_sha == $sha and .event == "push") | [.id, .status, (.conclusion // "pending"), .head_sha, .html_url] | @tsv'               | head -n 1)"
+            if [[ -n "$match" ]]; then
+              echo "matching_push_run=$match"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Matching push validation run was not observed for ${OBSERVED_HEAD}" >&2
+          exit 1
+
   home_a:
     name: HOME-A exact 055a908
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -375,6 +409,7 @@ jobs:
 
   home_b:
     name: HOME-B exact 014422a
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -713,6 +748,7 @@ jobs:
 
   reference_projects:
     name: Reference Projects exact d8fdac6
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
