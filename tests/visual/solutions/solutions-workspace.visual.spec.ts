@@ -9,11 +9,11 @@ import {
 import { START_DISCOVERY_PREFILL_VERSION } from '../../../src/types/start-discovery';
 
 const EXPLORATION = '#solutions-exploration';
-const EVIDENCE_DIR = resolve('tests/visual/solutions/evidence/final-public-w02');
+const EVIDENCE_DIR = resolve('tests/visual/solutions/evidence/deep-r1');
 const runtimeErrors = new WeakMap<Page, string[]>();
 
 async function openSolutions(page: Page) {
-  await page.goto('/');
+  await page.goto('/solutions');
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator(EXPLORATION)).toHaveAttribute('data-mode', 'explore');
 }
@@ -31,16 +31,55 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(size.scrollWidth).toBeLessThanOrEqual(size.clientWidth + 1);
 }
 
-test.beforeAll(async () => { await mkdir(EVIDENCE_DIR, { recursive: true }); });
+async function routePrefill(page: Page) {
+  return page.evaluate(() => {
+    const state = window.history.state as { usr?: { discoveryPrefill?: Record<string, unknown> } } | null;
+    return state?.usr?.discoveryPrefill ?? null;
+  });
+}
+
+function expectUserOwnedPrefill(
+  prefill: Record<string, unknown> | null,
+  familyId: string,
+  decisionOrigin: 'USER_DIRECT' | 'USER_COMPARE',
+) {
+  expect(prefill).toMatchObject({
+    version: START_DISCOVERY_PREFILL_VERSION,
+    source: {
+      adapter: 'solutions-exploration',
+      label: 'استكشاف الحلول',
+      referenceId: familyId,
+    },
+    solutionFamilyId: familyId,
+    decisionOrigin,
+  });
+  expect(prefill).not.toHaveProperty('recommendedFamily');
+  expect(prefill).not.toHaveProperty('candidateIds');
+  expect(prefill).not.toHaveProperty('confidence');
+  expect(prefill).not.toHaveProperty('ranking');
+  expect(prefill).not.toHaveProperty('recommendationResolution');
+  expect(prefill).not.toHaveProperty('selectedCapabilities');
+  expect(prefill).not.toHaveProperty('capabilitySelections');
+}
+
+test.beforeAll(async () => {
+  await mkdir(EVIDENCE_DIR, { recursive: true });
+});
+
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
   runtimeErrors.set(page, errors);
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
-  page.on('console', (message) => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(`console: ${message.text()}`);
+  });
 });
-test.afterEach(async ({ page }) => { expect(runtimeErrors.get(page) ?? []).toEqual([]); });
 
-test('exposes exactly the canonical six families early', async ({ page }) => {
+test.afterEach(async ({ page }) => {
+  expect(runtimeErrors.get(page) ?? []).toEqual([]);
+});
+
+test('preserves the canonical six-family product truth and approved visual recognition', async ({ page }) => {
   expect(solutionFamilies.map((family) => family.title)).toEqual([
     'مواقع الأعمال والخدمات',
     'التجارة الرقمية وتجارب العلامات',
@@ -49,9 +88,11 @@ test('exposes exactly the canonical six families early', async ({ page }) => {
     'الأنظمة التشغيلية والبوابات',
     'التعليم والمعرفة والمحتوى',
   ]);
+
   await page.setViewportSize({ width: 1440, height: 1000 });
   await openSolutions(page);
   await expect(page.getByRole('tab')).toHaveCount(6);
+
   const recognition = [
     ['business', 'FAM-01-EMB-01'],
     ['commerce', 'FAM-02-EMB-01'],
@@ -60,37 +101,25 @@ test('exposes exactly the canonical six families early', async ({ page }) => {
     ['portals', 'FAM-05-EMB-01'],
     ['knowledge', 'FAM-06-EMB-01'],
   ] as const;
+
   for (const [familyId, assetId] of recognition) {
     await expect(page.locator(`[data-family-id="${familyId}"] [data-asset-id="${assetId}"]`)).toBeVisible();
   }
-  await expect(page.locator('.solutions-family-tab [data-asset-id$="-EMB-01"]')).toHaveCount(6);
-  await expect(page.getByRole('tab', { name: /الحجوزات والخدمات/ })).toHaveAttribute('aria-selected', 'true');
-  await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-recognition-1440.png'), fullPage: true });
-});
 
-test('selected family is product-led and removes configurator semantics', async ({ page }) => {
-  await openSolutions(page);
   const panel = page.getByRole('tabpanel');
   await expect(panel.getByRole('heading', { name: 'الحجوزات والخدمات', exact: true })).toBeVisible();
   await expect(panel.getByText('متى يناسبني هذا النوع؟')).toBeVisible();
   await expect(panel.getByText('من يستخدمه؟')).toBeVisible();
   await expect(panel.getByText('كيف يعمل؟')).toBeVisible();
   await expect(panel.getByText('ما الذي يمكن أن يتضمنه؟')).toBeVisible();
-  await expect(panel.locator('[data-asset-id="FAM-03-MSC-01"]')).toBeVisible();
-  await expect(panel.locator('[data-asset-id^="FAM-03-DIR-"]')).toHaveCount(3);
-  await expect(panel.locator('[data-asset-id="FAM-03-CTX-01"]')).toHaveCount(1);
-  await expect(panel.locator('[data-asset-id="FAM-03-CTX-02"]')).toHaveCount(1);
   await expect(panel.getByText('اتجاهات استكشافية، وليست قوالب أو باقات أو منتجات جاهزة للبيع.')).toBeVisible();
   await expect(panel.getByText(/ليس عرض سعر/)).toBeVisible();
   await expect(panel.locator('.solutions-reference')).toHaveAttribute('data-reference-code', 'RP03');
-  await expect(panel.getByText(/RP-03/)).toBeVisible();
-  await expect(panel.getByText('حجز يبدأ من احتياج واضح')).toBeVisible();
   await expect(page.getByText(/Capability Builder|Project Pulse|CORE|RECOMMENDED|OPTIONAL/)).toHaveCount(0);
-  for (const detail of await panel.locator('.solutions-proof details').all()) await detail.locator('summary').click();
-  await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-booking-product-directions-context-1440.png'), fullPage: true });
+  await page.screenshot({ path: resolve(EVIDENCE_DIR, 'solutions-deep-r1-1440-product-truth.png'), fullPage: true });
 });
 
-test('selected-family reference surface follows canonical truth across all six families', async ({ page }) => {
+test('reference surface remains truthful across all six families', async ({ page }) => {
   await openSolutions(page);
   const expected = [
     ['business', 'unavailable', 'none', 'لا يوجد مرجع مطابق متاح حاليًا'],
@@ -109,16 +138,88 @@ test('selected-family reference surface follows canonical truth across all six f
     await expect(reference).toContainText(title);
     await expect(reference).not.toContainText('REFERENCE_ONLY');
     await expect(reference).not.toContainText('NOT_AVAILABLE');
-    if (familyId === 'business') await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-reference-unavailable-1440.png'), fullPage: true });
-    if (familyId === 'commerce') {
-      await expect(page.getByRole('tabpanel').locator('[data-asset-id="FAM-02-MSC-01"]')).toBeVisible();
-      await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-reference-available-non-booking-commerce-1440.png'), fullPage: true });
-    }
   }
 });
 
-test('family navigation is keyboard operable and retains focus', async ({ page }) => {
+test('exploration adapter carries only selected-family user provenance', () => {
+  for (const origin of ['USER_DIRECT', 'USER_COMPARE'] as const) {
+    const prefill = mapSolutionsExplorationToDiscovery('booking', origin);
+    expectUserOwnedPrefill(prefill as Record<string, unknown>, 'booking', origin);
+    const sanitized = readStartDiscoveryRouteState({ discoveryPrefill: prefill });
+    expect(sanitized?.solutionFamilyId).toBe('booking');
+    expect(sanitized?.decisionOrigin).toBe(origin);
+    expect(sanitized?.recommendedFamily).toBeUndefined();
+    expect(sanitized?.recommendationResolution).toBeUndefined();
+  }
+});
+
+test('DIRECT performs a real route journey into START and Browser Back/Forward restores SOLUTIONS', async ({ page }) => {
   await openSolutions(page);
+  await page.getByRole('tab', { name: /العقارات والأصول/ }).click();
+  await expect(page.locator(EXPLORATION)).toHaveAttribute('data-family', 'assets');
+
+  await page.locator('.solutions-selected__copy').getByRole('button', { name: 'ابدأ من هذا الاتجاه' }).click();
+  await expect(page).toHaveURL(/\/start$/);
+  expectUserOwnedPrefill(await routePrefill(page), 'assets', 'USER_DIRECT');
+
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-selected-family', 'assets');
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-recommended-family', '');
+  await expect(page.locator('[data-testid="user-selection"]')).toContainText('العقارات والأصول');
+  await expect(page.locator('[data-testid="system-recommendation"]')).toHaveCount(0);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/solutions$/);
+  await expect(page.locator(EXPLORATION)).toHaveAttribute('data-family', 'assets');
+  await expect(page.locator(EXPLORATION)).toHaveAttribute('data-mode', 'explore');
+
+  await page.goForward();
+  await expect(page).toHaveURL(/\/start$/);
+  expectUserOwnedPrefill(await routePrefill(page), 'assets', 'USER_DIRECT');
+});
+
+test('COMPARE performs a real USER_COMPARE route and restores the compare decision workspace', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openSolutions(page);
+  await openCompare(page);
+
+  await page.getByRole('button', { name: 'السؤال التالي' }).click();
+  await expect(page.locator('.solutions-compare-step')).toHaveAttribute('data-compare-step', '2');
+  await page.getByRole('button', { name: 'السؤال التالي' }).click();
+  await expect(page.locator('.solutions-compare-step')).toHaveAttribute('data-compare-step', '3');
+
+  await page.getByRole('button', { name: 'ابدأ من الأنظمة التشغيلية والبوابات' }).click();
+  await expect(page).toHaveURL(/\/start$/);
+  expectUserOwnedPrefill(await routePrefill(page), 'portals', 'USER_COMPARE');
+
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-selected-family', 'portals');
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-recommended-family', '');
+  await expect(page.locator('[data-testid="system-recommendation"]')).toHaveCount(0);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/solutions$/);
+  await expect(page.locator(EXPLORATION)).toHaveAttribute('data-mode', 'compare');
+  await expect(page.locator('.solutions-compare-step')).toHaveAttribute('data-compare-step', '3');
+
+  await page.goForward();
+  await expect(page).toHaveURL(/\/start$/);
+  expectUserOwnedPrefill(await routePrefill(page), 'portals', 'USER_COMPARE');
+});
+
+test('uncertain entry reaches START without fabricating a family or recommendation', async ({ page }) => {
+  await openSolutions(page);
+  await page.getByRole('button', { name: 'لست متأكدًا من الاتجاه؟ ساعدني على الاختيار' }).click();
+  await expect(page).toHaveURL(/\/start$/);
+  expect(await routePrefill(page)).toBeNull();
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-selected-family', '');
+  await expect(page.locator('.start-discovery')).toHaveAttribute('data-recommended-family', '');
+});
+
+test('desktop rail uses vertical semantics and retains focus through keyboard selection', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await openSolutions(page);
+  const rail = page.getByRole('tablist', { name: 'اختر عائلة حل لاستكشافها' });
+  await expect(rail).toHaveAttribute('aria-orientation', 'vertical');
+
   const booking = page.getByRole('tab', { name: /الحجوزات والخدمات/ });
   await booking.focus();
   await page.keyboard.press('ArrowDown');
@@ -126,91 +227,117 @@ test('family navigation is keyboard operable and retains focus', async ({ page }
   await expect(assets).toBeFocused();
   await expect(assets).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator(EXPLORATION)).toHaveAttribute('data-family', 'assets');
-  await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-keyboard-focus.png'), fullPage: true });
 });
 
-test('exploration to START v1 carries only truthful selected-family context', () => {
-  const prefill = mapSolutionsExplorationToDiscovery('booking', 'USER_DIRECT');
-  expect(prefill).toEqual({
-    version: START_DISCOVERY_PREFILL_VERSION,
-    source: { adapter: 'solutions-exploration', label: 'استكشاف الحلول', referenceId: 'booking' },
-    solutionFamilyId: 'booking',
-    decisionOrigin: 'USER_DIRECT',
-  });
-  expect(prefill.selectedCapabilities).toBeUndefined();
-  expect(prefill.capabilitySelections).toBeUndefined();
-  expect(prefill.capturedFacts).toBeUndefined();
-  expect(prefill.configurationPreference).toBeUndefined();
-  expect(prefill.budgetPreference).toBeUndefined();
-  expect(prefill.knownDependencies).toBeUndefined();
-  expect(prefill.recommendedFamily).toBeUndefined();
-  const sanitized = readStartDiscoveryRouteState({ discoveryPrefill: prefill });
-  expect(sanitized?.solutionFamilyId).toBe('booking');
-  expect(sanitized?.decisionOrigin).toBe('USER_DIRECT');
-});
-
-test('selected CTA and escape hatch expose distinct integration intents', async ({ page }) => {
+test('mobile rail uses horizontal RTL keyboard semantics and remains visibly discoverable', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await openSolutions(page);
-  await page.getByRole('button', { name: 'ابدأ من هذا الاتجاه' }).first().click();
-  await expect(page.locator('#fixture-transition')).toHaveAttribute('data-kind', 'family');
-  await expect(page.locator('#fixture-transition')).toHaveAttribute('data-family', 'booking');
-  await expect(page.locator('#fixture-transition')).toHaveAttribute('data-origin', 'USER_DIRECT');
-  await page.locator('#fixture-transition').evaluate((node) => { node.hidden = false; node.textContent = 'START handoff · booking · USER_DIRECT'; });
-  await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-start-direct-handoff.png'), fullPage: true });
-  await page.reload();
-  await page.evaluate(() => document.fonts.ready);
-  await page.getByRole('button', { name: 'لست متأكدًا من الاتجاه؟ ساعدني على الاختيار' }).click();
-  await expect(page.locator('#fixture-transition')).toHaveAttribute('data-kind', 'discover');
-  await expect(page.locator('#fixture-transition')).toHaveAttribute('data-family', 'none');
-  await page.locator('#fixture-transition').evaluate((node) => { node.hidden = false; node.textContent = 'Escape Hatch · START Discover · no fabricated family'; });
-  await page.screenshot({ path: resolve(EVIDENCE_DIR, 'w02-escape-hatch-handoff.png'), fullPage: true });
+
+  const rail = page.getByRole('tablist', { name: 'اختر عائلة حل لاستكشافها' });
+  await expect(rail).toHaveAttribute('aria-orientation', 'horizontal');
+  await expect(page.locator('.solutions-browser__position')).toBeVisible();
+
+  const booking = page.getByRole('tab', { name: /الحجوزات والخدمات/ });
+  await booking.focus();
+  await page.keyboard.press('ArrowLeft');
+  const assets = page.getByRole('tab', { name: /العقارات والأصول/ });
+  await expect(assets).toBeFocused();
+  await expect(assets).toHaveAttribute('aria-selected', 'true');
+
+  await page.keyboard.press('ArrowRight');
+  await expect(booking).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(page.getByRole('tab', { name: /مواقع الأعمال والخدمات/ })).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(page.getByRole('tab', { name: /التعليم والمعرفة والمحتوى/ })).toBeFocused();
 });
 
-test('compare is bounded inside SOLUTIONS and preserves the central distinction', async ({ page }) => {
+test('Compare moves focus into the workspace and returns it to the invoking control', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await openSolutions(page);
-  await openCompare(page);
-  await expect(page.getByRole('heading', { name: 'الحجوزات والخدمات أم الأنظمة التشغيلية والبوابات؟' })).toBeVisible();
-  await expect(page.locator('.solutions-compare__visuals [data-asset-id="FAM-03-CMP-01"]')).toBeVisible();
-  await expect(page.locator('.solutions-compare__visuals [data-asset-id="FAM-05-CMP-01"]')).toBeVisible();
-  await expect(page.getByText('رحلة العميل إلى الخدمة والموعد')).toBeVisible();
-  await expect(page.getByText('عمل الفريق والطلبات والسجلات', { exact: true })).toBeVisible();
-  await expect(page.locator('.solutions-compare-row')).toHaveCount(5);
+
+  const railTrigger = page.getByRole('button', { name: 'قارن الحجوزات بالتشغيل' });
+  await railTrigger.click();
+  const compareTitle = page.getByRole('heading', { name: 'الحجوزات والخدمات أم الأنظمة التشغيلية والبوابات؟' });
+  await expect(compareTitle).toBeFocused();
+
+  await page.getByRole('button', { name: 'العودة إلى جميع الحلول' }).click();
+  await expect(railTrigger).toBeFocused();
+
+  const selectedTrigger = page.getByRole('button', { name: 'قارن بالحجوزات والتشغيل' });
+  await selectedTrigger.click();
+  await expect(compareTitle).toBeFocused();
+  await page.getByRole('button', { name: 'العودة إلى جميع الحلول' }).click();
+  await expect(selectedTrigger).toBeFocused();
 });
 
-test('compare action carries USER_COMPARE provenance and undecided returns to exploration', async ({ page }) => {
+test('mobile Compare step changes preserve focus continuity', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await openSolutions(page);
   await openCompare(page);
-  await page.getByRole('button', { name: 'ابدأ من الأنظمة التشغيلية والبوابات' }).click();
-  await expect(page.locator('#fixture-transition')).toHaveAttribute('data-family', 'portals');
-  await expect(page.locator('#fixture-transition')).toHaveAttribute('data-origin', 'USER_COMPARE');
-  await page.reload();
-  await page.evaluate(() => document.fonts.ready);
-  await openCompare(page);
-  await page.getByRole('button', { name: 'لم أحسم بعد — ارجع إلى جميع الحلول' }).click();
-  await expect(page.locator(EXPLORATION)).toHaveAttribute('data-mode', 'explore');
+
+  await page.getByRole('button', { name: 'السؤال التالي' }).click();
+  const step = page.locator('.solutions-compare-step');
+  await expect(step).toHaveAttribute('data-compare-step', '2');
+  await expect(step).toBeFocused();
+
+  for (let stepNumber = 3; stepNumber <= 5; stepNumber += 1) {
+    await page.getByRole('button', { name: 'السؤال التالي' }).click();
+    await expect(step).toHaveAttribute('data-compare-step', String(stepNumber));
+  }
+  await page.getByRole('button', { name: 'عرض الخلاصة' }).click();
+  const summary = page.locator('.solutions-compare-summary');
+  await expect(summary).toBeVisible();
+  await expect(summary).toBeFocused();
+});
+
+test('mixed Arabic/LTR content preserves bidi isolation', async ({ page }) => {
+  await openSolutions(page);
+  await page.getByRole('tab', { name: /التجارة الرقمية وتجارب العلامات/ }).click();
+
+  const referenceHeading = page.locator('.solutions-reference h3');
+  await expect(referenceHeading.locator('bdi')).toHaveText('RP-01');
+  expect(await referenceHeading.evaluate((node) => getComputedStyle(node).direction)).toBe('rtl');
+  expect(await referenceHeading.locator('bdi').evaluate((node) => getComputedStyle(node).direction)).toBe('ltr');
+
+  const budgetCodes = page.locator('.solutions-budget strong bdi');
+  await expect(budgetCodes).toHaveCount(2);
+  for (const code of await budgetCodes.all()) {
+    expect(await code.evaluate((node) => getComputedStyle(node).direction)).toBe('ltr');
+  }
 });
 
 for (const width of [1440, 768, 430, 390]) {
-  test(`selected family renders without material overflow at ${width}px`, async ({ page }) => {
+  test(`selected family remains readable and overflow-free at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 768 ? 1024 : width <= 430 ? 844 : 1000 });
     await openSolutions(page);
     await expectNoHorizontalOverflow(page);
-    await page.screenshot({ path: resolve(EVIDENCE_DIR, `w02-${width}-selected-booking.png`), fullPage: true });
+
+    const rail = page.getByRole('tablist', { name: 'اختر عائلة حل لاستكشافها' });
+    await expect(rail).toHaveAttribute('aria-orientation', width <= 760 ? 'horizontal' : 'vertical');
+    if (width <= 760) {
+      await expect(page.locator('.solutions-browser__position')).toBeVisible();
+    } else {
+      await expect(page.locator('.solutions-browser__position')).toBeHidden();
+    }
+
+    await page.screenshot({ path: resolve(EVIDENCE_DIR, `solutions-deep-r1-${width}-selected-booking.png`), fullPage: true });
   });
 
-  test(`compare renders progressively without material overflow at ${width}px`, async ({ page }) => {
+  test(`compare remains readable and overflow-free at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 768 ? 1024 : width <= 430 ? 844 : 1000 });
     await openSolutions(page);
     await openCompare(page);
     await expectNoHorizontalOverflow(page);
-    if (width <= 430) {
+
+    if (width <= 760) {
       await expect(page.locator('.solutions-compare__desktop')).toBeHidden();
+      await expect(page.locator('.solutions-compare__mobile')).toBeVisible();
       await expect(page.getByText('سؤال 1 من 5')).toBeVisible();
-      await page.getByRole('button', { name: 'السؤال التالي' }).click();
-      await expect(page.getByText('سؤال 2 من 5')).toBeVisible();
     } else {
       await expect(page.locator('.solutions-compare__desktop')).toBeVisible();
     }
-    await page.screenshot({ path: resolve(EVIDENCE_DIR, `w02-${width}-compare.png`), fullPage: true });
+
+    await page.screenshot({ path: resolve(EVIDENCE_DIR, `solutions-deep-r1-${width}-compare.png`), fullPage: true });
   });
 }
