@@ -100,16 +100,89 @@ for (const width of [430, 390]) {
     await expectFontAtLeast(proof.locator('.reference-proof-v2__selector-family').first(), 11.5);
 
     const gateway = page.locator('#project-gateway');
+    const gatewayHeading = gateway.locator('#gateway-title');
+    const gatewayIntro = gateway.locator('.gateway-intro');
+    const gatewayActions = gateway.locator('.gateway-actions');
     const gatewayPrimary = gateway.locator('.gateway-cta--primary');
+    const gatewaySecondary = gateway.locator('.gateway-cta--secondary');
+    const gatewayPrivacy = gateway.locator('.gateway-privacy');
+    const gatewayContinuity = gateway.locator('.gateway-continuity');
+
+    await expect(gatewayHeading).toBeVisible();
+    await expect(gatewayIntro).toBeVisible();
     await expect(gatewayPrimary).toBeVisible();
-    const [gatewayBox, gatewayPrimaryBox] = await Promise.all([
+    await expect(gatewaySecondary).toBeVisible();
+    await expect(gatewayPrivacy).toBeVisible();
+    await expect(gatewayContinuity).toBeVisible();
+
+    const gatewayCtas = gatewayActions.locator('.gateway-cta');
+    await expect(gatewayCtas).toHaveCount(2);
+    await expect(gatewayCtas.nth(0)).toHaveClass(/gateway-cta--primary/);
+    await expect(gatewayCtas.nth(1)).toHaveClass(/gateway-cta--secondary/);
+
+    const [
+      gatewayBox,
+      headingBox,
+      introBox,
+      actionsBox,
+      gatewayPrimaryBox,
+      gatewaySecondaryBox,
+      privacyBox,
+      continuityBox,
+    ] = await Promise.all([
       gateway.boundingBox(),
+      gatewayHeading.boundingBox(),
+      gatewayIntro.boundingBox(),
+      gatewayActions.boundingBox(),
       gatewayPrimary.boundingBox(),
+      gatewaySecondary.boundingBox(),
+      gatewayPrivacy.boundingBox(),
+      gatewayContinuity.boundingBox(),
     ]);
+
     expect(gatewayBox).not.toBeNull();
+    expect(headingBox).not.toBeNull();
+    expect(introBox).not.toBeNull();
+    expect(actionsBox).not.toBeNull();
     expect(gatewayPrimaryBox).not.toBeNull();
-    expect(gatewayBox?.height ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(770);
-    expect(((gatewayPrimaryBox?.y ?? 0) - (gatewayBox?.y ?? 0)) / (gatewayBox?.height ?? 1)).toBeLessThan(0.68);
+    expect(gatewaySecondaryBox).not.toBeNull();
+    expect(privacyBox).not.toBeNull();
+    expect(continuityBox).not.toBeNull();
+
+    if (
+      !gatewayBox || !headingBox || !introBox || !actionsBox || !gatewayPrimaryBox
+      || !gatewaySecondaryBox || !privacyBox || !continuityBox
+    ) {
+      throw new Error('Gateway mobile composition boxes must be measurable');
+    }
+
+    expect(gatewayBox.height).toBeLessThanOrEqual(770);
+
+    const rootFontSize = await page.evaluate(() => Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize));
+    const actionMarginBlockStart = await gatewayActions.evaluate((element) => (
+      Number.parseFloat(window.getComputedStyle(element).marginBlockStart)
+    ));
+    const narrativeToActionsGap = actionsBox.y - (introBox.y + introBox.height);
+
+    expect(actionMarginBlockStart).toBeLessThanOrEqual(rootFontSize * 1.5);
+    expect(narrativeToActionsGap).toBeGreaterThanOrEqual(-1);
+    expect(narrativeToActionsGap).toBeLessThanOrEqual(actionMarginBlockStart + 2);
+
+    expect(introBox.y + introBox.height).toBeLessThanOrEqual(actionsBox.y + 1);
+    expect(actionsBox.y + actionsBox.height).toBeLessThanOrEqual(privacyBox.y + 1);
+    expect(actionsBox.y + actionsBox.height).toBeLessThanOrEqual(continuityBox.y + 1);
+    expect(gatewayPrimaryBox.y).toBeLessThan(gatewaySecondaryBox.y);
+
+    const gatewayRight = gatewayBox.x + gatewayBox.width;
+    const gatewayBottom = gatewayBox.y + gatewayBox.height;
+    for (const box of [headingBox, introBox, actionsBox, gatewayPrimaryBox, gatewaySecondaryBox, privacyBox, continuityBox]) {
+      expect(box.x).toBeGreaterThanOrEqual(gatewayBox.x - 1);
+      expect(box.y).toBeGreaterThanOrEqual(gatewayBox.y - 1);
+      expect(box.x + box.width).toBeLessThanOrEqual(gatewayRight + 1);
+      expect(box.y + box.height).toBeLessThanOrEqual(gatewayBottom + 1);
+      expect(box.x).toBeGreaterThanOrEqual(-1);
+      expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
+    }
 
     const footer = page.locator('.gs-footer');
     await expect(footer.getByRole('link', { name: 'ابدأ اختيارك', exact: true })).toHaveCount(1);
