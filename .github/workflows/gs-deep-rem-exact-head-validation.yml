@@ -55,23 +55,23 @@ jobs:
       matrix:
         include:
           - key: home-a
-            label: HOME-A exact 055a908
-            candidate_sha: 055a908af7720373f086c889fc93d75c2b7c8568
+            label: W12-R2 HOME-A exact 06a4697
+            candidate_sha: 06a46970798ac0cfdc220d24b0a8b260d97ca524
             parent_sha: 5acba33a23c3424dbdfbfd5ef8bc94a6f7fe494a
-            evidence_dir: /tmp/gs-w12-home-a
-            artifact_prefix: gs-w12-home-a
+            evidence_dir: /tmp/gs-w12-r2-home-a
+            artifact_prefix: gs-w12-r2-home-a
           - key: home-b
-            label: HOME-B exact 014422a
-            candidate_sha: 014422a8939270115a5474c4c3e423a39bc51047
+            label: W12-R2 HOME-B exact c07a3e9
+            candidate_sha: c07a3e9515bbd7e522f239f1bc010b1aa505e5e0
             parent_sha: 5acba33a23c3424dbdfbfd5ef8bc94a6f7fe494a
-            evidence_dir: /tmp/gs-w12-home-b
-            artifact_prefix: gs-w12-home-b
+            evidence_dir: /tmp/gs-w12-r2-home-b
+            artifact_prefix: gs-w12-r2-home-b
           - key: rp
-            label: Reference Projects exact d8fdac6
-            candidate_sha: d8fdac6fc032cd8ad77482247ecce9bcd4f30a3a
+            label: W12-R2 Reference Projects exact f6dbbef
+            candidate_sha: f6dbbef27de687a462866df8faedaeeb12d97955
             parent_sha: bef381bcebde8199f263e1be465c5b0010058f5d
-            evidence_dir: /tmp/gs-w12-rp
-            artifact_prefix: gs-w12-reference-projects
+            evidence_dir: /tmp/gs-w12-r2-rp
+            artifact_prefix: gs-w12-r2-reference-projects
     env:
       CANDIDATE_KEY: ${{ matrix.key }}
       CANDIDATE_SHA: ${{ matrix.candidate_sha }}
@@ -99,6 +99,7 @@ jobs:
             echo "project_id=GS"
             echo "classification=REFERENCE_ONLY"
             echo "workstream=GS-GOV-W12-DEEP-REM-EXACT-HEAD-VALIDATION-R1"
+            echo "follow_on=W12-R2"
             echo "candidate_key=$CANDIDATE_KEY"
             echo "candidate_sha=$CANDIDATE_SHA"
             echo "parent_sha=$PARENT_SHA"
@@ -106,6 +107,7 @@ jobs:
             echo "run_id=$GITHUB_RUN_ID"
             echo "job_key=$GITHUB_JOB"
             echo "viewports=1440,768,430,390"
+            echo "home_candidates_combined=NEVER"
           } | tee "$EVIDENCE_DIR/identity.txt"
 
           test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
@@ -121,6 +123,7 @@ jobs:
           src/components/hero/LivingSystemHero.tsx
           src/components/sections/SolutionsUniverse.tsx
           tests/visual/home-public-routing/home-deep-r1-a.spec.ts
+          tests/visual/home-public-routing/home-public-routing.spec.ts
           EOF
               ;;
             home-b)
@@ -134,6 +137,7 @@ jobs:
               ;;
             rp)
               cat > "$EVIDENCE_DIR/expected-paths.txt" <<'EOF'
+          src/data/reference-projects/referenceProjects.ts
           src/features/reference-projects/ReferenceProjectsBody.tsx
           tests/visual/reference-projects/reference-projects.visual.spec.ts
           EOF
@@ -146,6 +150,13 @@ jobs:
           diff -u "$EVIDENCE_DIR/expected-paths.txt" "$EVIDENCE_DIR/actual-paths.txt" | tee "$EVIDENCE_DIR/path-boundary.diff"
           git diff --stat "$PARENT_SHA...$CANDIDATE_SHA" | tee "$EVIDENCE_DIR/diff-stat.txt"
           git diff --check "$PARENT_SHA...$CANDIDATE_SHA" 2>&1 | tee "$EVIDENCE_DIR/logs/git-diff-check.log"
+
+          if [[ "$CANDIDATE_KEY" == "rp" ]]; then
+            grep -Fq 'لا تتوفر حاليًا لقطات موثقة يمكن عرضها كدليل.' src/data/reference-projects/referenceProjects.ts
+            grep -Fq 'No verified product captures are currently available to present as proof.' src/data/reference-projects/referenceProjects.ts
+            if grep -Fq 'لا توجد في هذا المستودع لقطات موثقة يمكن عرضها كدليل.' src/data/reference-projects/referenceProjects.ts; then exit 1; fi
+            if grep -Fq 'This repository contains no authoritative product captures that can be shown as proof.' src/data/reference-projects/referenceProjects.ts; then exit 1; fi
+          fi
 
       - name: Set up Node 20
         id: node
@@ -162,6 +173,19 @@ jobs:
         run: |
           set -o pipefail
           npm ci 2>&1 | tee "$EVIDENCE_DIR/logs/npm-ci.log"
+
+      - name: Record dependency-security signal without remediation
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f "$EVIDENCE_DIR/logs/npm-ci.log" ]] && grep -Eqi 'vulnerabilit|npm audit' "$EVIDENCE_DIR/logs/npm-ci.log"; then
+            echo 'dependency_security_signal=REPORTED_BY_NPM_CI' | tee "$EVIDENCE_DIR/dependency-security-signal.txt"
+            grep -Ei 'vulnerabilit|npm audit' "$EVIDENCE_DIR/logs/npm-ci.log" | tail -n 20 >> "$EVIDENCE_DIR/dependency-security-signal.txt" || true
+          else
+            echo 'dependency_security_signal=NOT_REPORTED_BY_NPM_CI_OUTPUT' | tee "$EVIDENCE_DIR/dependency-security-signal.txt"
+          fi
+          echo 'dependency_remediation=OUT_OF_SCOPE_NOT_PERFORMED' >> "$EVIDENCE_DIR/dependency-security-signal.txt"
 
       - name: Lint
         id: lint
@@ -260,7 +284,7 @@ jobs:
           done
           test "$ready" -eq 1
 
-          cat > "$RUNNER_TEMP/gs-w12-capture.cjs" <<'NODE'
+          cat > "$RUNNER_TEMP/gs-w12-r2-capture.cjs" <<'NODE'
           const { chromium } = require('@playwright/test');
           const fs = require('node:fs');
           const path = require('node:path');
@@ -272,9 +296,12 @@ jobs:
           const inventory = [];
           const reports = [];
           const failures = [];
+          const observations = [];
 
           const addFailure = (width, label, detail) => failures.push({ width, label, detail: String(detail) });
+          const observe = (width, label, value) => observations.push({ width, label, value });
           const check = (width, label, condition, detail = '') => {
+            observe(width, label, { pass: Boolean(condition), detail });
             if (!condition) addFailure(width, label, detail || 'check failed');
           };
 
@@ -288,7 +315,7 @@ jobs:
 
           async function commonRuntime(page, width, consoleErrors, pageErrors) {
             const dims = await page.evaluate(() => ({ client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
-            check(width, 'no-horizontal-overflow', dims.scroll <= dims.client + 1, `${dims.scroll}/${dims.client}`);
+            check(width, 'document-no-horizontal-overflow', dims.scroll <= dims.client + 1, `${dims.scroll}/${dims.client}`);
             check(width, 'zero-console-errors', consoleErrors.length === 0, JSON.stringify(consoleErrors));
             check(width, 'zero-page-errors', pageErrors.length === 0, JSON.stringify(pageErrors));
             return dims;
@@ -305,12 +332,12 @@ jobs:
             await need.focus();
             await need.press('Enter');
             const direction = hero.getByRole('button', { name: 'خطوة رئيسية واحدة' });
-            check(width, 'direction-focus', await direction.evaluate(el => el === document.activeElement));
+            check(width, 'direction-focus-transfer', await direction.evaluate(el => el === document.activeElement));
             await shot(hero, width, 'hero-direction');
 
             await direction.press('Enter');
             const arrange = hero.getByRole('button', { name: 'رتّب الرحلة حول الهدف', exact: true });
-            check(width, 'build-focus', await arrange.evaluate(el => el === document.activeElement));
+            check(width, 'build-focus-transfer', await arrange.evaluate(el => el === document.activeElement));
             await shot(hero, width, 'hero-build');
 
             for (const action of ['رتّب الرحلة حول الهدف', 'وحّد التجربة', 'جرّب المسار']) {
@@ -318,22 +345,21 @@ jobs:
             }
             const brief = hero.getByLabel('طلبك المختصر', { exact: true });
             check(width, 'brief-empty', (await brief.inputValue()) === '');
-            check(width, 'brief-focus', await brief.evaluate(el => el === document.activeElement));
+            check(width, 'brief-focus-transfer', await brief.evaluate(el => el === document.activeElement));
             await shot(hero, width, 'hero-brief-empty');
             await brief.fill('أحتاج تبسيط رحلة التسجيل');
             await shot(hero, width, 'hero-brief-user-authored');
             await page.keyboard.press('Tab');
             await hero.getByRole('button', { name: 'جهّز الملخّص', exact: true }).press('Enter');
             const launch = hero.locator('.e2-launch-chamber');
-            check(width, 'launch-focus', await launch.evaluate(el => el === document.activeElement));
-            const skipLink = page.locator('.skip-link').first();
-            check(width, 'skip-link-not-focused', !(await skipLink.evaluate(el => el === document.activeElement)));
+            check(width, 'launch-focus-transfer', await launch.evaluate(el => el === document.activeElement));
+            check(width, 'skip-link-not-focused', !(await page.locator('.skip-link').first().evaluate(el => el === document.activeElement)));
             await shot(hero, width, 'hero-launch');
 
             await page.goto(`${root}/`);
             await page.evaluate(() => document.fonts.ready);
-            const s02 = page.locator('#solutions-universe');
-            const commerce = s02.locator('.s02-station-2');
+            let s02 = page.locator('#solutions-universe');
+            let commerce = s02.locator('.s02-station-2');
             await commerce.hover();
             check(width, 'hover-does-not-select', (await s02.getAttribute('data-active')) === 'business');
             check(width, 'preview-distinct', (await s02.getAttribute('data-preview')) === 'commerce');
@@ -343,15 +369,53 @@ jobs:
             await shot(s02, width, 's02-explicit-selected');
 
             if (width <= 430) {
-              await commerce.focus();
-              const focus = await commerce.evaluate(el => {
-                const r = el.getBoundingClientRect();
-                const s = getComputedStyle(el);
-                const bleed = Math.max(0, (parseFloat(s.outlineWidth) || 0) + (parseFloat(s.outlineOffset) || 0));
-                return { left: r.left - bleed, right: r.right + bleed, viewport: innerWidth, outlineStyle: s.outlineStyle, outlineWidth: parseFloat(s.outlineWidth) || 0 };
-              });
-              check(width, 'focus-visible', focus.outlineStyle !== 'none' && focus.outlineWidth > 0, JSON.stringify(focus));
-              check(width, 'focus-inside-viewport', focus.left >= 0 && focus.right <= focus.viewport, JSON.stringify(focus));
+              await page.goto(`${root}/`);
+              await page.evaluate(() => document.fonts.ready);
+              s02 = page.locator('#solutions-universe');
+              commerce = s02.locator('.s02-station-2');
+
+              let reached = false;
+              let tabCount = 0;
+              for (let index = 0; index < 160; index += 1) {
+                await page.keyboard.press('Tab');
+                tabCount = index + 1;
+                if (await commerce.evaluate(el => el === document.activeElement)) {
+                  reached = true;
+                  break;
+                }
+              }
+              check(width, 's02-keyboard-focus-reached-intended-station', reached, `tabCount=${tabCount}`);
+
+              if (reached) {
+                const focus = await commerce.evaluate(el => {
+                  const r = el.getBoundingClientRect();
+                  const s = getComputedStyle(el);
+                  const outlineWidth = parseFloat(s.outlineWidth) || 0;
+                  const outlineOffset = parseFloat(s.outlineOffset) || 0;
+                  const bleed = Math.max(0, outlineWidth + outlineOffset);
+                  const focusVisible = el.matches(':focus-visible');
+                  const outlineVisible = s.outlineStyle !== 'none' && outlineWidth > 0;
+                  const shadowVisible = s.boxShadow !== 'none';
+                  return {
+                    active: el === document.activeElement,
+                    focusVisible,
+                    outlineVisible,
+                    shadowVisible,
+                    outlineStyle: s.outlineStyle,
+                    outlineWidth,
+                    outlineOffset,
+                    boxShadow: s.boxShadow,
+                    left: r.left - bleed,
+                    right: r.right + bleed,
+                    viewport: innerWidth,
+                  };
+                });
+                check(width, 's02-intended-element-active', focus.active, JSON.stringify(focus));
+                check(width, 's02-keyboard-focus-visible-modality', focus.focusVisible, JSON.stringify(focus));
+                check(width, 's02-perceivable-focus-visible-treatment', focus.outlineVisible || focus.shadowVisible, JSON.stringify(focus));
+                check(width, 's02-focus-geometry-inside-viewport', focus.left >= 0 && focus.right <= focus.viewport, JSON.stringify(focus));
+                observe(width, 's02-keyboard-focus-metrics', { tabCount, ...focus });
+              }
               await shot(s02, width, 's02-focus-boundary');
             }
           }
@@ -360,6 +424,7 @@ jobs:
             await page.goto(`${root}/`);
             await page.evaluate(() => document.fonts.ready);
             check(width, 'rtl', (await page.locator('html').getAttribute('dir')) === 'rtl');
+
             const proof = page.locator('#reference-proof');
             await shot(proof, width, 'reference-proof-default');
             const disclosure = proof.locator('[data-visible-evidence-boundary]');
@@ -368,8 +433,7 @@ jobs:
               await shot(disclosure, width, 'disclosure');
             }
 
-            const rp04 = proof.locator('[data-project-selector="rp04"]');
-            await rp04.click();
+            await proof.locator('[data-project-selector="rp04"]').click();
             check(width, 'pointer-selection', (await proof.getAttribute('data-project')) === 'rp04');
             await shot(proof, width, 'reference-proof-selected-rp04');
             const rp02 = proof.locator('[data-project-selector="rp02"]');
@@ -377,13 +441,88 @@ jobs:
             check(width, 'focus-does-not-select', (await proof.getAttribute('data-project')) === 'rp04');
 
             const gateway = page.locator('#project-gateway');
-            await shot(gateway, width, 'project-gateway');
+            const heading = gateway.locator('#gateway-title');
+            const intro = gateway.locator('.gateway-intro');
+            const actions = gateway.locator('.gateway-actions');
             const primary = gateway.locator('.gateway-cta--primary');
+            const secondary = gateway.locator('.gateway-cta--secondary');
+            const privacy = gateway.locator('.gateway-privacy');
+            const continuity = gateway.locator('.gateway-continuity');
+
+            await shot(gateway, width, 'project-gateway');
             await shot(primary, width, 'final-cta');
+
             if (width <= 430) {
-              const [g, c] = await Promise.all([gateway.boundingBox(), primary.boundingBox()]);
-              if (g && c) check(width, 'gateway-cta-position', ((c.y - g.y) / g.height) < 0.68, `${(c.y - g.y) / g.height}`);
-              else addFailure(width, 'gateway-cta-position', 'missing bounding box');
+              for (const [label, locator] of [
+                ['gateway-heading-visible', heading],
+                ['gateway-intro-visible', intro],
+                ['gateway-primary-visible', primary],
+                ['gateway-secondary-visible', secondary],
+                ['gateway-privacy-visible', privacy],
+                ['gateway-continuity-visible', continuity],
+              ]) {
+                check(width, label, await locator.isVisible());
+              }
+
+              const ctas = actions.locator('.gateway-cta');
+              check(width, 'gateway-two-actions', await ctas.count() === 2, `count=${await ctas.count()}`);
+              if (await ctas.count() === 2) {
+                check(width, 'gateway-primary-precedes-secondary-dom', (await ctas.nth(0).getAttribute('class') || '').includes('gateway-cta--primary'));
+                check(width, 'gateway-secondary-follows-primary-dom', (await ctas.nth(1).getAttribute('class') || '').includes('gateway-cta--secondary'));
+              }
+
+              const [g, h, i, a, p, s, pr, c] = await Promise.all([
+                gateway.boundingBox(), heading.boundingBox(), intro.boundingBox(), actions.boundingBox(),
+                primary.boundingBox(), secondary.boundingBox(), privacy.boundingBox(), continuity.boundingBox(),
+              ]);
+
+              if ([g, h, i, a, p, s, pr, c].some(box => !box)) {
+                addFailure(width, 'gateway-composition-boxes', 'required bounding box missing');
+              } else {
+                const gatewayBox = g;
+                const headingBox = h;
+                const introBox = i;
+                const actionsBox = a;
+                const primaryBox = p;
+                const secondaryBox = s;
+                const privacyBox = pr;
+                const continuityBox = c;
+                const rootFontSize = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+                const actionMarginBlockStart = await actions.evaluate(el => parseFloat(getComputedStyle(el).marginBlockStart) || 0);
+                const narrativeToActionsGap = actionsBox.y - (introBox.y + introBox.height);
+
+                check(width, 'gateway-primary-precedes-secondary-geometry', primaryBox.y < secondaryBox.y, `${primaryBox.y}/${secondaryBox.y}`);
+                check(width, 'gateway-mobile-action-margin-bounded', actionMarginBlockStart <= rootFontSize * 1.5, `${actionMarginBlockStart}/${rootFontSize}`);
+                check(width, 'gateway-narrative-actions-gap-nonnegative', narrativeToActionsGap >= -1, String(narrativeToActionsGap));
+                check(width, 'gateway-narrative-actions-gap-within-design-spacing', narrativeToActionsGap <= actionMarginBlockStart + 2, `${narrativeToActionsGap}/${actionMarginBlockStart}`);
+                check(width, 'gateway-intro-actions-no-overlap', introBox.y + introBox.height <= actionsBox.y + 1);
+                check(width, 'gateway-actions-privacy-no-overlap', actionsBox.y + actionsBox.height <= privacyBox.y + 1);
+                check(width, 'gateway-actions-continuity-no-collision', actionsBox.y + actionsBox.height <= continuityBox.y + 1);
+
+                const gatewayRight = gatewayBox.x + gatewayBox.width;
+                const gatewayBottom = gatewayBox.y + gatewayBox.height;
+                for (const [label, box] of [
+                  ['heading', headingBox], ['intro', introBox], ['actions', actionsBox], ['primary', primaryBox],
+                  ['secondary', secondaryBox], ['privacy', privacyBox], ['continuity', continuityBox],
+                ]) {
+                  check(width, `gateway-${label}-inside-gateway-x`, box.x >= gatewayBox.x - 1 && box.x + box.width <= gatewayRight + 1, JSON.stringify(box));
+                  check(width, `gateway-${label}-inside-gateway-y`, box.y >= gatewayBox.y - 1 && box.y + box.height <= gatewayBottom + 1, JSON.stringify(box));
+                  check(width, `gateway-${label}-inside-viewport-width`, box.x >= -1 && box.x + box.width <= width + 1, JSON.stringify(box));
+                }
+                observe(width, 'gateway-mobile-composition-metrics', {
+                  rootFontSize,
+                  actionMarginBlockStart,
+                  narrativeToActionsGap,
+                  gatewayBox,
+                  headingBox,
+                  introBox,
+                  actionsBox,
+                  primaryBox,
+                  secondaryBox,
+                  privacyBox,
+                  continuityBox,
+                });
+              }
             }
 
             const footer = page.locator('.gs-footer');
@@ -417,14 +556,18 @@ jobs:
             check(width, 'ledger-expanded', (await toggle.getAttribute('aria-expanded')) === 'true');
             await shot(page.locator('.rp-ledger'), width, 'expanded-ledger');
             await shot(page.locator('.rp-comparison'), width, 'comparison');
+
             const route = page.getByText('المسار الخارجي الموثوق غير متاح حاليًا').first();
             check(width, 'truthful-unavailable-route-visible', await route.isVisible());
             await shot(route, width, 'route-unavailable');
 
             const publicText = await body.innerText();
-            for (const forbidden of ['REFERENCE_ONLY', 'UNAVAILABLE', 'ROUTE_NOT_CONFIGURED', 'GS-PUB-003', 'repository', 'المستودع']) {
-              check(width, `forbidden-${forbidden}`, !publicText.toLowerCase().includes(forbidden.toLowerCase()));
+            check(width, 'rp-ar-product-capture-truth-visible', publicText.includes('لا تتوفر حاليًا لقطات موثقة يمكن عرضها كدليل.'));
+            check(width, 'rp-unavailable-machine-state-preserved', await body.locator('[data-state="UNAVAILABLE"]').count() >= 2, `count=${await body.locator('[data-state="UNAVAILABLE"]').count()}`);
+            for (const forbidden of ['REFERENCE_ONLY', 'UNAVAILABLE', 'ROUTE_NOT_CONFIGURED', 'GS-PUB-003', 'repository', 'المستودع', 'لا توجد في هذا المستودع لقطات موثقة يمكن عرضها كدليل.']) {
+              check(width, `rp-public-copy-forbidden-${forbidden}`, !publicText.toLowerCase().includes(forbidden.toLowerCase()));
             }
+
             const footer = page.locator('.gs-footer');
             if (await footer.count()) await shot(footer, width, 'final-page-cta');
             else await shot(body, width, 'final-page-cta', true);
@@ -439,8 +582,8 @@ jobs:
               const page = await context.newPage();
               const consoleErrors = [];
               const pageErrors = [];
-              page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
-              page.on('pageerror', e => pageErrors.push(e.message));
+              page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+              page.on('pageerror', error => pageErrors.push(error.message));
               try {
                 if (key === 'home-a') await captureHomeA(page, width);
                 else if (key === 'home-b') await captureHomeB(page, width);
@@ -457,7 +600,7 @@ jobs:
               await context.close();
             }
             await browser.close();
-            fs.writeFileSync(path.join(out, 'capture-report.json'), JSON.stringify({ candidate: key, reports, failures }, null, 2));
+            fs.writeFileSync(path.join(out, 'capture-report.json'), JSON.stringify({ candidate: key, reports, observations, failures }, null, 2));
             fs.writeFileSync(path.join(out, 'screenshots-inventory.txt'), inventory.sort().join('\n') + (inventory.length ? '\n' : ''));
             if (failures.length) {
               console.error(JSON.stringify(failures, null, 2));
@@ -466,7 +609,7 @@ jobs:
           })().catch(error => { console.error(error); process.exit(1); });
           NODE
 
-          NODE_PATH="$GITHUB_WORKSPACE/node_modules" node "$RUNNER_TEMP/gs-w12-capture.cjs" 2>&1 | tee "$EVIDENCE_DIR/logs/capture.log"
+          NODE_PATH="$GITHUB_WORKSPACE/node_modules" node "$RUNNER_TEMP/gs-w12-r2-capture.cjs" 2>&1 | tee "$EVIDENCE_DIR/logs/capture.log"
 
       - name: Summarize evidence identity and exact results
         id: summary
@@ -502,6 +645,11 @@ jobs:
             find "$EVIDENCE_DIR/screenshots" -maxdepth 1 -type f -name '*.png' -printf 'custom/%f\n' 2>/dev/null
             find "$EVIDENCE_DIR/repo-native" -maxdepth 1 -type f -name '*.png' -printf 'repo-native/%f\n' 2>/dev/null
           } | sort | tee "$EVIDENCE_DIR/screenshots-inventory.txt" || true
+          custom_count="$(find "$EVIDENCE_DIR/screenshots" -maxdepth 1 -type f -name '*.png' 2>/dev/null | wc -l | tr -d ' ')"
+          repo_native_count="$(find "$EVIDENCE_DIR/repo-native" -maxdepth 1 -type f -name '*.png' 2>/dev/null | wc -l | tr -d ' ')"
+          echo "custom_screenshot_count=$custom_count" | tee "$EVIDENCE_DIR/screenshot-counts.txt"
+          echo "repo_native_screenshot_count=$repo_native_count" | tee -a "$EVIDENCE_DIR/screenshot-counts.txt"
+          echo "total_screenshot_count=$((custom_count + repo_native_count))" | tee -a "$EVIDENCE_DIR/screenshot-counts.txt"
 
           runtime_status="CAPTURE_NOT_AVAILABLE"
           if [[ -f "$EVIDENCE_DIR/capture-report.json" ]]; then
@@ -522,6 +670,7 @@ jobs:
             echo "project=General Solutions"
             echo "project_id=GS"
             echo "workstream=GS-GOV-W12-DEEP-REM-EXACT-HEAD-VALIDATION-R1"
+            echo "follow_on=W12-R2"
             echo "classification=REFERENCE_ONLY"
             echo "candidate_key=$CANDIDATE_KEY"
             echo "candidate_sha=$CANDIDATE_SHA"
@@ -536,6 +685,7 @@ jobs:
             echo "public_regression_result=$PUBLIC_OUTCOME"
             echo "capture_result=$CAPTURE_OUTCOME"
             echo "console_page_error_status=$runtime_status"
+            echo "home_a_home_b_combined=NEVER"
           } | tee "$EVIDENCE_DIR/artifact-metadata.txt"
 
           {
@@ -562,3 +712,23 @@ jobs:
           path: ${{ matrix.evidence_dir }}
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish artifact identity
+        if: always() && steps.artifact.outcome == 'success'
+        shell: bash
+        run: |
+          {
+            echo "artifact_id=${{ steps.artifact.outputs.artifact-id }}"
+            echo "artifact_digest=${{ steps.artifact.outputs.artifact-digest }}"
+            echo "artifact_name=${{ matrix.artifact_prefix }}-${{ matrix.candidate_sha }}"
+            echo "candidate_sha=${CANDIDATE_SHA}"
+            echo "run_id=${GITHUB_RUN_ID}"
+          } | tee "$EVIDENCE_DIR/artifact-upload-output.txt"
+          {
+            echo "### $JOB_NAME"
+            echo "- candidate: $CANDIDATE_SHA"
+            echo "- artifact: ${{ matrix.artifact_prefix }}-${{ matrix.candidate_sha }}"
+            echo "- artifact id: ${{ steps.artifact.outputs.artifact-id }}"
+            echo "- digest: ${{ steps.artifact.outputs.artifact-digest }}"
+            echo "- classification: REFERENCE_ONLY"
+          } >> "$GITHUB_STEP_SUMMARY"
