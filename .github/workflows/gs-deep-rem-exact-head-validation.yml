@@ -18,6 +18,10 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: gs-w12-r4-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+
 jobs:
   observe_push:
     name: Observe matching push validation
@@ -45,34 +49,23 @@ jobs:
           echo "Matching push validation run was not observed for ${OBSERVED_HEAD}" >&2
           exit 1
 
-  validate:
-    name: ${{ matrix.label }}
+  validate_start:
+    name: W12-R4 START exact 2dfa3d0
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 75
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - key: home-a
-            label: W12-R3 HOME-A exact 8e975e8
-            candidate_sha: 8e975e8082bff4143f283da2f2e9cd8a1caa7d30
-            parent_sha: 5acba33a23c3424dbdfbfd5ef8bc94a6f7fe494a
-            evidence_dir: /tmp/gs-w12-r3-home-a
-            artifact_prefix: gs-w12-r3-home-a
     env:
-      CANDIDATE_KEY: ${{ matrix.key }}
-      CANDIDATE_SHA: ${{ matrix.candidate_sha }}
-      PARENT_SHA: ${{ matrix.parent_sha }}
-      EVIDENCE_DIR: ${{ matrix.evidence_dir }}
-      JOB_NAME: ${{ matrix.label }}
+      CANDIDATE_SHA: 2dfa3d09d8de2023aaff62a938d7c22ab4d28a2c
+      PARENT_SHA: d10cba74a7eb4103be4a2e285fff1c5732959043
+      EVIDENCE_DIR: /tmp/gs-w12-r4-start
+      JOB_NAME: W12-R4 START exact 2dfa3d0
 
     steps:
-      - name: Check out exact pinned candidate
+      - name: Check out exact pinned START candidate
         id: checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ matrix.candidate_sha }}
+          ref: 2dfa3d09d8de2023aaff62a938d7c22ab4d28a2c
           fetch-depth: 0
           persist-credentials: false
 
@@ -87,19 +80,20 @@ jobs:
             echo "project_id=GS"
             echo "classification=REFERENCE_ONLY"
             echo "workstream=GS-GOV-W12-DEEP-REM-EXACT-HEAD-VALIDATION-R1"
-            echo "follow_on=W12-R3_HOME_A_ONLY"
-            echo "candidate_key=$CANDIDATE_KEY"
+            echo "follow_on=W12-R4_START_ONLY"
+            echo "candidate=START"
+            echo "candidate_pr=83"
             echo "candidate_sha=$CANDIDATE_SHA"
             echo "parent_sha=$PARENT_SHA"
             echo "actual_head=$(git rev-parse HEAD)"
             echo "run_id=$GITHUB_RUN_ID"
             echo "job_key=$GITHUB_JOB"
             echo "viewports=1440,768,430,390"
+            echo "home_a_executed=NO"
             echo "home_b_executed=NO"
             echo "rp_executed=NO"
           } | tee "$EVIDENCE_DIR/identity.txt"
 
-          test "$CANDIDATE_KEY" = "home-a"
           test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
           test "$(git merge-base "$PARENT_SHA" "$CANDIDATE_SHA")" = "$PARENT_SHA"
           read -r behind ahead < <(git rev-list --left-right --count "$PARENT_SHA...$CANDIDATE_SHA")
@@ -108,16 +102,20 @@ jobs:
           test "$ahead" -gt 0
 
           cat > "$EVIDENCE_DIR/expected-paths.txt" <<'EOF'
-          src/components/hero/LivingSystemHero.tsx
-          src/components/sections/SolutionsUniverse.tsx
-          tests/visual/home-public-routing/home-deep-r1-a.spec.ts
-          tests/visual/home-public-routing/home-public-routing.spec.ts
+          src/components/hero/HeroNav.tsx
+          src/features/start-discovery/StartDiscoveryBody.tsx
+          src/features/start-discovery/start-ipa-remediation.css
+          src/routes/StartDiscoveryRoute.tsx
+          tests/visual/start-discovery/deep-remediation.spec.ts
+          tests/visual/start-discovery/playwright.config.ts
+          tests/visual/start-discovery/public-handoff.spec.ts
+          tests/visual/start-discovery/start-discovery.spec.ts
           EOF
           sed -i 's/^          //' "$EVIDENCE_DIR/expected-paths.txt"
           sort -o "$EVIDENCE_DIR/expected-paths.txt" "$EVIDENCE_DIR/expected-paths.txt"
           git diff --name-only "$PARENT_SHA...$CANDIDATE_SHA" | sort | tee "$EVIDENCE_DIR/actual-paths.txt"
           diff -u "$EVIDENCE_DIR/expected-paths.txt" "$EVIDENCE_DIR/actual-paths.txt" | tee "$EVIDENCE_DIR/path-boundary.diff"
-          test "$(wc -l < "$EVIDENCE_DIR/actual-paths.txt" | tr -d ' ')" -eq 4
+          test "$(wc -l < "$EVIDENCE_DIR/actual-paths.txt" | tr -d ' ')" -eq 8
           git diff --stat "$PARENT_SHA...$CANDIDATE_SHA" | tee "$EVIDENCE_DIR/diff-stat.txt"
           git diff --check "$PARENT_SHA...$CANDIDATE_SHA" 2>&1 | tee "$EVIDENCE_DIR/logs/git-diff-check.log"
 
@@ -182,40 +180,60 @@ jobs:
           set -o pipefail
           npx playwright install chromium 2>&1 | tee "$EVIDENCE_DIR/logs/playwright-install.log"
 
-      - name: Run HOME-A targeted suite
-        id: targeted
+      - name: Run canonical START fixture suites
+        id: start_suites
         if: always() && steps.build.outcome == 'success' && steps.chromium.outcome == 'success'
         shell: bash
         run: |
           set +e
-          npx playwright test tests/visual/home-public-routing/home-deep-r1-a.spec.ts --config=playwright.config.ts --project=chromium --workers=1 --reporter=json > "$EVIDENCE_DIR/reports/home-a-targeted.json" 2> "$EVIDENCE_DIR/logs/home-a-targeted.stderr.log"
+          START_DISCOVERY_EVIDENCE_DIR="$EVIDENCE_DIR/repo-native-start" \
+            npx playwright test \
+              --config=tests/visual/start-discovery/playwright.config.ts \
+              --project=chromium \
+              --workers=1 \
+              --reporter=json \
+              > "$EVIDENCE_DIR/reports/start-canonical.json" \
+              2> "$EVIDENCE_DIR/logs/start-canonical.stderr.log"
           rc=$?
-          echo "$rc" > "$EVIDENCE_DIR/reports/targeted.exit"
+          echo "$rc" > "$EVIDENCE_DIR/reports/start-canonical.exit"
           exit "$rc"
 
-      - name: Run shared HOME routing suite
-        id: home_regression
+      - name: Run START public handoff actual-route suite
+        id: public_handoff
         if: always() && steps.build.outcome == 'success' && steps.chromium.outcome == 'success'
         shell: bash
         run: |
           set +e
-          npx playwright test tests/visual/home-public-routing/home-public-routing.spec.ts --config=playwright.config.ts --project=chromium --workers=1 --reporter=json > "$EVIDENCE_DIR/reports/home-routing.json" 2> "$EVIDENCE_DIR/logs/home-routing.stderr.log"
+          npx playwright test \
+            --config=tests/visual/start-discovery/public-handoff.playwright.config.ts \
+            --project=chromium \
+            --workers=1 \
+            --reporter=json \
+            > "$EVIDENCE_DIR/reports/start-public-handoff.json" \
+            2> "$EVIDENCE_DIR/logs/start-public-handoff.stderr.log"
           rc=$?
-          echo "$rc" > "$EVIDENCE_DIR/reports/home-routing.exit"
+          echo "$rc" > "$EVIDENCE_DIR/reports/start-public-handoff.exit"
           exit "$rc"
 
       - name: Run public-site integration suite
-        id: public_regression
+        id: public_integration
         if: always() && steps.build.outcome == 'success' && steps.chromium.outcome == 'success'
         shell: bash
         run: |
           set +e
-          npx playwright test tests/visual/public-site.integration.spec.ts --config=playwright.config.ts --project=chromium --workers=1 --reporter=json > "$EVIDENCE_DIR/reports/public-site-integration.json" 2> "$EVIDENCE_DIR/logs/public-site-integration.stderr.log"
+          npx playwright test \
+            tests/visual/public-site.integration.spec.ts \
+            --config=playwright.config.ts \
+            --project=chromium \
+            --workers=1 \
+            --reporter=json \
+            > "$EVIDENCE_DIR/reports/public-site-integration.json" \
+            2> "$EVIDENCE_DIR/logs/public-site-integration.stderr.log"
           rc=$?
           echo "$rc" > "$EVIDENCE_DIR/reports/public-site-integration.exit"
           exit "$rc"
 
-      - name: Capture exact-head rendered evidence
+      - name: Capture and validate exact built /start route
         id: capture
         if: always() && steps.build.outcome == 'success' && steps.chromium.outcome == 'success'
         shell: bash
@@ -226,13 +244,13 @@ jobs:
           trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
           ready=0
           for _ in $(seq 1 45); do
-            if curl -fsS http://127.0.0.1:4191/ >/dev/null; then ready=1; break; fi
+            if curl -fsS http://127.0.0.1:4191/start >/dev/null; then ready=1; break; fi
             if ! kill -0 "$preview_pid" 2>/dev/null; then break; fi
             sleep 1
           done
           test "$ready" -eq 1
 
-          cat > "$RUNNER_TEMP/gs-w12-r3-home-a-capture.cjs" <<'NODE'
+          cat > "$RUNNER_TEMP/gs-w12-r4-start-capture.cjs" <<'NODE'
           const { chromium } = require('@playwright/test');
           const fs = require('node:fs');
           const path = require('node:path');
@@ -245,209 +263,284 @@ jobs:
           const failures = [];
           const observations = [];
 
-          const addFailure = (width, label, detail) => failures.push({ width, label, detail: String(detail) });
+          const fail = (width, label, detail) => failures.push({ width, label, detail: String(detail) });
           const observe = (width, label, value) => observations.push({ width, label, value });
           const check = (width, label, condition, detail = '') => {
             observe(width, label, { pass: Boolean(condition), detail });
-            if (!condition) addFailure(width, label, detail || 'check failed');
+            if (!condition) fail(width, label, detail || 'check failed');
           };
 
-          function parseCssTimeListMilliseconds(value) {
-            return value.split(',').map((token) => {
-              const match = token.trim().match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*(ms|s)$/i);
-              if (!match) throw new Error(`Unsupported CSS time value: ${token}`);
-              const numericValue = Number(match[1]);
-              if (!Number.isFinite(numericValue)) throw new Error(`Invalid CSS time value: ${token}`);
-              return match[2].toLowerCase() === 's' ? numericValue * 1000 : numericValue;
+          function externalSelectionPrefill(decisionOrigin, solutionFamilyId = 'portals') {
+            return {
+              version: 1,
+              source: {
+                adapter: 'solutions-decision-workspace',
+                label: 'ملخص قرار الحلول',
+                referenceId: `W12-R4-${decisionOrigin}`,
+              },
+              solutionFamilyId,
+              decisionOrigin,
+              capabilitySelections: [],
+              capturedFacts: {
+                outcome: 'جمع الطلبات والحالات في مسار واحد',
+                activity: 'عمليات وفرق',
+                audience: 'فريق داخلي',
+              },
+            };
+          }
+
+          function finderPrefill() {
+            return {
+              version: 1,
+              source: {
+                adapter: 'solutions-decision-workspace',
+                label: 'ملخص قرار الحلول',
+                referenceId: 'W12-R4-SYSTEM-FINDER',
+              },
+              recommendedFamily: 'الحجوزات والخدمات',
+              solutionFamilyId: 'booking',
+              decisionOrigin: 'SYSTEM_FINDER',
+              recommendationResolution: 'decisive',
+              capabilitySelections: [],
+              capturedFacts: {
+                outcome: 'جعل الحجز أوضح للعميل والفريق',
+                activity: 'خدمة تعتمد على المواعيد',
+                audience: 'عملاء وفريق خدمة',
+              },
+            };
+          }
+
+          async function waitStart(page) {
+            await page.locator('.start-discovery').waitFor({ state: 'visible' });
+            await page.evaluate(() => document.fonts.ready);
+          }
+
+          async function clearStartStorage(page) {
+            await page.goto(`${root}/start`);
+            await page.evaluate(() => {
+              sessionStorage.removeItem('gs-start-frozen-product-v1');
+              sessionStorage.removeItem('gs-start-project-brief-v1');
             });
           }
 
-          const fileFor = (width, name) => path.join(out, 'screenshots', `home-a-${width}-${name}.png`);
-          async function shot(locator, width, name) {
-            const file = fileFor(width, name);
-            await locator.screenshot({ path: file, animations: 'disabled' });
+          async function openStart(page) {
+            await clearStartStorage(page);
+            await page.goto(`${root}/start`);
+            await waitStart(page);
+          }
+
+          async function openWithPrefill(page, prefill) {
+            await clearStartStorage(page);
+            await page.evaluate((value) => {
+              const current = window.history.state ?? {};
+              window.history.replaceState(
+                { ...current, usr: { discoveryPrefill: value } },
+                '',
+                '/start',
+              );
+            }, prefill);
+            await page.reload();
+            await waitStart(page);
+          }
+
+          async function screenshot(page, width, state) {
+            const file = path.join(out, 'screenshots', `start-${width}-${state}.png`);
+            await page.screenshot({ path: file, fullPage: true, animations: 'disabled' });
             inventory.push(path.basename(file));
           }
 
-          async function commonRuntime(page, width, consoleErrors, pageErrors) {
-            const dims = await page.evaluate(() => ({
-              client: document.documentElement.clientWidth,
-              scroll: document.documentElement.scrollWidth,
+          async function checkRuntime(page, width, label, consoleErrors, pageErrors) {
+            const runtime = await page.evaluate(() => ({
+              pathname: location.pathname,
+              dir: document.documentElement.getAttribute('dir'),
+              clientWidth: document.documentElement.clientWidth,
+              scrollWidth: document.documentElement.scrollWidth,
             }));
-            check(width, 'document-no-horizontal-overflow', dims.scroll <= dims.client + 1, `${dims.scroll}/${dims.client}`);
-            check(width, 'zero-console-errors', consoleErrors.length === 0, JSON.stringify(consoleErrors));
-            check(width, 'zero-page-errors', pageErrors.length === 0, JSON.stringify(pageErrors));
-            return dims;
+            check(width, `${label}-pathname-start`, runtime.pathname === '/start', runtime.pathname);
+            check(width, `${label}-rtl`, runtime.dir === 'rtl', runtime.dir);
+            check(width, `${label}-no-overflow`, runtime.scrollWidth <= runtime.clientWidth + 1, `${runtime.scrollWidth}/${runtime.clientWidth}`);
+            check(width, `${label}-zero-console-errors`, consoleErrors.length === 0, JSON.stringify(consoleErrors));
+            check(width, `${label}-zero-page-errors`, pageErrors.length === 0, JSON.stringify(pageErrors));
           }
 
-          async function captureHomeA(page, width) {
-            await page.goto(`${root}/`);
-            await page.evaluate(() => document.fonts.ready);
-            check(width, 'rtl', (await page.locator('html').getAttribute('dir')) === 'rtl');
-            const hero = page.locator('#hero');
-            await shot(hero, width, 'hero-need');
+          async function readFrozen(page) {
+            return page.evaluate(() => JSON.parse(sessionStorage.getItem('gs-start-frozen-product-v1') ?? 'null'));
+          }
 
-            const need = hero.getByRole('button', { name: 'إطلاق خدمة رقمية', exact: true });
-            await need.focus();
-            await need.press('Enter');
-            const direction = hero.getByRole('button', { name: 'خطوة رئيسية واحدة' });
-            check(width, 'direction-focus-transfer', await direction.evaluate(el => el === document.activeElement));
-            await shot(hero, width, 'hero-direction');
-
-            await direction.press('Enter');
-            const arrange = hero.getByRole('button', { name: 'رتّب الرحلة حول الهدف', exact: true });
-            check(width, 'build-focus-transfer', await arrange.evaluate(el => el === document.activeElement));
-            await shot(hero, width, 'hero-build');
-
-            for (const action of ['رتّب الرحلة حول الهدف', 'وحّد التجربة', 'جرّب المسار']) {
-              await hero.getByRole('button', { name: action, exact: true }).press('Enter');
-            }
-            const brief = hero.getByLabel('طلبك المختصر', { exact: true });
-            check(width, 'brief-empty', (await brief.inputValue()) === '');
-            check(width, 'brief-focus-transfer', await brief.evaluate(el => el === document.activeElement));
-            await shot(hero, width, 'hero-brief-empty');
-            await brief.fill('أحتاج تبسيط رحلة التسجيل');
-            await shot(hero, width, 'hero-brief-user-authored');
-            await page.keyboard.press('Tab');
-            await hero.getByRole('button', { name: 'جهّز الملخّص', exact: true }).press('Enter');
-            const launch = hero.locator('.e2-launch-chamber');
-            check(width, 'launch-focus-transfer', await launch.evaluate(el => el === document.activeElement));
-            check(width, 'skip-link-not-focused', !(await page.locator('.skip-link').first().evaluate(el => el === document.activeElement)));
-            await shot(hero, width, 'hero-launch');
-
-            await page.goto(`${root}/`);
-            await page.evaluate(() => document.fonts.ready);
-            let s02 = page.locator('#solutions-universe');
-            let commerce = s02.locator('.s02-station-2');
-            await commerce.hover();
-            check(width, 'hover-does-not-select', (await s02.getAttribute('data-active')) === 'business');
-            check(width, 'preview-distinct', (await s02.getAttribute('data-preview')) === 'commerce');
-            await shot(s02, width, 's02-preview-not-selected');
-            await commerce.click();
-            check(width, 'explicit-select', (await s02.getAttribute('data-active')) === 'commerce');
-            await shot(s02, width, 's02-explicit-selected');
-
-            if (width <= 430) {
-              await page.goto(`${root}/`);
-              await page.evaluate(() => document.fonts.ready);
-              s02 = page.locator('#solutions-universe');
-              commerce = s02.locator('.s02-station-2');
-
-              let reached = false;
-              let tabCount = 0;
-              for (let index = 0; index < 160; index += 1) {
-                await page.keyboard.press('Tab');
-                tabCount = index + 1;
-                if (await commerce.evaluate(el => el === document.activeElement)) {
-                  reached = true;
-                  break;
-                }
-              }
-              check(width, 's02-keyboard-focus-reached-intended-station', reached, `tabCount=${tabCount}`);
-
-              if (reached) {
-                const focus = await commerce.evaluate(el => {
-                  const r = el.getBoundingClientRect();
-                  const s = getComputedStyle(el);
-                  const outlineWidth = parseFloat(s.outlineWidth) || 0;
-                  const outlineOffset = parseFloat(s.outlineOffset) || 0;
-                  const bleed = Math.max(0, outlineWidth + outlineOffset);
-                  return {
-                    active: el === document.activeElement,
-                    focusVisible: el.matches(':focus-visible'),
-                    outlineVisible: s.outlineStyle !== 'none' && outlineWidth > 0,
-                    shadowVisible: s.boxShadow !== 'none',
-                    outlineStyle: s.outlineStyle,
-                    outlineWidth,
-                    outlineOffset,
-                    boxShadow: s.boxShadow,
-                    left: r.left - bleed,
-                    right: r.right + bleed,
-                    viewport: innerWidth,
-                  };
-                });
-                check(width, 's02-intended-element-active', focus.active, JSON.stringify(focus));
-                check(width, 's02-keyboard-focus-visible-modality', focus.focusVisible, JSON.stringify(focus));
-                check(width, 's02-perceivable-focus-visible-treatment', focus.outlineVisible || focus.shadowVisible, JSON.stringify(focus));
-                check(width, 's02-focus-geometry-inside-viewport', focus.left >= 0 && focus.right <= focus.viewport, JSON.stringify(focus));
-                observe(width, 's02-keyboard-focus-metrics', { tabCount, ...focus });
-              }
-              await shot(s02, width, 's02-focus-boundary');
-            }
-
+          async function validateReducedMotion(page, width) {
             await page.emulateMedia({ reducedMotion: 'reduce' });
-            await page.goto(`${root}/`);
-            await page.evaluate(() => document.fonts.ready);
-            for (const [label, selector] of [
-              ['hero-threshold-light', '#hero .e2-threshold-light'],
-              ['s02-connector', '#solutions-universe .s02-connector'],
-            ]) {
-              const raw = await page.locator(selector).first().evaluate(el => getComputedStyle(el).transitionDuration);
-              const durationsMs = parseCssTimeListMilliseconds(raw);
-              const detail = JSON.stringify({ selector, raw, durationsMs, thresholdMs: 0.01 });
-              check(width, `reduced-motion-${label}-has-values`, durationsMs.length > 0, detail);
-              check(width, `reduced-motion-${label}-finite`, durationsMs.every(Number.isFinite), detail);
-              check(width, `reduced-motion-${label}-threshold`, durationsMs.every(value => value <= 0.01), detail);
-              observe(width, `reduced-motion-${label}-computed`, { selector, raw, durationsMs, thresholdMs: 0.01 });
-            }
+            check(width, 'reduced-motion-media-active', await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches));
+            const motion = await page.locator('.start-discovery').evaluate((rootNode) => {
+              const parse = (value) => {
+                const token = value.trim().toLowerCase();
+                if (token.endsWith('ms')) return Number.parseFloat(token);
+                if (token.endsWith('s')) return Number.parseFloat(token) * 1000;
+                return 0;
+              };
+              let maxAnimationMs = 0;
+              let maxMotionTransitionMs = 0;
+              const offenders = [];
+              for (const el of [rootNode, ...rootNode.querySelectorAll('*')]) {
+                if (!(el instanceof HTMLElement) || el.offsetParent === null) continue;
+                const style = getComputedStyle(el);
+                for (const duration of style.animationDuration.split(',')) {
+                  maxAnimationMs = Math.max(maxAnimationMs, parse(duration));
+                }
+                const props = style.transitionProperty.split(',').map((value) => value.trim());
+                const durations = style.transitionDuration.split(',').map(parse);
+                props.forEach((prop, index) => {
+                  if (prop === 'all' || /transform|translate|scale|rotate/.test(prop)) {
+                    const duration = durations[index] ?? durations[durations.length - 1] ?? 0;
+                    maxMotionTransitionMs = Math.max(maxMotionTransitionMs, duration);
+                    if (duration > 0.1) offenders.push({ tag: el.tagName, className: el.className, prop, duration });
+                  }
+                });
+              }
+              return { maxAnimationMs, maxMotionTransitionMs, offenders: offenders.slice(0, 12) };
+            });
+            observe(width, 'reduced-motion-scan', motion);
+            check(width, 'reduced-motion-animation-duration', motion.maxAnimationMs <= 0.1, JSON.stringify(motion));
+            check(width, 'reduced-motion-spatial-transition-duration', motion.maxMotionTransitionMs <= 0.1, JSON.stringify(motion));
+            await page.emulateMedia({ reducedMotion: 'no-preference' });
           }
 
           (async () => {
             fs.mkdirSync(path.join(out, 'screenshots'), { recursive: true });
             const browser = await chromium.launch({ headless: true });
+
             for (const width of widths) {
               const height = width === 768 ? 1024 : width <= 430 ? 844 : 900;
               const context = await browser.newContext({ viewport: { width, height } });
               const page = await context.newPage();
               const consoleErrors = [];
               const pageErrors = [];
-              page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
-              page.on('pageerror', error => pageErrors.push(error.message));
+              page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+              page.on('pageerror', (error) => pageErrors.push(error.message));
+
               try {
-                await captureHomeA(page, width);
+                await openStart(page);
+                const start = page.locator('.start-discovery');
+                check(width, 'initial-stage-discover', (await start.getAttribute('data-stage')) === 'discover', await start.getAttribute('data-stage'));
+                check(width, 'initial-heading-focused', await page.locator('#start-discovery-title').evaluate((el) => el === document.activeElement));
+                await screenshot(page, width, 'initial');
+                await checkRuntime(page, width, 'initial', consoleErrors, pageErrors);
+
+                const firstEntry = page.getByRole('radio', { name: /ساعدني على اكتشاف ما أحتاج/ });
+                await firstEntry.focus();
+                await firstEntry.press('ArrowDown');
+                const secondEntry = page.getByRole('radio', { name: /أعرف تقريبًا نوع الحل/ });
+                check(width, 'keyboard-entry-focus', await secondEntry.evaluate((el) => el === document.activeElement));
+                check(width, 'keyboard-entry-selection', (await secondEntry.getAttribute('aria-checked')) === 'true', await secondEntry.getAttribute('aria-checked'));
+                await screenshot(page, width, 'keyboard-focus');
+                await checkRuntime(page, width, 'keyboard-focus', consoleErrors, pageErrors);
+
+                await openWithPrefill(page, externalSelectionPrefill('USER_DIRECT'));
+                check(width, 'user-direct-selected', (await start.getAttribute('data-selected-family')) === 'portals', await start.getAttribute('data-selected-family'));
+                check(width, 'user-direct-no-recommendation', (await start.getAttribute('data-recommended-family')) === '', await start.getAttribute('data-recommended-family'));
+                await screenshot(page, width, 'user-direct');
+                await checkRuntime(page, width, 'user-direct', consoleErrors, pageErrors);
+
+                const directNext = page.getByRole('button', { name: /تابع مع اختيارك/ });
+                await directNext.focus();
+                await directNext.press('Enter');
+                check(width, 'user-direct-forward-build', (await start.getAttribute('data-stage')) === 'build', await start.getAttribute('data-stage'));
+                check(width, 'user-direct-build-focus', await page.locator('#start-build-title').evaluate((el) => el === document.activeElement));
+                const directStored = await readFrozen(page);
+                check(width, 'user-direct-stored-origin', directStored?.draft?.decisionOrigin === 'USER_DIRECT', directStored?.draft?.decisionOrigin);
+                await screenshot(page, width, 'user-direct-build');
+                await checkRuntime(page, width, 'user-direct-build', consoleErrors, pageErrors);
+
+                await page.reload();
+                await waitStart(page);
+                check(width, 'stored-session-restored-stage', (await start.getAttribute('data-stage')) === 'build', await start.getAttribute('data-stage'));
+                check(width, 'stored-session-restored-family', (await start.getAttribute('data-selected-family')) === 'portals', await start.getAttribute('data-selected-family'));
+                await screenshot(page, width, 'stored-session-restored');
+                await checkRuntime(page, width, 'stored-session-restored', consoleErrors, pageErrors);
+
+                await page.goto(`${root}/solutions`);
+                check(width, 'browser-forward-destination-solutions', new URL(page.url()).pathname === '/solutions', page.url());
+                await page.goBack();
+                await waitStart(page);
+                check(width, 'browser-back-restores-start', new URL(page.url()).pathname === '/start', page.url());
+                check(width, 'browser-back-restores-build', (await start.getAttribute('data-stage')) === 'build', await start.getAttribute('data-stage'));
+                await screenshot(page, width, 'browser-back-restored');
+                await page.goForward();
+                check(width, 'browser-forward-returns-solutions', new URL(page.url()).pathname === '/solutions', page.url());
+                await page.goBack();
+                await waitStart(page);
+                await checkRuntime(page, width, 'browser-back-final', consoleErrors, pageErrors);
+
+                await openWithPrefill(page, externalSelectionPrefill('USER_COMPARE'));
+                check(width, 'user-compare-selected', (await start.getAttribute('data-selected-family')) === 'portals', await start.getAttribute('data-selected-family'));
+                check(width, 'user-compare-no-recommendation', (await start.getAttribute('data-recommended-family')) === '', await start.getAttribute('data-recommended-family'));
+                const compareStored = await readFrozen(page);
+                check(width, 'user-compare-stored-origin', compareStored?.draft?.decisionOrigin === 'USER_COMPARE', compareStored?.draft?.decisionOrigin);
+                await screenshot(page, width, 'user-compare');
+                await checkRuntime(page, width, 'user-compare', consoleErrors, pageErrors);
+                await page.getByRole('button', { name: /تابع مع اختيارك/ }).click();
+                check(width, 'user-compare-forward-build', (await start.getAttribute('data-stage')) === 'build', await start.getAttribute('data-stage'));
+
+                await openWithPrefill(page, finderPrefill());
+                check(width, 'system-finder-selected-empty', (await start.getAttribute('data-selected-family')) === '', await start.getAttribute('data-selected-family'));
+                check(width, 'system-finder-recommended-booking', (await start.getAttribute('data-recommended-family')) === 'booking', await start.getAttribute('data-recommended-family'));
+                const finderStored = await readFrozen(page);
+                check(width, 'system-finder-origin', finderStored?.draft?.decisionOrigin === 'SYSTEM_FINDER', finderStored?.draft?.decisionOrigin);
+                await screenshot(page, width, 'system-finder');
+                await checkRuntime(page, width, 'system-finder', consoleErrors, pageErrors);
+
+                await openWithPrefill(page, externalSelectionPrefill('USER_DIRECT', 'not-a-family'));
+                check(width, 'invalid-family-selected-empty', (await start.getAttribute('data-selected-family')) === '', await start.getAttribute('data-selected-family'));
+                check(width, 'invalid-family-recommended-empty', (await start.getAttribute('data-recommended-family')) === '', await start.getAttribute('data-recommended-family'));
+                const invalidButton = page.getByRole('button', { name: /اختر هذا الاتجاه/ });
+                check(width, 'invalid-family-continuation-disabled', await invalidButton.isDisabled());
+                check(width, 'invalid-family-fallback-visible', await page.getByText('قارن أو اختر اتجاهًا آخر').isVisible());
+                await screenshot(page, width, 'invalid-family-fallback');
+                await checkRuntime(page, width, 'invalid-family-fallback', consoleErrors, pageErrors);
+
+                await validateReducedMotion(page, width);
+                await screenshot(page, width, 'reduced-motion');
+                await checkRuntime(page, width, 'reduced-motion', consoleErrors, pageErrors);
               } catch (error) {
-                addFailure(width, 'capture-fatal', error && error.stack ? error.stack : error);
+                fail(width, 'capture-fatal', error && error.stack ? error.stack : error);
               }
-              const dims = await commonRuntime(page, width, consoleErrors, pageErrors).catch(error => {
-                addFailure(width, 'runtime-summary', error);
-                return null;
-              });
-              reports.push({ width, consoleErrors, pageErrors, document: dims });
+
+              reports.push({ width, consoleErrors, pageErrors });
               await context.close();
             }
+
             await browser.close();
-            fs.writeFileSync(path.join(out, 'capture-report.json'), JSON.stringify({
-              candidate: 'home-a', reports, observations, failures,
-            }, null, 2));
+            fs.writeFileSync(path.join(out, 'capture-report.json'), JSON.stringify({ reports, observations, failures }, null, 2));
             fs.writeFileSync(path.join(out, 'screenshots-inventory.txt'), inventory.sort().join('\n') + (inventory.length ? '\n' : ''));
             if (failures.length) {
               console.error(JSON.stringify(failures, null, 2));
               process.exit(1);
             }
-          })().catch(error => { console.error(error); process.exit(1); });
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
           NODE
 
-          NODE_PATH="$GITHUB_WORKSPACE/node_modules" node "$RUNNER_TEMP/gs-w12-r3-home-a-capture.cjs" 2>&1 | tee "$EVIDENCE_DIR/logs/capture.log"
+          NODE_PATH="$GITHUB_WORKSPACE/node_modules" node "$RUNNER_TEMP/gs-w12-r4-start-capture.cjs" 2>&1 | tee "$EVIDENCE_DIR/logs/capture.log"
 
-      - name: Summarize evidence identity and exact results
+      - name: Summarize exact START evidence
         id: summary
         if: always()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TARGETED_OUTCOME: ${{ steps.targeted.outcome }}
-          HOME_OUTCOME: ${{ steps.home_regression.outcome }}
-          PUBLIC_OUTCOME: ${{ steps.public_regression.outcome }}
+          START_SUITES_OUTCOME: ${{ steps.start_suites.outcome }}
+          PUBLIC_HANDOFF_OUTCOME: ${{ steps.public_handoff.outcome }}
+          PUBLIC_INTEGRATION_OUTCOME: ${{ steps.public_integration.outcome }}
           CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
         run: |
           set -euo pipefail
-          mkdir -p "$EVIDENCE_DIR"
           node <<'NODE' | tee "$EVIDENCE_DIR/test-counts.txt"
           const fs = require('node:fs');
           const path = require('node:path');
           const dir = path.join(process.env.EVIDENCE_DIR, 'reports');
           if (!fs.existsSync(dir)) process.exit(0);
-          for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort()) {
+          for (const file of fs.readdirSync(dir).filter((file) => file.endsWith('.json')).sort()) {
             try {
               const report = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
               const s = report.stats || {};
@@ -459,35 +552,17 @@ jobs:
           }
           NODE
 
-          find "$EVIDENCE_DIR/screenshots" -maxdepth 1 -type f -name '*.png' -printf 'custom/%f\n' 2>/dev/null | sort | tee "$EVIDENCE_DIR/screenshots-inventory.txt" || true
-          custom_count="$(find "$EVIDENCE_DIR/screenshots" -maxdepth 1 -type f -name '*.png' 2>/dev/null | wc -l | tr -d ' ')"
-          echo "custom_screenshot_count=$custom_count" | tee "$EVIDENCE_DIR/screenshot-counts.txt"
-          echo "total_screenshot_count=$custom_count" | tee -a "$EVIDENCE_DIR/screenshot-counts.txt"
+          {
+            find "$EVIDENCE_DIR/screenshots" -type f -name '*.png' -printf 'custom/%f\n' 2>/dev/null
+            find "$EVIDENCE_DIR/repo-native-start" -type f -name '*.png' -printf 'repo-native/%P\n' 2>/dev/null
+          } | sort | tee "$EVIDENCE_DIR/screenshots-inventory.txt" || true
 
           runtime_status="CAPTURE_NOT_AVAILABLE"
-          console_total="UNKNOWN"
-          page_total="UNKNOWN"
           if [[ -f "$EVIDENCE_DIR/capture-report.json" ]]; then
-            node <<'NODE' | tee "$EVIDENCE_DIR/runtime-counts.txt"
-          const r = require(process.env.EVIDENCE_DIR + '/capture-report.json');
-          const consoleTotal = r.reports.reduce((sum, item) => sum + (item.consoleErrors || []).length, 0);
-          const pageTotal = r.reports.reduce((sum, item) => sum + (item.pageErrors || []).length, 0);
-          console.log(`console_error_total=${consoleTotal}`);
-          console.log(`page_error_total=${pageTotal}`);
-          NODE
-            console_total="$(grep '^console_error_total=' "$EVIDENCE_DIR/runtime-counts.txt" | cut -d= -f2)"
-            page_total="$(grep '^page_error_total=' "$EVIDENCE_DIR/runtime-counts.txt" | cut -d= -f2)"
-            if [[ "$console_total" == "0" && "$page_total" == "0" ]]; then runtime_status="ZERO_ERRORS"; else runtime_status="ERRORS_PRESENT"; fi
-            node <<'NODE' | tee "$EVIDENCE_DIR/reduced-motion-observed.txt"
-          const r = require(process.env.EVIDENCE_DIR + '/capture-report.json');
-          for (const item of r.observations.filter(x => x.label.startsWith('reduced-motion-') && x.label.endsWith('-computed'))) {
-            const v = item.value;
-            console.log(`width=${item.width} label=${item.label} raw=${JSON.stringify(v.raw)} durations_ms=${JSON.stringify(v.durationsMs)} threshold_ms=${v.thresholdMs}`);
-          }
-          NODE
+            runtime_status="$(node -e 'const r=require(process.argv[1]); const bad=(r.reports||[]).some(x=>(x.consoleErrors||[]).length||(x.pageErrors||[]).length); process.stdout.write(bad?"ERRORS_PRESENT":"ZERO_ERRORS")' "$EVIDENCE_DIR/capture-report.json")"
           fi
 
-          if [[ "$TARGETED_OUTCOME" == "success" && "$HOME_OUTCOME" == "success" && "$PUBLIC_OUTCOME" == "success" && "$CAPTURE_OUTCOME" == "success" ]]; then
+          if [[ "$START_SUITES_OUTCOME" == "success" && "$PUBLIC_HANDOFF_OUTCOME" == "success" && "$PUBLIC_INTEGRATION_OUTCOME" == "success" && "$CAPTURE_OUTCOME" == "success" ]]; then
             test_result="PASS"
           else
             test_result="FAIL"
@@ -501,9 +576,10 @@ jobs:
             echo "project=General Solutions"
             echo "project_id=GS"
             echo "workstream=GS-GOV-W12-DEEP-REM-EXACT-HEAD-VALIDATION-R1"
-            echo "follow_on=W12-R3_HOME_A_ONLY"
+            echo "follow_on=W12-R4_START_ONLY"
             echo "classification=REFERENCE_ONLY"
-            echo "candidate_key=$CANDIDATE_KEY"
+            echo "candidate=START"
+            echo "candidate_pr=83"
             echo "candidate_sha=$CANDIDATE_SHA"
             echo "parent_sha=$PARENT_SHA"
             echo "run_id=$GITHUB_RUN_ID"
@@ -511,13 +587,12 @@ jobs:
             echo "job_name=$JOB_NAME"
             echo "viewports=1440,768,430,390"
             echo "test_result=$test_result"
-            echo "targeted_test_result=$TARGETED_OUTCOME"
-            echo "home_regression_result=$HOME_OUTCOME"
-            echo "public_regression_result=$PUBLIC_OUTCOME"
-            echo "capture_result=$CAPTURE_OUTCOME"
+            echo "canonical_start_suites_result=$START_SUITES_OUTCOME"
+            echo "public_handoff_result=$PUBLIC_HANDOFF_OUTCOME"
+            echo "public_site_integration_result=$PUBLIC_INTEGRATION_OUTCOME"
+            echo "actual_start_capture_result=$CAPTURE_OUTCOME"
             echo "console_page_error_status=$runtime_status"
-            echo "console_error_total=$console_total"
-            echo "page_error_total=$page_total"
+            echo "home_a_executed=NO"
             echo "home_b_executed=NO"
             echo "rp_executed=NO"
           } | tee "$EVIDENCE_DIR/artifact-metadata.txt"
@@ -531,38 +606,38 @@ jobs:
             echo "typecheck=${{ steps.typecheck.outcome }}"
             echo "build=${{ steps.build.outcome }}"
             echo "chromium=${{ steps.chromium.outcome }}"
-            echo "targeted=${{ steps.targeted.outcome }}"
-            echo "home_regression=${{ steps.home_regression.outcome }}"
-            echo "public_regression=${{ steps.public_regression.outcome }}"
-            echo "capture=${{ steps.capture.outcome }}"
+            echo "canonical_start_suites=${{ steps.start_suites.outcome }}"
+            echo "public_handoff=${{ steps.public_handoff.outcome }}"
+            echo "public_site_integration=${{ steps.public_integration.outcome }}"
+            echo "actual_start_capture=${{ steps.capture.outcome }}"
           } | tee "$EVIDENCE_DIR/step-outcomes.txt"
 
-      - name: Upload HOME-A SHA-bound evidence artifact
+      - name: Upload START SHA-bound evidence artifact
         id: artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_prefix }}-${{ matrix.candidate_sha }}
-          path: ${{ matrix.evidence_dir }}
+          name: gs-w12-r4-start-${{ env.CANDIDATE_SHA }}
+          path: ${{ env.EVIDENCE_DIR }}
           if-no-files-found: error
           retention-days: 14
 
-      - name: Publish artifact identity
-        if: always() && steps.artifact.outcome == 'success'
+      - name: Publish concise execution summary
+        if: always()
         shell: bash
         run: |
           {
-            echo "artifact_id=${{ steps.artifact.outputs.artifact-id }}"
-            echo "artifact_digest=${{ steps.artifact.outputs.artifact-digest }}"
-            echo "artifact_name=${{ matrix.artifact_prefix }}-${{ matrix.candidate_sha }}"
-            echo "candidate_sha=${CANDIDATE_SHA}"
-            echo "run_id=${GITHUB_RUN_ID}"
-          } | tee "$EVIDENCE_DIR/artifact-upload-output.txt"
-          {
-            echo "### $JOB_NAME"
-            echo "- candidate: $CANDIDATE_SHA"
-            echo "- artifact: ${{ matrix.artifact_prefix }}-${{ matrix.candidate_sha }}"
-            echo "- artifact id: ${{ steps.artifact.outputs.artifact-id }}"
-            echo "- digest: ${{ steps.artifact.outputs.artifact-digest }}"
+            echo "## W12-R4 START exact-head validation"
+            echo "- candidate: \`$CANDIDATE_SHA\`"
+            echo "- parent: \`$PARENT_SHA\`"
+            echo "- canonical START suites: \`${{ steps.start_suites.outcome }}\`"
+            echo "- public handoff suite: \`${{ steps.public_handoff.outcome }}\`"
+            echo "- public-site integration: \`${{ steps.public_integration.outcome }}\`"
+            echo "- actual /start capture: \`${{ steps.capture.outcome }}\`"
+            echo "- artifact id: \`${{ steps.artifact.outputs.artifact-id }}\`"
+            echo "- artifact digest: \`${{ steps.artifact.outputs.artifact-digest }}\`"
+            echo "- HOME-A executed: NO"
+            echo "- HOME-B executed: NO"
+            echo "- RP executed: NO"
             echo "- classification: REFERENCE_ONLY"
           } >> "$GITHUB_STEP_SUMMARY"
