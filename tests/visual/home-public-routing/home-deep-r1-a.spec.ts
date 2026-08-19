@@ -32,6 +32,18 @@ async function expectFocusVisualInsideViewport(locator: Locator) {
   expect(result.right).toBeLessThanOrEqual(result.viewportWidth);
 }
 
+function parseCssTimeListMilliseconds(value: string) {
+  return value.split(',').map((token) => {
+    const match = token.trim().match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*(ms|s)$/i);
+    if (!match) throw new Error(`Unsupported CSS time value: ${token}`);
+
+    const numericValue = Number(match[1]);
+    if (!Number.isFinite(numericValue)) throw new Error(`Invalid CSS time value: ${token}`);
+
+    return match[2].toLowerCase() === 's' ? numericValue * 1000 : numericValue;
+  });
+}
+
 test.beforeEach(async ({ page }) => {
   const errors = { console: [] as string[], page: [] as string[] };
   runtimeErrors.set(page, errors);
@@ -167,12 +179,14 @@ test('owned Hero and S02 motion remains reduced when the user requests it', asyn
   await openHome(page);
 
   for (const selector of ['#hero .e2-threshold-light', '#solutions-universe .s02-connector']) {
-    const durations = await page.locator(selector).first().evaluate((element) => {
-      return window.getComputedStyle(element).transitionDuration
-        .split(',')
-        .map((value) => value.trim());
-    });
-
-    expect(durations.every((value) => value === '0s' || value === '0.00001s')).toBe(true);
+    const duration = await page.locator(selector).first().evaluate((element) => (
+      window.getComputedStyle(element).transitionDuration
+    ));
+    const durationsMs = parseCssTimeListMilliseconds(duration);
+    expect(durationsMs.length).toBeGreaterThan(0);
+    for (const durationMs of durationsMs) {
+      expect(Number.isFinite(durationMs)).toBe(true);
+      expect(durationMs).toBeLessThanOrEqual(0.01);
+    }
   }
 });
