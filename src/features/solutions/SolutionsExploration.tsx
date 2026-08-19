@@ -55,7 +55,8 @@ function isSolutionFamilyId(value: unknown): value is SolutionFamilyId {
 function normalizeInitialState(
   state?: Partial<SolutionsExplorationState>,
 ): SolutionsExplorationState {
-  const familyId = isSolutionFamilyId(state?.familyId) ? state.familyId : 'booking';
+  const requestedFamilyId = state?.familyId;
+  const familyId = isSolutionFamilyId(requestedFamilyId) ? requestedFamilyId : 'booking';
   const mode: SolutionsExplorationMode = state?.mode === 'compare' ? 'compare' : 'explore';
   const requestedIndex = Number.isInteger(state?.compareIndex) ? Number(state?.compareIndex) : 0;
   const compareIndex = Math.max(0, Math.min(compare.length - 1, requestedIndex));
