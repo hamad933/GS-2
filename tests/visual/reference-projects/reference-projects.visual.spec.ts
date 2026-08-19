@@ -142,7 +142,7 @@ test('comparison exposes project identity and all field meanings programmaticall
   }
 });
 
-test('public route copy avoids repository implementation wording while preserving unavailable-route truth', async ({ page }) => {
+test('public evidence and route copy avoid repository implementation wording while preserving unavailable truth', async ({ page }) => {
   await openFixture(page, 'ar');
   let publicText = await page.locator(BODY).innerText();
   expect(publicText).not.toContain('المستودع');
@@ -150,7 +150,14 @@ test('public route copy avoids repository implementation wording while preservin
   expect(publicText).toContain('المسار الخارجي الموثوق غير متاح حاليًا');
 
   await page.getByRole('button', { name: /سجل الحدود والتحقق/ }).click();
+  await expect(page.getByText('لا تتوفر حاليًا لقطات موثقة يمكن عرضها كدليل.')).toBeVisible();
+  await expect(page.locator('.rp-ledger__evidence [data-state="UNAVAILABLE"]')).toHaveCount(2);
+  await expect(page.getByText('الدليل غير متاح')).toHaveCount(2);
   await expect(page.getByText('لا يتوفر حاليًا رابط موثوق إلى المصدر المستقل.')).toBeVisible();
+  publicText = await page.locator(BODY).innerText();
+  expect(publicText).not.toContain('المستودع');
+  expect(publicText.toLowerCase()).not.toContain('repository');
+  expect(publicText).not.toContain('لا توجد في هذا المستودع لقطات موثقة يمكن عرضها كدليل.');
 
   await openFixture(page, 'en');
   publicText = await page.locator(BODY).innerText();
@@ -159,7 +166,14 @@ test('public route copy avoids repository implementation wording while preservin
   expect(publicText).toContain('Verified outbound route currently unavailable');
 
   await page.getByRole('button', { name: /boundaries and verification ledger/i }).click();
+  await expect(page.getByText('No verified product captures are currently available to present as proof.')).toBeVisible();
+  await expect(page.locator('.rp-ledger__evidence [data-state="UNAVAILABLE"]')).toHaveCount(2);
+  await expect(page.getByText('Evidence unavailable')).toHaveCount(2);
   await expect(page.getByText('No verified route to the independent source is currently available.')).toBeVisible();
+  publicText = await page.locator(BODY).innerText();
+  expect(publicText).not.toContain('المستودع');
+  expect(publicText.toLowerCase()).not.toContain('repository');
+  expect(publicText).not.toContain('This repository contains no authoritative product captures that can be shown as proof.');
 });
 
 test('capability-map disclaimer has production-readable type and contrast treatment', async ({ page }) => {
