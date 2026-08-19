@@ -23,7 +23,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npx vite ../fixtures/solutions --host 127.0.0.1 --port 4182',
+    command: 'npx vite --host 127.0.0.1 --port 4182',
     url: 'http://127.0.0.1:4182',
     reuseExistingServer: false,
     timeout: 30_000,

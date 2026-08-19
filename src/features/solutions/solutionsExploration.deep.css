@@ -1,0 +1,125 @@
+.solutions-exploration {
+  --muted: #c3ccc8;
+  --gold: #d6bb7f;
+  --line: rgba(243, 238, 227, .19);
+}
+
+.solutions-exploration button:focus-visible,
+.solutions-exploration summary:focus-visible,
+.solutions-exploration [tabindex="-1"]:focus-visible {
+  outline-color: #8db4ff;
+}
+
+.solutions-browser,
+.solutions-browser__rail,
+.solutions-selected,
+.solutions-compare,
+.solutions-compare__mobile {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.solutions-browser__position {
+  display: none;
+}
+
+.solutions-reference h3 {
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: right;
+}
+
+.solutions-reference h3 bdi,
+.solutions-budget bdi,
+.solutions-eyebrow bdi,
+.solutions-scene figcaption bdi,
+.solutions-heading bdi {
+  unicode-bidi: isolate;
+}
+
+.solutions-compare__header h2:focus,
+.solutions-compare-step:focus,
+.solutions-compare-summary:focus {
+  outline: 0;
+}
+
+@media (max-width: 760px) {
+  .solutions-browser__position {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 0 .7rem;
+    color: var(--muted);
+    font-size: .78rem;
+    line-height: 1.6;
+  }
+
+  .solutions-browser__position strong {
+    color: var(--ivory);
+    font-size: .82rem;
+    text-align: left;
+  }
+
+  .solutions-browser__rail {
+    max-width: calc(100vw - 2rem);
+    padding-inline: .15rem 1.2rem;
+    scroll-padding-inline: 1.2rem;
+  }
+
+  .solutions-family-tab {
+    flex-basis: min(74vw, 300px);
+  }
+
+  .solutions-family-tab:hover {
+    transform: none;
+  }
+
+  .solutions-scene img {
+    min-height: 0;
+    aspect-ratio: 16 / 11;
+  }
+
+  .solutions-compare-step,
+  .solutions-compare-summary {
+    scroll-margin-top: 1.5rem;
+  }
+
+  .solutions-compare__actions .solutions-primary,
+  .solutions-compare__actions .solutions-link {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .solutions-browser__rail {
+    max-width: calc(100vw - 1.8rem);
+  }
+
+  .solutions-family-tab {
+    flex-basis: 76vw;
+    min-height: 82px;
+  }
+
+  .solutions-loop ol {
+    grid-template-columns: 1fr;
+  }
+
+  .solutions-loop li {
+    min-height: 0;
+  }
+
+  .solutions-loop li span {
+    margin-bottom: .8rem;
+  }
+
+  .solutions-directions figure,
+  .solutions-directions figure:first-child,
+  .solutions-directions figure:last-child {
+    min-height: 240px;
+  }
+
+  .solutions-reference {
+    padding-inline-start: 1rem;
+  }
+}
