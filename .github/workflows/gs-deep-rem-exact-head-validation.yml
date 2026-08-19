@@ -55,23 +55,11 @@ jobs:
       matrix:
         include:
           - key: home-a
-            label: W12-R2 HOME-A exact 06a4697
-            candidate_sha: 06a46970798ac0cfdc220d24b0a8b260d97ca524
+            label: W12-R3 HOME-A exact 8e975e8
+            candidate_sha: 8e975e8082bff4143f283da2f2e9cd8a1caa7d30
             parent_sha: 5acba33a23c3424dbdfbfd5ef8bc94a6f7fe494a
-            evidence_dir: /tmp/gs-w12-r2-home-a
-            artifact_prefix: gs-w12-r2-home-a
-          - key: home-b
-            label: W12-R2 HOME-B exact c07a3e9
-            candidate_sha: c07a3e9515bbd7e522f239f1bc010b1aa505e5e0
-            parent_sha: 5acba33a23c3424dbdfbfd5ef8bc94a6f7fe494a
-            evidence_dir: /tmp/gs-w12-r2-home-b
-            artifact_prefix: gs-w12-r2-home-b
-          - key: rp
-            label: W12-R2 Reference Projects exact f6dbbef
-            candidate_sha: f6dbbef27de687a462866df8faedaeeb12d97955
-            parent_sha: bef381bcebde8199f263e1be465c5b0010058f5d
-            evidence_dir: /tmp/gs-w12-r2-rp
-            artifact_prefix: gs-w12-r2-reference-projects
+            evidence_dir: /tmp/gs-w12-r3-home-a
+            artifact_prefix: gs-w12-r3-home-a
     env:
       CANDIDATE_KEY: ${{ matrix.key }}
       CANDIDATE_SHA: ${{ matrix.candidate_sha }}
@@ -93,13 +81,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$EVIDENCE_DIR/logs" "$EVIDENCE_DIR/reports" "$EVIDENCE_DIR/screenshots" "$EVIDENCE_DIR/repo-native"
+          mkdir -p "$EVIDENCE_DIR/logs" "$EVIDENCE_DIR/reports" "$EVIDENCE_DIR/screenshots"
           {
             echo "project=General Solutions"
             echo "project_id=GS"
             echo "classification=REFERENCE_ONLY"
             echo "workstream=GS-GOV-W12-DEEP-REM-EXACT-HEAD-VALIDATION-R1"
-            echo "follow_on=W12-R2"
+            echo "follow_on=W12-R3_HOME_A_ONLY"
             echo "candidate_key=$CANDIDATE_KEY"
             echo "candidate_sha=$CANDIDATE_SHA"
             echo "parent_sha=$PARENT_SHA"
@@ -107,9 +95,11 @@ jobs:
             echo "run_id=$GITHUB_RUN_ID"
             echo "job_key=$GITHUB_JOB"
             echo "viewports=1440,768,430,390"
-            echo "home_candidates_combined=NEVER"
+            echo "home_b_executed=NO"
+            echo "rp_executed=NO"
           } | tee "$EVIDENCE_DIR/identity.txt"
 
+          test "$CANDIDATE_KEY" = "home-a"
           test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
           test "$(git merge-base "$PARENT_SHA" "$CANDIDATE_SHA")" = "$PARENT_SHA"
           read -r behind ahead < <(git rev-list --left-right --count "$PARENT_SHA...$CANDIDATE_SHA")
@@ -117,46 +107,19 @@ jobs:
           test "$behind" -eq 0
           test "$ahead" -gt 0
 
-          case "$CANDIDATE_KEY" in
-            home-a)
-              cat > "$EVIDENCE_DIR/expected-paths.txt" <<'EOF'
+          cat > "$EVIDENCE_DIR/expected-paths.txt" <<'EOF'
           src/components/hero/LivingSystemHero.tsx
           src/components/sections/SolutionsUniverse.tsx
           tests/visual/home-public-routing/home-deep-r1-a.spec.ts
           tests/visual/home-public-routing/home-public-routing.spec.ts
           EOF
-              ;;
-            home-b)
-              cat > "$EVIDENCE_DIR/expected-paths.txt" <<'EOF'
-          src/components/footer/Footer.tsx
-          src/components/sections/ProjectGateway.v2.css
-          src/components/sections/ReferenceProof.remediation.css
-          src/components/sections/ReferenceProof.tsx
-          tests/visual/home-public-routing/home-deep-r1-b.spec.ts
-          EOF
-              ;;
-            rp)
-              cat > "$EVIDENCE_DIR/expected-paths.txt" <<'EOF'
-          src/data/reference-projects/referenceProjects.ts
-          src/features/reference-projects/ReferenceProjectsBody.tsx
-          tests/visual/reference-projects/reference-projects.visual.spec.ts
-          EOF
-              ;;
-            *) exit 2 ;;
-          esac
-
+          sed -i 's/^          //' "$EVIDENCE_DIR/expected-paths.txt"
           sort -o "$EVIDENCE_DIR/expected-paths.txt" "$EVIDENCE_DIR/expected-paths.txt"
           git diff --name-only "$PARENT_SHA...$CANDIDATE_SHA" | sort | tee "$EVIDENCE_DIR/actual-paths.txt"
           diff -u "$EVIDENCE_DIR/expected-paths.txt" "$EVIDENCE_DIR/actual-paths.txt" | tee "$EVIDENCE_DIR/path-boundary.diff"
+          test "$(wc -l < "$EVIDENCE_DIR/actual-paths.txt" | tr -d ' ')" -eq 4
           git diff --stat "$PARENT_SHA...$CANDIDATE_SHA" | tee "$EVIDENCE_DIR/diff-stat.txt"
           git diff --check "$PARENT_SHA...$CANDIDATE_SHA" 2>&1 | tee "$EVIDENCE_DIR/logs/git-diff-check.log"
-
-          if [[ "$CANDIDATE_KEY" == "rp" ]]; then
-            grep -Fq 'لا تتوفر حاليًا لقطات موثقة يمكن عرضها كدليل.' src/data/reference-projects/referenceProjects.ts
-            grep -Fq 'No verified product captures are currently available to present as proof.' src/data/reference-projects/referenceProjects.ts
-            if grep -Fq 'لا توجد في هذا المستودع لقطات موثقة يمكن عرضها كدليل.' src/data/reference-projects/referenceProjects.ts; then exit 1; fi
-            if grep -Fq 'This repository contains no authoritative product captures that can be shown as proof.' src/data/reference-projects/referenceProjects.ts; then exit 1; fi
-          fi
 
       - name: Set up Node 20
         id: node
@@ -219,51 +182,36 @@ jobs:
           set -o pipefail
           npx playwright install chromium 2>&1 | tee "$EVIDENCE_DIR/logs/playwright-install.log"
 
-      - name: Run exact candidate targeted suite
+      - name: Run HOME-A targeted suite
         id: targeted
         if: always() && steps.build.outcome == 'success' && steps.chromium.outcome == 'success'
         shell: bash
         run: |
           set +e
-          rc=0
-          case "$CANDIDATE_KEY" in
-            home-a)
-              npx playwright test tests/visual/home-public-routing/home-deep-r1-a.spec.ts --config=playwright.config.ts --project=chromium --workers=1 --reporter=json > "$EVIDENCE_DIR/reports/home-a-targeted.json" 2> "$EVIDENCE_DIR/logs/home-a-targeted.stderr.log" || rc=$?
-              ;;
-            home-b)
-              npx playwright test tests/visual/home-public-routing/home-deep-r1-b.spec.ts --config=playwright.config.ts --project=chromium --workers=1 --reporter=json > "$EVIDENCE_DIR/reports/home-b-targeted.json" 2> "$EVIDENCE_DIR/logs/home-b-targeted.stderr.log" || rc=$?
-              ;;
-            rp)
-              rm -rf tests/visual/reference-projects/evidence
-              npx playwright test tests/visual/reference-projects/reference-projects.visual.spec.ts --config=tests/visual/reference-projects/playwright.config.ts --project=chromium --workers=1 --reporter=json > "$EVIDENCE_DIR/reports/reference-projects-targeted.json" 2> "$EVIDENCE_DIR/logs/reference-projects-targeted.stderr.log" || rc=$?
-              if [[ -d tests/visual/reference-projects/evidence ]]; then
-                cp -a tests/visual/reference-projects/evidence/. "$EVIDENCE_DIR/repo-native"/
-                rm -rf tests/visual/reference-projects/evidence
-              fi
-              ;;
-          esac
+          npx playwright test tests/visual/home-public-routing/home-deep-r1-a.spec.ts --config=playwright.config.ts --project=chromium --workers=1 --reporter=json > "$EVIDENCE_DIR/reports/home-a-targeted.json" 2> "$EVIDENCE_DIR/logs/home-a-targeted.stderr.log"
+          rc=$?
           echo "$rc" > "$EVIDENCE_DIR/reports/targeted.exit"
           exit "$rc"
 
-      - name: Run HOME existing routing regression
+      - name: Run shared HOME routing suite
         id: home_regression
-        if: always() && matrix.key != 'rp' && steps.build.outcome == 'success' && steps.chromium.outcome == 'success'
+        if: always() && steps.build.outcome == 'success' && steps.chromium.outcome == 'success'
         shell: bash
         run: |
           set +e
-          rc=0
-          npx playwright test tests/visual/home-public-routing/home-public-routing.spec.ts --config=playwright.config.ts --project=chromium --workers=1 --reporter=json > "$EVIDENCE_DIR/reports/home-routing.json" 2> "$EVIDENCE_DIR/logs/home-routing.stderr.log" || rc=$?
+          npx playwright test tests/visual/home-public-routing/home-public-routing.spec.ts --config=playwright.config.ts --project=chromium --workers=1 --reporter=json > "$EVIDENCE_DIR/reports/home-routing.json" 2> "$EVIDENCE_DIR/logs/home-routing.stderr.log"
+          rc=$?
           echo "$rc" > "$EVIDENCE_DIR/reports/home-routing.exit"
           exit "$rc"
 
-      - name: Run HOME public-site integration regression
+      - name: Run public-site integration suite
         id: public_regression
-        if: always() && matrix.key != 'rp' && steps.build.outcome == 'success' && steps.chromium.outcome == 'success'
+        if: always() && steps.build.outcome == 'success' && steps.chromium.outcome == 'success'
         shell: bash
         run: |
           set +e
-          rc=0
-          npx playwright test tests/visual/public-site.integration.spec.ts --config=playwright.config.ts --project=chromium --workers=1 --reporter=json > "$EVIDENCE_DIR/reports/public-site-integration.json" 2> "$EVIDENCE_DIR/logs/public-site-integration.stderr.log" || rc=$?
+          npx playwright test tests/visual/public-site.integration.spec.ts --config=playwright.config.ts --project=chromium --workers=1 --reporter=json > "$EVIDENCE_DIR/reports/public-site-integration.json" 2> "$EVIDENCE_DIR/logs/public-site-integration.stderr.log"
+          rc=$?
           echo "$rc" > "$EVIDENCE_DIR/reports/public-site-integration.exit"
           exit "$rc"
 
@@ -284,13 +232,12 @@ jobs:
           done
           test "$ready" -eq 1
 
-          cat > "$RUNNER_TEMP/gs-w12-r2-capture.cjs" <<'NODE'
+          cat > "$RUNNER_TEMP/gs-w12-r3-home-a-capture.cjs" <<'NODE'
           const { chromium } = require('@playwright/test');
           const fs = require('node:fs');
           const path = require('node:path');
 
           const out = process.env.EVIDENCE_DIR;
-          const key = process.env.CANDIDATE_KEY;
           const root = 'http://127.0.0.1:4191';
           const widths = [1440, 768, 430, 390];
           const inventory = [];
@@ -305,16 +252,28 @@ jobs:
             if (!condition) addFailure(width, label, detail || 'check failed');
           };
 
-          const fileFor = (width, name) => path.join(out, 'screenshots', `${key}-${width}-${name}.png`);
-          async function shot(locator, width, name, fullPage = false) {
+          function parseCssTimeListMilliseconds(value) {
+            return value.split(',').map((token) => {
+              const match = token.trim().match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*(ms|s)$/i);
+              if (!match) throw new Error(`Unsupported CSS time value: ${token}`);
+              const numericValue = Number(match[1]);
+              if (!Number.isFinite(numericValue)) throw new Error(`Invalid CSS time value: ${token}`);
+              return match[2].toLowerCase() === 's' ? numericValue * 1000 : numericValue;
+            });
+          }
+
+          const fileFor = (width, name) => path.join(out, 'screenshots', `home-a-${width}-${name}.png`);
+          async function shot(locator, width, name) {
             const file = fileFor(width, name);
-            if (fullPage) await locator.page().screenshot({ path: file, fullPage: true, animations: 'disabled' });
-            else await locator.screenshot({ path: file, animations: 'disabled' });
+            await locator.screenshot({ path: file, animations: 'disabled' });
             inventory.push(path.basename(file));
           }
 
           async function commonRuntime(page, width, consoleErrors, pageErrors) {
-            const dims = await page.evaluate(() => ({ client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
+            const dims = await page.evaluate(() => ({
+              client: document.documentElement.clientWidth,
+              scroll: document.documentElement.scrollWidth,
+            }));
             check(width, 'document-no-horizontal-overflow', dims.scroll <= dims.client + 1, `${dims.scroll}/${dims.client}`);
             check(width, 'zero-console-errors', consoleErrors.length === 0, JSON.stringify(consoleErrors));
             check(width, 'zero-page-errors', pageErrors.length === 0, JSON.stringify(pageErrors));
@@ -393,14 +352,11 @@ jobs:
                   const outlineWidth = parseFloat(s.outlineWidth) || 0;
                   const outlineOffset = parseFloat(s.outlineOffset) || 0;
                   const bleed = Math.max(0, outlineWidth + outlineOffset);
-                  const focusVisible = el.matches(':focus-visible');
-                  const outlineVisible = s.outlineStyle !== 'none' && outlineWidth > 0;
-                  const shadowVisible = s.boxShadow !== 'none';
                   return {
                     active: el === document.activeElement,
-                    focusVisible,
-                    outlineVisible,
-                    shadowVisible,
+                    focusVisible: el.matches(':focus-visible'),
+                    outlineVisible: s.outlineStyle !== 'none' && outlineWidth > 0,
+                    shadowVisible: s.boxShadow !== 'none',
                     outlineStyle: s.outlineStyle,
                     outlineWidth,
                     outlineOffset,
@@ -418,159 +374,22 @@ jobs:
               }
               await shot(s02, width, 's02-focus-boundary');
             }
-          }
 
-          async function captureHomeB(page, width) {
+            await page.emulateMedia({ reducedMotion: 'reduce' });
             await page.goto(`${root}/`);
             await page.evaluate(() => document.fonts.ready);
-            check(width, 'rtl', (await page.locator('html').getAttribute('dir')) === 'rtl');
-
-            const proof = page.locator('#reference-proof');
-            await shot(proof, width, 'reference-proof-default');
-            const disclosure = proof.locator('[data-visible-evidence-boundary]');
-            if (width <= 430) {
-              check(width, 'disclosure-visible', await disclosure.isVisible());
-              await shot(disclosure, width, 'disclosure');
+            for (const [label, selector] of [
+              ['hero-threshold-light', '#hero .e2-threshold-light'],
+              ['s02-connector', '#solutions-universe .s02-connector'],
+            ]) {
+              const raw = await page.locator(selector).first().evaluate(el => getComputedStyle(el).transitionDuration);
+              const durationsMs = parseCssTimeListMilliseconds(raw);
+              const detail = JSON.stringify({ selector, raw, durationsMs, thresholdMs: 0.01 });
+              check(width, `reduced-motion-${label}-has-values`, durationsMs.length > 0, detail);
+              check(width, `reduced-motion-${label}-finite`, durationsMs.every(Number.isFinite), detail);
+              check(width, `reduced-motion-${label}-threshold`, durationsMs.every(value => value <= 0.01), detail);
+              observe(width, `reduced-motion-${label}-computed`, { selector, raw, durationsMs, thresholdMs: 0.01 });
             }
-
-            await proof.locator('[data-project-selector="rp04"]').click();
-            check(width, 'pointer-selection', (await proof.getAttribute('data-project')) === 'rp04');
-            await shot(proof, width, 'reference-proof-selected-rp04');
-            const rp02 = proof.locator('[data-project-selector="rp02"]');
-            await rp02.focus();
-            check(width, 'focus-does-not-select', (await proof.getAttribute('data-project')) === 'rp04');
-
-            const gateway = page.locator('#project-gateway');
-            const heading = gateway.locator('#gateway-title');
-            const intro = gateway.locator('.gateway-intro');
-            const actions = gateway.locator('.gateway-actions');
-            const primary = gateway.locator('.gateway-cta--primary');
-            const secondary = gateway.locator('.gateway-cta--secondary');
-            const privacy = gateway.locator('.gateway-privacy');
-            const continuity = gateway.locator('.gateway-continuity');
-
-            await shot(gateway, width, 'project-gateway');
-            await shot(primary, width, 'final-cta');
-
-            if (width <= 430) {
-              for (const [label, locator] of [
-                ['gateway-heading-visible', heading],
-                ['gateway-intro-visible', intro],
-                ['gateway-primary-visible', primary],
-                ['gateway-secondary-visible', secondary],
-                ['gateway-privacy-visible', privacy],
-                ['gateway-continuity-visible', continuity],
-              ]) {
-                check(width, label, await locator.isVisible());
-              }
-
-              const ctas = actions.locator('.gateway-cta');
-              check(width, 'gateway-two-actions', await ctas.count() === 2, `count=${await ctas.count()}`);
-              if (await ctas.count() === 2) {
-                check(width, 'gateway-primary-precedes-secondary-dom', (await ctas.nth(0).getAttribute('class') || '').includes('gateway-cta--primary'));
-                check(width, 'gateway-secondary-follows-primary-dom', (await ctas.nth(1).getAttribute('class') || '').includes('gateway-cta--secondary'));
-              }
-
-              const [g, h, i, a, p, s, pr, c] = await Promise.all([
-                gateway.boundingBox(), heading.boundingBox(), intro.boundingBox(), actions.boundingBox(),
-                primary.boundingBox(), secondary.boundingBox(), privacy.boundingBox(), continuity.boundingBox(),
-              ]);
-
-              if ([g, h, i, a, p, s, pr, c].some(box => !box)) {
-                addFailure(width, 'gateway-composition-boxes', 'required bounding box missing');
-              } else {
-                const gatewayBox = g;
-                const headingBox = h;
-                const introBox = i;
-                const actionsBox = a;
-                const primaryBox = p;
-                const secondaryBox = s;
-                const privacyBox = pr;
-                const continuityBox = c;
-                const rootFontSize = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
-                const actionMarginBlockStart = await actions.evaluate(el => parseFloat(getComputedStyle(el).marginBlockStart) || 0);
-                const narrativeToActionsGap = actionsBox.y - (introBox.y + introBox.height);
-
-                check(width, 'gateway-primary-precedes-secondary-geometry', primaryBox.y < secondaryBox.y, `${primaryBox.y}/${secondaryBox.y}`);
-                check(width, 'gateway-mobile-action-margin-bounded', actionMarginBlockStart <= rootFontSize * 1.5, `${actionMarginBlockStart}/${rootFontSize}`);
-                check(width, 'gateway-narrative-actions-gap-nonnegative', narrativeToActionsGap >= -1, String(narrativeToActionsGap));
-                check(width, 'gateway-narrative-actions-gap-within-design-spacing', narrativeToActionsGap <= actionMarginBlockStart + 2, `${narrativeToActionsGap}/${actionMarginBlockStart}`);
-                check(width, 'gateway-intro-actions-no-overlap', introBox.y + introBox.height <= actionsBox.y + 1);
-                check(width, 'gateway-actions-privacy-no-overlap', actionsBox.y + actionsBox.height <= privacyBox.y + 1);
-                check(width, 'gateway-actions-continuity-no-collision', actionsBox.y + actionsBox.height <= continuityBox.y + 1);
-
-                const gatewayRight = gatewayBox.x + gatewayBox.width;
-                const gatewayBottom = gatewayBox.y + gatewayBox.height;
-                for (const [label, box] of [
-                  ['heading', headingBox], ['intro', introBox], ['actions', actionsBox], ['primary', primaryBox],
-                  ['secondary', secondaryBox], ['privacy', privacyBox], ['continuity', continuityBox],
-                ]) {
-                  check(width, `gateway-${label}-inside-gateway-x`, box.x >= gatewayBox.x - 1 && box.x + box.width <= gatewayRight + 1, JSON.stringify(box));
-                  check(width, `gateway-${label}-inside-gateway-y`, box.y >= gatewayBox.y - 1 && box.y + box.height <= gatewayBottom + 1, JSON.stringify(box));
-                  check(width, `gateway-${label}-inside-viewport-width`, box.x >= -1 && box.x + box.width <= width + 1, JSON.stringify(box));
-                }
-                observe(width, 'gateway-mobile-composition-metrics', {
-                  rootFontSize,
-                  actionMarginBlockStart,
-                  narrativeToActionsGap,
-                  gatewayBox,
-                  headingBox,
-                  introBox,
-                  actionsBox,
-                  primaryBox,
-                  secondaryBox,
-                  privacyBox,
-                  continuityBox,
-                });
-              }
-            }
-
-            const footer = page.locator('.gs-footer');
-            check(width, 'footer-primary-label-count', await footer.getByRole('link', { name: 'ابدأ اختيارك', exact: true }).count() === 1);
-            check(width, 'footer-secondary-label-count', await footer.getByRole('link', { name: 'انتقل إلى نقطة البدء', exact: true }).count() === 1);
-            await shot(footer, width, 'footer');
-          }
-
-          async function captureRP(page, width) {
-            await page.goto(`${root}/reference-projects`);
-            await page.evaluate(() => document.fonts.ready);
-            const body = page.locator('.reference-projects-body');
-            await body.waitFor({ state: 'visible' });
-            check(width, 'rtl', (await body.getAttribute('dir')) === 'rtl');
-            await shot(body, width, 'page-initial', true);
-
-            const selector = page.locator('.rp-project-selector');
-            const orientation = width <= 900 ? 'horizontal' : 'vertical';
-            check(width, 'selector-orientation', (await selector.getAttribute('aria-orientation')) === orientation, await selector.getAttribute('aria-orientation'));
-            await shot(selector, width, 'responsive-selector');
-
-            await page.locator('[data-project-selector="rp02"]').click();
-            check(width, 'rp02-selected', (await body.getAttribute('data-active-project')) === 'rp02');
-            await shot(body, width, 'selected-rp02', true);
-            await shot(page.locator('.rp-capability-map'), width, 'capability-map');
-            await shot(page.locator('.rp-capability-map figcaption'), width, 'capability-disclaimer');
-
-            await page.locator('[data-project-selector="rp04"]').click();
-            const toggle = page.getByRole('button', { name: /سجل الحدود والتحقق/ });
-            await toggle.click();
-            check(width, 'ledger-expanded', (await toggle.getAttribute('aria-expanded')) === 'true');
-            await shot(page.locator('.rp-ledger'), width, 'expanded-ledger');
-            await shot(page.locator('.rp-comparison'), width, 'comparison');
-
-            const route = page.getByText('المسار الخارجي الموثوق غير متاح حاليًا').first();
-            check(width, 'truthful-unavailable-route-visible', await route.isVisible());
-            await shot(route, width, 'route-unavailable');
-
-            const publicText = await body.innerText();
-            check(width, 'rp-ar-product-capture-truth-visible', publicText.includes('لا تتوفر حاليًا لقطات موثقة يمكن عرضها كدليل.'));
-            check(width, 'rp-unavailable-machine-state-preserved', await body.locator('[data-state="UNAVAILABLE"]').count() >= 2, `count=${await body.locator('[data-state="UNAVAILABLE"]').count()}`);
-            for (const forbidden of ['REFERENCE_ONLY', 'UNAVAILABLE', 'ROUTE_NOT_CONFIGURED', 'GS-PUB-003', 'repository', 'المستودع', 'لا توجد في هذا المستودع لقطات موثقة يمكن عرضها كدليل.']) {
-              check(width, `rp-public-copy-forbidden-${forbidden}`, !publicText.toLowerCase().includes(forbidden.toLowerCase()));
-            }
-
-            const footer = page.locator('.gs-footer');
-            if (await footer.count()) await shot(footer, width, 'final-page-cta');
-            else await shot(body, width, 'final-page-cta', true);
           }
 
           (async () => {
@@ -585,10 +404,7 @@ jobs:
               page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
               page.on('pageerror', error => pageErrors.push(error.message));
               try {
-                if (key === 'home-a') await captureHomeA(page, width);
-                else if (key === 'home-b') await captureHomeB(page, width);
-                else if (key === 'rp') await captureRP(page, width);
-                else throw new Error(`Unknown candidate key ${key}`);
+                await captureHomeA(page, width);
               } catch (error) {
                 addFailure(width, 'capture-fatal', error && error.stack ? error.stack : error);
               }
@@ -600,7 +416,9 @@ jobs:
               await context.close();
             }
             await browser.close();
-            fs.writeFileSync(path.join(out, 'capture-report.json'), JSON.stringify({ candidate: key, reports, observations, failures }, null, 2));
+            fs.writeFileSync(path.join(out, 'capture-report.json'), JSON.stringify({
+              candidate: 'home-a', reports, observations, failures,
+            }, null, 2));
             fs.writeFileSync(path.join(out, 'screenshots-inventory.txt'), inventory.sort().join('\n') + (inventory.length ? '\n' : ''));
             if (failures.length) {
               console.error(JSON.stringify(failures, null, 2));
@@ -609,7 +427,7 @@ jobs:
           })().catch(error => { console.error(error); process.exit(1); });
           NODE
 
-          NODE_PATH="$GITHUB_WORKSPACE/node_modules" node "$RUNNER_TEMP/gs-w12-r2-capture.cjs" 2>&1 | tee "$EVIDENCE_DIR/logs/capture.log"
+          NODE_PATH="$GITHUB_WORKSPACE/node_modules" node "$RUNNER_TEMP/gs-w12-r3-home-a-capture.cjs" 2>&1 | tee "$EVIDENCE_DIR/logs/capture.log"
 
       - name: Summarize evidence identity and exact results
         id: summary
@@ -641,25 +459,38 @@ jobs:
           }
           NODE
 
-          {
-            find "$EVIDENCE_DIR/screenshots" -maxdepth 1 -type f -name '*.png' -printf 'custom/%f\n' 2>/dev/null
-            find "$EVIDENCE_DIR/repo-native" -maxdepth 1 -type f -name '*.png' -printf 'repo-native/%f\n' 2>/dev/null
-          } | sort | tee "$EVIDENCE_DIR/screenshots-inventory.txt" || true
+          find "$EVIDENCE_DIR/screenshots" -maxdepth 1 -type f -name '*.png' -printf 'custom/%f\n' 2>/dev/null | sort | tee "$EVIDENCE_DIR/screenshots-inventory.txt" || true
           custom_count="$(find "$EVIDENCE_DIR/screenshots" -maxdepth 1 -type f -name '*.png' 2>/dev/null | wc -l | tr -d ' ')"
-          repo_native_count="$(find "$EVIDENCE_DIR/repo-native" -maxdepth 1 -type f -name '*.png' 2>/dev/null | wc -l | tr -d ' ')"
           echo "custom_screenshot_count=$custom_count" | tee "$EVIDENCE_DIR/screenshot-counts.txt"
-          echo "repo_native_screenshot_count=$repo_native_count" | tee -a "$EVIDENCE_DIR/screenshot-counts.txt"
-          echo "total_screenshot_count=$((custom_count + repo_native_count))" | tee -a "$EVIDENCE_DIR/screenshot-counts.txt"
+          echo "total_screenshot_count=$custom_count" | tee -a "$EVIDENCE_DIR/screenshot-counts.txt"
 
           runtime_status="CAPTURE_NOT_AVAILABLE"
+          console_total="UNKNOWN"
+          page_total="UNKNOWN"
           if [[ -f "$EVIDENCE_DIR/capture-report.json" ]]; then
-            runtime_status="$(node -e 'const r=require(process.argv[1]); const bad=r.reports.some(x=>(x.consoleErrors||[]).length||(x.pageErrors||[]).length); process.stdout.write(bad?"ERRORS_PRESENT":"ZERO_ERRORS")' "$EVIDENCE_DIR/capture-report.json")"
+            node <<'NODE' | tee "$EVIDENCE_DIR/runtime-counts.txt"
+          const r = require(process.env.EVIDENCE_DIR + '/capture-report.json');
+          const consoleTotal = r.reports.reduce((sum, item) => sum + (item.consoleErrors || []).length, 0);
+          const pageTotal = r.reports.reduce((sum, item) => sum + (item.pageErrors || []).length, 0);
+          console.log(`console_error_total=${consoleTotal}`);
+          console.log(`page_error_total=${pageTotal}`);
+          NODE
+            console_total="$(grep '^console_error_total=' "$EVIDENCE_DIR/runtime-counts.txt" | cut -d= -f2)"
+            page_total="$(grep '^page_error_total=' "$EVIDENCE_DIR/runtime-counts.txt" | cut -d= -f2)"
+            if [[ "$console_total" == "0" && "$page_total" == "0" ]]; then runtime_status="ZERO_ERRORS"; else runtime_status="ERRORS_PRESENT"; fi
+            node <<'NODE' | tee "$EVIDENCE_DIR/reduced-motion-observed.txt"
+          const r = require(process.env.EVIDENCE_DIR + '/capture-report.json');
+          for (const item of r.observations.filter(x => x.label.startsWith('reduced-motion-') && x.label.endsWith('-computed'))) {
+            const v = item.value;
+            console.log(`width=${item.width} label=${item.label} raw=${JSON.stringify(v.raw)} durations_ms=${JSON.stringify(v.durationsMs)} threshold_ms=${v.thresholdMs}`);
+          }
+          NODE
           fi
 
-          if [[ "$CANDIDATE_KEY" == "rp" ]]; then
-            if [[ "$TARGETED_OUTCOME" == "success" && "$CAPTURE_OUTCOME" == "success" ]]; then test_result="PASS"; else test_result="FAIL"; fi
+          if [[ "$TARGETED_OUTCOME" == "success" && "$HOME_OUTCOME" == "success" && "$PUBLIC_OUTCOME" == "success" && "$CAPTURE_OUTCOME" == "success" ]]; then
+            test_result="PASS"
           else
-            if [[ "$TARGETED_OUTCOME" == "success" && "$HOME_OUTCOME" == "success" && "$PUBLIC_OUTCOME" == "success" && "$CAPTURE_OUTCOME" == "success" ]]; then test_result="PASS"; else test_result="FAIL"; fi
+            test_result="FAIL"
           fi
 
           jobs_api="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?per_page=100"
@@ -670,7 +501,7 @@ jobs:
             echo "project=General Solutions"
             echo "project_id=GS"
             echo "workstream=GS-GOV-W12-DEEP-REM-EXACT-HEAD-VALIDATION-R1"
-            echo "follow_on=W12-R2"
+            echo "follow_on=W12-R3_HOME_A_ONLY"
             echo "classification=REFERENCE_ONLY"
             echo "candidate_key=$CANDIDATE_KEY"
             echo "candidate_sha=$CANDIDATE_SHA"
@@ -685,7 +516,10 @@ jobs:
             echo "public_regression_result=$PUBLIC_OUTCOME"
             echo "capture_result=$CAPTURE_OUTCOME"
             echo "console_page_error_status=$runtime_status"
-            echo "home_a_home_b_combined=NEVER"
+            echo "console_error_total=$console_total"
+            echo "page_error_total=$page_total"
+            echo "home_b_executed=NO"
+            echo "rp_executed=NO"
           } | tee "$EVIDENCE_DIR/artifact-metadata.txt"
 
           {
@@ -703,7 +537,7 @@ jobs:
             echo "capture=${{ steps.capture.outcome }}"
           } | tee "$EVIDENCE_DIR/step-outcomes.txt"
 
-      - name: Upload separate SHA-bound evidence artifact
+      - name: Upload HOME-A SHA-bound evidence artifact
         id: artifact
         if: always()
         uses: actions/upload-artifact@v4
