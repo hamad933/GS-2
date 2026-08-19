@@ -43,8 +43,8 @@ const sharedEvidence: ReferenceEvidence[] = [
     label: { ar: 'واجهات المنتج', en: 'Product surfaces' },
     state: 'UNAVAILABLE',
     note: {
-      ar: 'لا توجد في هذا المستودع لقطات موثقة يمكن عرضها كدليل.',
-      en: 'This repository contains no authoritative product captures that can be shown as proof.',
+      ar: 'لا تتوفر حاليًا لقطات موثقة يمكن عرضها كدليل.',
+      en: 'No verified product captures are currently available to present as proof.',
     },
   },
   {
