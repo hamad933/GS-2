@@ -393,7 +393,7 @@ const howWeWorkRemediationStyles = `
     border: 0;
   }
   .project-transition li > i { display: none; }
-  .project-transition > aside { align-items: flex-start; }
+  .project-transition > aside { align-items: flex-start; font-size: 12px; }
   .about-gs { min-height: 0; gap: 28px; }
   .about-gs__mark { width: 96px; height: 96px; font-size: 30px; }
   .about-gs__mark i { height: 30px; }
