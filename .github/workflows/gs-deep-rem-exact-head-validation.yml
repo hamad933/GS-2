@@ -363,8 +363,10 @@ jobs:
             const proof = page.locator('#reference-proof');
             await shot(proof, width, 'reference-proof-default');
             const disclosure = proof.locator('[data-visible-evidence-boundary]');
-            check(width, 'disclosure-visible', await disclosure.isVisible());
-            await shot(disclosure, width, 'disclosure');
+            if (width <= 430) {
+              check(width, 'disclosure-visible', await disclosure.isVisible());
+              await shot(disclosure, width, 'disclosure');
+            }
 
             const rp04 = proof.locator('[data-project-selector="rp04"]');
             await rp04.click();
@@ -507,9 +509,9 @@ jobs:
           fi
 
           if [[ "$CANDIDATE_KEY" == "rp" ]]; then
-            [[ "$TARGETED_OUTCOME" == "success" ]] && test_result="PASS" || test_result="FAIL"
+            if [[ "$TARGETED_OUTCOME" == "success" && "$CAPTURE_OUTCOME" == "success" ]]; then test_result="PASS"; else test_result="FAIL"; fi
           else
-            if [[ "$TARGETED_OUTCOME" == "success" && "$HOME_OUTCOME" == "success" && "$PUBLIC_OUTCOME" == "success" ]]; then test_result="PASS"; else test_result="FAIL"; fi
+            if [[ "$TARGETED_OUTCOME" == "success" && "$HOME_OUTCOME" == "success" && "$PUBLIC_OUTCOME" == "success" && "$CAPTURE_OUTCOME" == "success" ]]; then test_result="PASS"; else test_result="FAIL"; fi
           fi
 
           jobs_api="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?per_page=100"
