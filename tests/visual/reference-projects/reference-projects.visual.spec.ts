@@ -6,10 +6,22 @@ const FIXTURE = '/tests/visual/fixtures/reference-projects/index.html';
 const EVIDENCE_DIR = resolve('tests/visual/reference-projects/evidence');
 const BODY = '.reference-projects-body';
 
+async function expectImagesLoaded(locator: Locator) {
+  await expect.poll(() => locator.evaluateAll((images: HTMLImageElement[]) => (
+    images.length > 0 && images.every((image) => image.complete && image.naturalWidth > 0)
+  ))).toBe(true);
+}
+
+async function expectSceneAssetsLoaded(page: Page, projectId: string) {
+  await expectImagesLoaded(page.locator(`[data-project-scene="${projectId}"] img[data-rp-asset]`));
+}
+
 async function openFixture(page: Page, locale: 'ar' | 'en' = 'ar') {
-  await page.goto(`${FIXTURE}?locale=${locale}`);
+  await page.goto(`${FIXTURE}?locale=${locale}`, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator(BODY)).toHaveAttribute('data-active-project', 'rp01');
+  await expectImagesLoaded(page.locator('img[data-rp-role="emblem"]'));
+  await expectSceneAssetsLoaded(page, 'rp01');
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -46,6 +58,39 @@ test('all four references support pointer focus and contextual expansion', async
   await expect(page.getByText('ROUTE_NOT_CONFIGURED')).toHaveCount(0);
 });
 
+test('all 12 canonical RP assets are bound and load for their intended presentation roles', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openFixture(page);
+
+  for (let index = 1; index <= 4; index += 1) {
+    const code = `RP-0${index}`;
+    const projectId = `rp0${index}`;
+    const emblem = page.locator(`img[data-rp-asset="${code}-EMB-01"]`).first();
+    await expect(emblem).toHaveAttribute('data-rp-role', 'emblem');
+    await expect.poll(() => emblem.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+
+    await page.locator(`[data-project-selector="${projectId}"]`).click();
+    for (const role of ['master', 'mobile'] as const) {
+      const suffix = role === 'master' ? 'MSC' : 'MOB';
+      const image = page.locator(`[data-project-scene="${projectId}"] img[data-rp-asset="${code}-${suffix}-01"]`);
+      await expect(image).toHaveCount(1);
+      await expect(image).toHaveAttribute('data-rp-role', role);
+      await expect.poll(() => image.evaluate((asset: HTMLImageElement) => asset.complete && asset.naturalWidth > 0)).toBe(true);
+    }
+  }
+});
+
+test('emblem identity assets remain decorative in the accessibility tree', async ({ page }) => {
+  await openFixture(page);
+
+  const emblems = page.locator('img[data-rp-role="emblem"]');
+  await expect(emblems).toHaveCount(5);
+  for (let index = 0; index < await emblems.count(); index += 1) {
+    await expect(emblems.nth(index)).toHaveAttribute('alt', '');
+    await expect(emblems.nth(index)).toHaveAttribute('aria-hidden', 'true');
+  }
+});
+
 test('desktop selector exposes vertical semantics and vertical keyboard navigation', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 900 });
   await openFixture(page);
@@ -62,6 +107,15 @@ test('desktop selector exposes vertical semantics and vertical keyboard navigati
   await expect(page.locator(BODY)).toHaveAttribute('data-active-project', 'rp02');
   await page.keyboard.press('End');
   await expect(page.locator(BODY)).toHaveAttribute('data-active-project', 'rp04');
+});
+
+test('selector orientation switches at the governed 900px boundary', async ({ page }) => {
+  await page.setViewportSize({ width: 901, height: 900 });
+  await openFixture(page);
+  await expect(page.getByRole('tablist', { name: 'اختر المشروع المرجعي' })).toHaveAttribute('aria-orientation', 'vertical');
+
+  await page.setViewportSize({ width: 900, height: 900 });
+  await expect(page.getByRole('tablist', { name: 'اختر المشروع المرجعي' })).toHaveAttribute('aria-orientation', 'horizontal');
 });
 
 for (const width of [768, 430, 390]) {
@@ -82,6 +136,31 @@ for (const width of [768, 430, 390]) {
     await expect(page.locator(BODY)).toHaveAttribute('data-active-project', 'rp01');
   });
 }
+
+test('LTR horizontal keyboard direction moves forward with ArrowRight', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await openFixture(page, 'en');
+
+  const first = page.locator('[data-project-selector="rp01"]');
+  await first.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('[data-project-selector="rp02"]')).toBeFocused();
+  await expect(page.locator(BODY)).toHaveAttribute('data-active-project', 'rp02');
+  await page.keyboard.press('ArrowLeft');
+  await expect(first).toBeFocused();
+});
+
+test('changing the selected project closes and resets the disclosure ledger', async ({ page }) => {
+  await openFixture(page);
+  const toggle = page.getByRole('button', { name: /سجل الحدود والتحقق/ });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+  await page.locator('[data-project-selector="rp03"]').click();
+  await expect(page.locator(BODY)).toHaveAttribute('data-active-project', 'rp03');
+  await expect(page.locator('.rp-ledger')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('.rp-ledger')).not.toHaveClass(/is-open/);
+});
 
 test('public RP display notation is buyer-facing while internal selector ids remain canonical', async ({ page }) => {
   await openFixture(page);
@@ -250,6 +329,7 @@ test('captures required exact-current reference body evidence', async ({ page })
     await page.setViewportSize({ width, height: width === 768 ? 1024 : 900 });
     await openFixture(page);
     await page.locator('[data-project-selector="rp02"]').click();
+    await expectSceneAssetsLoaded(page, 'rp02');
     await page.screenshot({ path: resolve(EVIDENCE_DIR, `reference-projects-${width}-rp02.png`), fullPage: true, animations: 'disabled' });
   }
 
@@ -257,6 +337,7 @@ test('captures required exact-current reference body evidence', async ({ page })
     await page.setViewportSize({ width, height: width === 768 ? 1024 : 900 });
     await openFixture(page);
     await page.locator('[data-project-selector="rp04"]').click();
+    await expectSceneAssetsLoaded(page, 'rp04');
     await page.getByRole('button', { name: /سجل الحدود والتحقق/ }).click();
     await page.screenshot({ path: resolve(EVIDENCE_DIR, `reference-projects-${width}-rp04-expanded.png`), fullPage: true, animations: 'disabled' });
   }

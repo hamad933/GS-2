@@ -14,6 +14,7 @@ import {
   type ReferenceProject,
   type ReferenceProjectId,
 } from '../../data/reference-projects';
+import { rpAssetMap } from './rpAssetMap';
 import './reference-projects.css';
 
 export type ReferenceProjectsBodyProps = {
@@ -130,27 +131,55 @@ function StateLabel({
   );
 }
 
-function CapabilityMap({ project, locale }: { project: ReferenceProject; locale: ReferenceLocale }) {
+function ProductScene({ project, locale }: { project: ReferenceProject; locale: ReferenceLocale }) {
+  const assets = rpAssetMap[project.id];
+  const publicCode = publicProjectCode(project.code);
+  const sceneAlt = locale === 'ar'
+    ? `تكوين بصري توضيحي للمرجع المستقل ${project.name}`
+    : `Illustrative visual composition for the independent reference ${project.name}`;
+
   return (
-    <figure className="rp-capability-map" aria-labelledby={`capability-map-${project.id}`}>
+    <figure
+      className="rp-capability-map rp-product-scene"
+      data-project-scene={project.id}
+      aria-labelledby={`capability-map-${project.id}`}
+    >
+      <div className="rp-product-scene__glow" aria-hidden="true" />
+      <div className="rp-product-scene__media">
+        <img
+          className="rp-product-scene__master"
+          src={assets.master}
+          alt={sceneAlt}
+          data-rp-asset={`${publicCode}-MSC-01`}
+          data-rp-role="master"
+          decoding="async"
+        />
+        <img
+          className="rp-product-scene__mobile"
+          src={assets.mobile}
+          alt=""
+          aria-hidden="true"
+          data-rp-asset={`${publicCode}-MOB-01`}
+          data-rp-role="mobile"
+          decoding="async"
+        />
+      </div>
       <figcaption
         id={`capability-map-${project.id}`}
         style={{ color: '#aeb2b5', fontSize: '12px', lineHeight: 1.6 }}
       >
         {pageCopy[locale].capabilityMap}
       </figcaption>
-      <svg className="rp-capability-map__routes" viewBox="0 0 720 420" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M360 210 C286 210 258 90 137 90" />
-        <path d="M360 210 C430 210 466 90 585 90" />
-        <path d="M360 210 C286 210 258 330 137 330" />
-        <path d="M360 210 C430 210 466 330 585 330" />
-        <circle cx="360" cy="210" r="102" />
-        <circle cx="360" cy="210" r="76" />
-      </svg>
-
       <div className="rp-capability-map__core" aria-hidden="true">
-        <span>{publicProjectCode(project.code)}</span>
-        <i />
+        <img
+          src={assets.emblem}
+          alt=""
+          aria-hidden="true"
+          data-rp-asset={`${publicCode}-EMB-01`}
+          data-rp-role="emblem"
+          decoding="async"
+        />
+        <span>{publicCode}</span>
         <strong dir="ltr">{project.name}</strong>
         {localized(project.domain, locale) !== project.name ? <small>{localized(project.domain, locale)}</small> : null}
       </div>
@@ -280,6 +309,16 @@ export function ReferenceProjectsBody({
                   onClick={() => selectProject(project.id)}
                   onKeyDown={(event) => handleProjectKey(event, index)}
                 >
+                  <span className="rp-project-selector__emblem" aria-hidden="true">
+                    <img
+                      src={rpAssetMap[project.id].emblem}
+                      alt=""
+                      aria-hidden="true"
+                      data-rp-asset={`${publicProjectCode(project.code)}-EMB-01`}
+                      data-rp-role="emblem"
+                      decoding="async"
+                    />
+                  </span>
                   <span className="rp-project-selector__code" dir="ltr">{publicProjectCode(project.code)}</span>
                   <span className="rp-project-selector__copy">
                     <strong dir="ltr">{project.name}</strong>
@@ -306,7 +345,7 @@ export function ReferenceProjectsBody({
               <p>{localized(active.context, locale)}</p>
             </div>
 
-            <CapabilityMap project={active} locale={locale} />
+            <ProductScene project={active} locale={locale} />
 
             <dl className="rp-active-project__summary">
               <div>
