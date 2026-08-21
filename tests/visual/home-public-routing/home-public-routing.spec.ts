@@ -95,6 +95,9 @@ function parseCssTimeListMilliseconds(value: string) {
 }
 
 async function tabTo(page: Page, locator: Locator, maximumTabs = 30) {
+  const alreadyFocused = await locator.evaluate((element) => element === document.activeElement).catch(() => false);
+  if (alreadyFocused) return;
+
   for (let index = 0; index < maximumTabs; index += 1) {
     await page.keyboard.press('Tab');
     const focused = await locator.evaluate((element) => element === document.activeElement).catch(() => false);
@@ -190,6 +193,7 @@ test('Hero keyboard journey contains inactive controls and advances Need to Dire
   await expectNoVisibleTabbables(needButtons);
   const firstDirection = hero.getByRole('button', { name: 'خطوة رئيسية واحدة' });
   await expect(firstDirection).not.toHaveClass(/preview/);
+  await expect(firstDirection).toBeFocused();
   await tabTo(page, firstDirection);
   await expect(firstDirection).toBeFocused();
   await firstDirection.press('Enter');
