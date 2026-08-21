@@ -886,13 +886,15 @@ jobs:
               check(width, 'selector-orientation', (await selector.getAttribute('aria-orientation')) === (width > 900 ? 'vertical' : 'horizontal'), await selector.getAttribute('aria-orientation'));
               check(width, 'no-visible-machine-control-tokens', !/REFERENCE_ONLY|UNAVAILABLE|ROUTE_NOT_CONFIGURED/.test(publicText), 'machine/control token found in visible text');
               check(width, 'no-visible-repository-implementation-wording', !/المستودع|repository/i.test(publicText), 'repository implementation wording found in visible text');
-              check(width, 'canonical-unavailable-semantics', publicText.includes('المسار الخارجي الموثوق غير متاح حاليًا') && publicText.includes('لا يتوفر حاليًا رابط موثوق إلى المصدر المستقل.'), 'required unavailable semantics missing');
+              check(width, 'canonical-unavailable-state-visible', publicText.includes('المسار الخارجي الموثوق غير متاح حاليًا'), 'required unavailable state missing');
               check(width, 'illustrative-not-operational-proof', publicText.includes('ليست واجهة منتج أو دليلاً تشغيلياً'), 'illustrative/not-operational-proof disclaimer missing');
               check(width, 'five-field-comparison', await page.locator('.rp-comparison__legend > span').count() === 5 && await page.locator('[data-project-row] [data-comparison-field="project"]').count() === 4 && await page.locator('[data-project-row] [data-comparison-field="domain"]').count() === 4 && await page.locator('[data-project-row] [data-comparison-field="capability"]').count() === 4 && await page.locator('[data-project-row] [data-comparison-field="state"]').count() === 4 && await page.locator('[data-project-row] [data-comparison-field="route"]').count() === 4, 'five comparison fields are not preserved for all rows');
               await screenshot(page, width, 'initial');
               await page.locator('[data-project-selector="rp02"]').click();
               await screenshot(page, width, 'rp02');
               await page.getByRole('button', { name: /سجل الحدود والتحقق/ }).click();
+              const expandedText = await body.innerText();
+              check(width, 'canonical-unavailable-explanation-visible', expandedText.includes('لا يتوفر حاليًا رابط موثوق إلى المصدر المستقل.'), 'required unavailable explanation missing after disclosure expansion');
               await screenshot(page, width, 'ledger-expanded');
               await assertAssets(page, width);
 
