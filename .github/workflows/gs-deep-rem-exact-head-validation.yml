@@ -50,23 +50,23 @@ jobs:
           exit 1
 
   validate_start:
-    name: W12-R4 START exact 2dfa3d0
-    # Historical lane retained for its prior evidence; this RP-only follow-on must not rerun START.
-    if: ${{ false }}
+    name: W12-R4 START exact efc51bd
+    # START F2 exact-head rerun only; unrelated RP lane remains disabled.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
-      CANDIDATE_SHA: 2dfa3d09d8de2023aaff62a938d7c22ab4d28a2c
+      CANDIDATE_SHA: efc51bde1eb250a479a3c2bbb06b132880cdca98
       PARENT_SHA: d10cba74a7eb4103be4a2e285fff1c5732959043
       EVIDENCE_DIR: /tmp/gs-w12-r4-start
-      JOB_NAME: W12-R4 START exact 2dfa3d0
+      JOB_NAME: W12-R4 START exact efc51bd
 
     steps:
       - name: Check out exact pinned START candidate
         id: checkout
         uses: actions/checkout@v4
         with:
-          ref: 2dfa3d09d8de2023aaff62a938d7c22ab4d28a2c
+          ref: efc51bde1eb250a479a3c2bbb06b132880cdca98
           fetch-depth: 0
           persist-credentials: false
 
@@ -645,7 +645,7 @@ jobs:
 
   validate_rp_e57:
     name: W12 RP-e57 exact e57eac0
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
