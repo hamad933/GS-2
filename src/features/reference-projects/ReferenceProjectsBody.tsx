@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useId,
   useRef,
   useState,
@@ -13,6 +14,7 @@ import {
   type ReferenceProject,
   type ReferenceProjectId,
 } from '../../data/reference-projects';
+import { rpAssetMap } from './rpAssetMap';
 import './reference-projects.css';
 
 export type ReferenceProjectsBodyProps = {
@@ -23,7 +25,7 @@ export type ReferenceProjectsBodyProps = {
 
 const pageCopy = {
   ar: {
-    eyebrow: 'GS-PUB-003 / مشروعات مرجعية',
+    eyebrow: 'مشروعات مرجعية',
     titleLead: 'أربع بيئات تشغيل.',
     titleClose: 'حدود واضحة لما تثبته.',
     intro: 'نستخدم هذه المشروعات المستقلة لفهم نوع النظام الذي يناسب الحاجة، لا لادعاء أنها تطبيقات عميل أو وحدات جاهزة داخل GS.',
@@ -42,8 +44,8 @@ const pageCopy = {
     notProve: 'ما لا يثبته هذا المرجع',
     evidenceState: 'حالة التحقق',
     routeSlot: 'مسار المصدر المستقل',
-    routeMissing: 'لم يُضبط رابط موثوق للمصدر المستقل في هذا المستودع.',
-    routeState: 'الرابط المرجعي غير مهيأ بعد',
+    routeMissing: 'لا يتوفر حاليًا رابط موثوق إلى المصدر المستقل.',
+    routeState: 'المسار الخارجي الموثوق غير متاح حاليًا',
     compareEyebrow: 'مقارنة مضبوطة',
     compareTitle: 'أربع نقاط بداية، وليست أربعة قوالب جاهزة.',
     compareIntro: 'المقارنة هنا تختصر المجال وفئة القدرة وحالة المصدر. اختيار نقطة بداية لا يضيف وظائف أو أدلة غير متحققة.',
@@ -55,7 +57,7 @@ const pageCopy = {
     independent: 'مشروع مستقل',
   },
   en: {
-    eyebrow: 'GS-PUB-003 / REFERENCE PROJECTS',
+    eyebrow: 'REFERENCE PROJECTS',
     titleLead: 'Four operating environments.',
     titleClose: 'Clear limits on what they prove.',
     intro: 'We use these independent projects to understand which system class fits a need—not to present them as client implementations or ready-made GS modules.',
@@ -74,8 +76,8 @@ const pageCopy = {
     notProve: 'What this reference does not prove',
     evidenceState: 'Verification state',
     routeSlot: 'Independent source route',
-    routeMissing: 'No verified independent-source URL is configured in this repository.',
-    routeState: 'Reference route not configured yet',
+    routeMissing: 'No verified route to the independent source is currently available.',
+    routeState: 'Verified outbound route currently unavailable',
     compareEyebrow: 'Controlled comparison',
     compareTitle: 'Four starting points—not four ready-made templates.',
     compareIntro: 'This comparison is limited to domain, capability class, and source state. Choosing a starting point adds no unverified feature or proof.',
@@ -108,34 +110,76 @@ function publicProjectCode(code: ReferenceProject['code']): string {
 function StateLabel({
   label,
   machineState,
+  accessibilityLabel,
+  comparisonField,
 }: {
   label: string;
   machineState: EvidenceState | typeof routeMachineState;
+  accessibilityLabel?: string;
+  comparisonField?: 'state' | 'route';
 }) {
   return (
-    <span className="rp-state-label" data-state={machineState}>
+    <span
+      className="rp-state-label"
+      data-state={machineState}
+      data-comparison-field={comparisonField}
+      role={accessibilityLabel ? 'group' : undefined}
+      aria-label={accessibilityLabel}
+    >
       <strong>{label}</strong>
-      <small dir="ltr">{machineState}</small>
     </span>
   );
 }
 
-function CapabilityMap({ project, locale }: { project: ReferenceProject; locale: ReferenceLocale }) {
-  return (
-    <figure className="rp-capability-map" aria-labelledby={`capability-map-${project.id}`}>
-      <figcaption id={`capability-map-${project.id}`}>{pageCopy[locale].capabilityMap}</figcaption>
-      <svg className="rp-capability-map__routes" viewBox="0 0 720 420" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M360 210 C286 210 258 90 137 90" />
-        <path d="M360 210 C430 210 466 90 585 90" />
-        <path d="M360 210 C286 210 258 330 137 330" />
-        <path d="M360 210 C430 210 466 330 585 330" />
-        <circle cx="360" cy="210" r="102" />
-        <circle cx="360" cy="210" r="76" />
-      </svg>
+function ProductScene({ project, locale }: { project: ReferenceProject; locale: ReferenceLocale }) {
+  const assets = rpAssetMap[project.id];
+  const publicCode = publicProjectCode(project.code);
+  const sceneAlt = locale === 'ar'
+    ? `تكوين بصري توضيحي للمرجع المستقل ${project.name}`
+    : `Illustrative visual composition for the independent reference ${project.name}`;
 
+  return (
+    <figure
+      className="rp-capability-map rp-product-scene"
+      data-project-scene={project.id}
+      aria-labelledby={`capability-map-${project.id}`}
+    >
+      <div className="rp-product-scene__glow" aria-hidden="true" />
+      <div className="rp-product-scene__media">
+        <img
+          className="rp-product-scene__master"
+          src={assets.master}
+          alt={sceneAlt}
+          data-rp-asset={`${publicCode}-MSC-01`}
+          data-rp-role="master"
+          decoding="async"
+        />
+        <img
+          className="rp-product-scene__mobile"
+          src={assets.mobile}
+          alt=""
+          aria-hidden="true"
+          data-rp-asset={`${publicCode}-MOB-01`}
+          data-rp-role="mobile"
+          decoding="async"
+        />
+      </div>
+      <figcaption
+        id={`capability-map-${project.id}`}
+        style={{ color: '#aeb2b5', fontSize: '12px', lineHeight: 1.6 }}
+      >
+        {pageCopy[locale].capabilityMap}
+      </figcaption>
       <div className="rp-capability-map__core" aria-hidden="true">
-        <span>{publicProjectCode(project.code)}</span>
-        <i />
+        <img
+          src={assets.emblem}
+          alt=""
+          aria-hidden="true"
+          data-rp-asset={`${publicCode}-EMB-01`}
+          data-rp-role="emblem"
+          decoding="async"
+        />
+        <span>{publicCode}</span>
         <strong dir="ltr">{project.name}</strong>
         {localized(project.domain, locale) !== project.name ? <small>{localized(project.domain, locale)}</small> : null}
       </div>
@@ -162,12 +206,26 @@ export function ReferenceProjectsBody({
     : 'rp01';
   const [activeId, setActiveId] = useState<ReferenceProjectId>(initialProject);
   const [expanded, setExpanded] = useState(false);
+  const [selectorOrientation, setSelectorOrientation] = useState<'vertical' | 'horizontal'>(() => (
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
+      ? 'horizontal'
+      : 'vertical'
+  ));
   const projectButtons = useRef<Array<HTMLButtonElement | null>>([]);
   const panelId = useId();
   const copy = pageCopy[locale];
   const direction = locale === 'ar' ? 'rtl' : 'ltr';
   const activeIndex = referenceProjects.findIndex((project) => project.id === activeId);
   const active = referenceProjects[activeIndex] ?? referenceProjects[0];
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 900px)');
+    const syncOrientation = () => setSelectorOrientation(mediaQuery.matches ? 'horizontal' : 'vertical');
+
+    syncOrientation();
+    mediaQuery.addEventListener('change', syncOrientation);
+    return () => mediaQuery.removeEventListener('change', syncOrientation);
+  }, []);
 
   const selectProject = (projectId: ReferenceProjectId) => {
     setActiveId(projectId);
@@ -176,18 +234,28 @@ export function ReferenceProjectsBody({
 
   const handleProjectKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const lastIndex = referenceProjects.length - 1;
-    let nextIndex: number | null = null;
+    const nextIndex = index === lastIndex ? 0 : index + 1;
+    const previousIndex = index === 0 ? lastIndex : index - 1;
+    let targetIndex: number | null = null;
 
-    if (event.key === 'Home') nextIndex = 0;
-    if (event.key === 'End') nextIndex = lastIndex;
-    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') nextIndex = index === lastIndex ? 0 : index + 1;
-    if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') nextIndex = index === 0 ? lastIndex : index - 1;
+    if (event.key === 'Home') targetIndex = 0;
+    if (event.key === 'End') targetIndex = lastIndex;
 
-    if (nextIndex !== null) {
+    if (selectorOrientation === 'vertical') {
+      if (event.key === 'ArrowDown') targetIndex = nextIndex;
+      if (event.key === 'ArrowUp') targetIndex = previousIndex;
+    } else {
+      const forwardKey = direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+      const backwardKey = direction === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+      if (event.key === forwardKey) targetIndex = nextIndex;
+      if (event.key === backwardKey) targetIndex = previousIndex;
+    }
+
+    if (targetIndex !== null) {
       event.preventDefault();
-      const nextProject = referenceProjects[nextIndex];
+      const nextProject = referenceProjects[targetIndex];
       selectProject(nextProject.id);
-      projectButtons.current[nextIndex]?.focus();
+      projectButtons.current[targetIndex]?.focus();
     }
   };
 
@@ -218,7 +286,12 @@ export function ReferenceProjectsBody({
             <span>{publicProjectCode(active.code)}</span><i /><span>04 / {String(activeIndex + 1).padStart(2, '0')}</span>
           </div>
 
-          <div className="rp-project-selector" role="tablist" aria-label={copy.selectorLabel} aria-orientation="vertical">
+          <div
+            className="rp-project-selector"
+            role="tablist"
+            aria-label={copy.selectorLabel}
+            aria-orientation={selectorOrientation}
+          >
             {referenceProjects.map((project, index) => {
               const selected = project.id === active.id;
               return (
@@ -236,6 +309,16 @@ export function ReferenceProjectsBody({
                   onClick={() => selectProject(project.id)}
                   onKeyDown={(event) => handleProjectKey(event, index)}
                 >
+                  <span className="rp-project-selector__emblem" aria-hidden="true">
+                    <img
+                      src={rpAssetMap[project.id].emblem}
+                      alt=""
+                      aria-hidden="true"
+                      data-rp-asset={`${publicProjectCode(project.code)}-EMB-01`}
+                      data-rp-role="emblem"
+                      decoding="async"
+                    />
+                  </span>
                   <span className="rp-project-selector__code" dir="ltr">{publicProjectCode(project.code)}</span>
                   <span className="rp-project-selector__copy">
                     <strong dir="ltr">{project.name}</strong>
@@ -262,7 +345,7 @@ export function ReferenceProjectsBody({
               <p>{localized(active.context, locale)}</p>
             </div>
 
-            <CapabilityMap project={active} locale={locale} />
+            <ProductScene project={active} locale={locale} />
 
             <dl className="rp-active-project__summary">
               <div>
@@ -318,7 +401,7 @@ export function ReferenceProjectsBody({
                 <span dir="ltr">0{index + 1}</span>
                 <div>
                   <h4>{localized(evidence.label, locale)}</h4>
-                  <p>{localized(evidence.note, locale)}</p>
+                  <p style={{ fontSize: '12px', lineHeight: 1.7 }}>{localized(evidence.note, locale)}</p>
                 </div>
                 <StateLabel
                   label={localized(evidenceStateLabels[evidence.state], locale)}
@@ -344,7 +427,7 @@ export function ReferenceProjectsBody({
           <span>{copy.compareIntro}</span>
         </header>
 
-        <div className="rp-comparison__legend" aria-hidden="true">
+        <div className="rp-comparison__legend">
           <span>{copy.project}</span>
           <span>{copy.domain}</span>
           <span>{copy.capability}</span>
@@ -352,18 +435,55 @@ export function ReferenceProjectsBody({
           <span>{copy.route}</span>
         </div>
         <ol className="rp-comparison__rows">
-          {referenceProjects.map((project) => (
-            <li key={project.id} data-project-row={project.id}>
-              <div><span dir="ltr">{publicProjectCode(project.code)}</span><strong dir="ltr">{project.name}</strong></div>
-              <p>{localized(project.domain, locale)}</p>
-              <p>{localized(project.capabilityClass, locale)}</p>
-              <StateLabel
-                label={localized(evidenceStateLabels.REFERENCE_ONLY, locale)}
-                machineState="REFERENCE_ONLY"
-              />
-              <StateLabel label={copy.routeState} machineState={routeMachineState} />
-            </li>
-          ))}
+          {referenceProjects.map((project) => {
+            const publicCode = publicProjectCode(project.code);
+            const domain = localized(project.domain, locale);
+            const capability = localized(project.capabilityClass, locale);
+            const summaryState = localized(evidenceStateLabels.REFERENCE_ONLY, locale);
+
+            return (
+              <li
+                key={project.id}
+                data-project-row={project.id}
+                aria-label={`${copy.project}: ${publicCode} ${project.name}`}
+              >
+                <div
+                  role="group"
+                  aria-label={`${copy.project}: ${publicCode} ${project.name}`}
+                  data-comparison-field="project"
+                >
+                  <span dir="ltr">{publicCode}</span>
+                  <strong dir="ltr">{project.name}</strong>
+                </div>
+                <p
+                  role="group"
+                  aria-label={`${copy.domain}: ${domain}`}
+                  data-comparison-field="domain"
+                >
+                  {domain}
+                </p>
+                <p
+                  role="group"
+                  aria-label={`${copy.capability}: ${capability}`}
+                  data-comparison-field="capability"
+                >
+                  {capability}
+                </p>
+                <StateLabel
+                  label={summaryState}
+                  machineState="REFERENCE_ONLY"
+                  accessibilityLabel={`${copy.state}: ${summaryState}`}
+                  comparisonField="state"
+                />
+                <StateLabel
+                  label={copy.routeState}
+                  machineState={routeMachineState}
+                  accessibilityLabel={`${copy.route}: ${copy.routeState}`}
+                  comparisonField="route"
+                />
+              </li>
+            );
+          })}
         </ol>
       </section>
     </div>
