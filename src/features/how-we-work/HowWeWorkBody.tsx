@@ -147,26 +147,30 @@ const pageCopy = {
 } as const;
 
 const howWeWorkRemediationStyles = `
+/* --- Working Relationship (Refined framing, reduced barrier weight) --- */
 .working-relationship {
   width: min(1320px, 100%);
-  margin: 48px auto 0;
-  padding: 24px;
-  border: 1px solid var(--method-line);
-  background: rgba(7, 16, 23, 0.72);
+  margin: 38px auto 0;
+  padding: 22px 26px;
+  border: 1px solid rgba(203, 162, 105, 0.16);
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(7, 16, 23, 0.65) 0%, rgba(5, 12, 18, 0.82) 100%);
+  backdrop-filter: blur(8px);
 }
 .working-relationship > header {
   display: grid;
   grid-template-columns: minmax(240px, .8fr) minmax(320px, 1.2fr);
-  gap: 24px 48px;
+  gap: 20px 48px;
   align-items: end;
-  margin-bottom: 22px;
+  margin-bottom: 20px;
 }
 .working-relationship > header h2 {
   margin: 0;
   font-family: 'Noto Kufi Arabic', 'Segoe UI', sans-serif;
-  font-size: clamp(22px, 2.1vw, 31px);
+  font-size: clamp(22px, 2.1vw, 30px);
   font-weight: 500;
   line-height: 1.45;
+  color: var(--method-text);
 }
 .working-relationship > header p {
   margin: 0;
@@ -180,20 +184,21 @@ const howWeWorkRemediationStyles = `
   margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--method-line);
+  border-top: 1px solid rgba(203, 162, 105, 0.12);
 }
 .working-relationship li {
   min-width: 0;
-  padding: 20px;
-  border-inline-start: 1px solid var(--method-line);
+  padding: 18px 20px;
+  border-inline-start: 1px solid rgba(203, 162, 105, 0.12);
 }
 .working-relationship li:first-child { border-inline-start: 0; }
 .working-relationship li > span {
   display: block;
-  margin-bottom: 9px;
+  margin-bottom: 8px;
   color: var(--method-gold);
   font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.02em;
 }
 .working-relationship li strong {
   display: block;
@@ -208,6 +213,49 @@ const howWeWorkRemediationStyles = `
   font-size: 13px;
   line-height: 1.75;
 }
+
+/* --- Hero Header Trust Aside Polish --- */
+.method-hero__header > aside {
+  border-inline-start: 1px solid rgba(215, 170, 112, 0.28);
+  background: linear-gradient(90deg, rgba(215, 170, 112, 0.04), transparent);
+}
+[dir='ltr'] .method-hero__header > aside {
+  background: linear-gradient(270deg, rgba(215, 170, 112, 0.04), transparent);
+}
+
+/* --- Method Corridor Rhythm & De-densification --- */
+.method-corridor {
+  margin-top: 48px;
+  border: 1px solid rgba(203, 162, 105, 0.18);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012), transparent 24%),
+    radial-gradient(circle at 47% 45%, rgba(71, 112, 168, 0.10), transparent 34%),
+    rgba(5, 13, 19, 0.88);
+}
+.method-corridor::after {
+  border: 1px solid rgba(255, 255, 255, 0.015);
+}
+.method-stage-selector {
+  border-inline-end: 1px solid rgba(203, 162, 105, 0.14);
+}
+.method-stage-selector button {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.method-stage-selector button:focus-visible,
+.method-stage-selector button:focus {
+  outline: 2px solid var(--method-gold);
+  outline-offset: -2px;
+}
+.method-blueprint {
+  border: 1px solid rgba(109, 156, 255, 0.10);
+  background: rgba(3, 10, 15, 0.65);
+}
+.method-gate {
+  border: 1px solid rgba(203, 162, 105, 0.12);
+  background: rgba(4, 11, 17, 0.6);
+}
+
+/* --- Typography Floor & Contrast Hierarchy --- */
 .method-eyebrow,
 .method-hero__header > aside span,
 .method-stage-selector button strong,
@@ -223,6 +271,7 @@ const howWeWorkRemediationStyles = `
 .risk-register__fields span,
 .about-gs__principles h3,
 .about-gs > aside span { font-size: 12px; }
+
 .method-stage-selector button small,
 .method-gate > header p,
 .method-gate dd,
@@ -235,12 +284,14 @@ const howWeWorkRemediationStyles = `
 .quality-evidence li p,
 .about-gs__principles li,
 .about-gs > aside p { font-size: 13px; }
+
 .method-corridor__topline {
   font-family: inherit;
   font-size: 11px;
   letter-spacing: .04em;
   direction: inherit;
 }
+
 .method-stage-selector button > span,
 .method-blueprint__object small,
 .scope-architecture li > span,
@@ -249,8 +300,51 @@ const howWeWorkRemediationStyles = `
 .quality-evidence li > span,
 .project-transition li > span,
 .about-gs__principles li span { font-size: 10px; }
+
 .risk-register__dimensions article > strong,
 .project-transition li > strong { font-size: 13px; }
+
+/* --- Subsequent Sections De-densification & Rhythm --- */
+.scope-architecture li {
+  border-top: 1px solid rgba(203, 162, 105, 0.14);
+  border-inline-end: 1px solid rgba(203, 162, 105, 0.14);
+  background: rgba(7, 16, 23, 0.45);
+}
+.scope-architecture li:last-child {
+  border-inline-end: 0;
+}
+.risk-register__system {
+  border: 1px solid rgba(203, 162, 105, 0.14);
+  background: rgba(7, 16, 23, 0.45);
+}
+.risk-register__dimensions article {
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(5, 12, 18, 0.6);
+}
+.risk-register__fields span {
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  background: rgba(4, 10, 15, 0.5);
+}
+.quality-evidence li {
+  border: 1px solid rgba(203, 162, 105, 0.14);
+  background: rgba(7, 16, 23, 0.45);
+}
+.project-transition li {
+  border: 1px solid rgba(203, 162, 105, 0.14);
+  background: rgba(7, 16, 23, 0.45);
+}
+.project-transition > aside {
+  border-inline-start: 1px solid rgba(203, 162, 105, 0.18);
+}
+.about-gs__principles {
+  border: 1px solid rgba(203, 162, 105, 0.14);
+  background: rgba(7, 16, 23, 0.45);
+}
+.about-gs > aside {
+  border-inline-start: 1px solid rgba(203, 162, 105, 0.16);
+}
+
+/* --- About GS Grid & Closing CTA Composition --- */
 .about-gs {
   grid-template-areas:
     'mark header principles'
@@ -263,18 +357,21 @@ const howWeWorkRemediationStyles = `
   grid-template-columns: minmax(0, 1.4fr) auto;
   gap: 22px 34px;
   align-items: center;
-  padding: 26px 28px;
-  border: 1px solid var(--method-line-strong);
-  background: linear-gradient(90deg, rgba(215, 170, 112, .08), rgba(7, 16, 23, .9));
+  padding: 28px 32px;
+  border: 1px solid rgba(215, 170, 112, 0.32);
+  border-radius: 2px;
+  background: linear-gradient(135deg, rgba(215, 170, 112, 0.08) 0%, rgba(7, 16, 23, 0.92) 55%, rgba(4, 10, 15, 0.98) 100%);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(215, 170, 112, 0.2);
 }
 [dir='ltr'] .about-gs__cta {
-  background: linear-gradient(270deg, rgba(215, 170, 112, .08), rgba(7, 16, 23, .9));
+  background: linear-gradient(225deg, rgba(215, 170, 112, 0.08) 0%, rgba(7, 16, 23, 0.92) 55%, rgba(4, 10, 15, 0.98) 100%);
 }
 .about-gs__cta > div > span {
   display: block;
   color: var(--method-gold);
   font-size: 12px;
   font-weight: 700;
+  letter-spacing: 0.04em;
 }
 .about-gs__cta h3 {
   margin: 8px 0 7px;
@@ -296,24 +393,39 @@ const howWeWorkRemediationStyles = `
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  padding: 12px 22px;
+  padding: 12px 24px;
   border: 1px solid var(--method-gold);
+  border-radius: 2px;
+  background: rgba(215, 170, 112, 0.08);
   color: #f4dfbe;
   text-decoration: none;
   font-weight: 700;
+  transition: all 180ms ease;
+}
+.about-gs__cta a:hover {
+  background: rgba(215, 170, 112, 0.18);
+  color: #ffffff;
+  border-color: var(--method-gold-pale);
+  box-shadow: 0 0 16px rgba(215, 170, 112, 0.25);
+}
+.about-gs__cta a:focus {
+  outline: 2px solid var(--method-gold);
+  outline-offset: 3px;
 }
 .about-gs__cta small {
   grid-column: 1 / -1;
-  color: #85898b;
+  color: #888c8e;
   font-size: 12px;
   line-height: 1.7;
 }
+
+/* --- Responsive 900px --- */
 @media (max-width: 900px) {
   .working-relationship > header { grid-template-columns: 1fr; }
   .working-relationship > ol { grid-template-columns: 1fr; }
   .working-relationship li {
     border-inline-start: 0;
-    border-top: 1px solid rgba(255,255,255,.06);
+    border-top: 1px solid rgba(203, 162, 105, 0.10);
     padding: 16px 4px;
   }
   .working-relationship li:first-child { border-top: 0; }
@@ -324,8 +436,10 @@ const howWeWorkRemediationStyles = `
       'cta cta';
   }
 }
+
+/* --- Responsive 760px --- */
 @media (max-width: 760px) {
-  .working-relationship { margin-top: 34px; padding: 20px; }
+  .working-relationship { margin-top: 30px; padding: 18px 20px; }
   .method-hero { padding-bottom: 64px; }
   .scope-architecture,
   .risk-register,
@@ -344,13 +458,15 @@ const howWeWorkRemediationStyles = `
   .about-gs__cta small { grid-column: 1; }
   .about-gs__cta a { justify-self: start; }
 }
+
+/* --- Responsive 480px / 430px / 390px Scanning Rhythm --- */
 @media (max-width: 480px) {
   .method-hero { padding-top: 48px; padding-bottom: 54px; }
   .method-hero__header h1 { font-size: clamp(31px, 9vw, 40px); }
-  .working-relationship { padding: 16px; }
+  .working-relationship { padding: 16px; margin-top: 24px; }
   .working-relationship > header { margin-bottom: 14px; gap: 12px; }
-  .working-relationship li { padding-block: 13px; }
-  .method-corridor { gap: 14px; margin-top: 34px; padding-top: 58px; }
+  .working-relationship li { padding-block: 12px; }
+  .method-corridor { gap: 14px; margin-top: 28px; padding-top: 56px; }
   .method-stage-selector button { min-width: 128px; min-height: 82px; }
   .method-blueprint { min-height: 0; padding: 16px; }
   .method-blueprint__field { display: none; }
@@ -371,8 +487,8 @@ const howWeWorkRemediationStyles = `
   .scope-architecture li:first-child {
     min-height: 170px;
     padding: 17px 14px;
-    border-top: 1px solid var(--method-line);
-    border-inline-end: 1px solid var(--method-line);
+    border-top: 1px solid rgba(203, 162, 105, 0.14);
+    border-inline-end: 1px solid rgba(203, 162, 105, 0.14);
   }
   .scope-architecture li > i { margin: 14px 0 20px; }
   .scope-architecture li h3 { min-height: 0; font-size: 13px; }
@@ -386,7 +502,7 @@ const howWeWorkRemediationStyles = `
   .risk-register__fields span { min-height: 62px; }
   .quality-evidence > ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .quality-evidence li { min-height: 150px; gap: 16px; padding: 17px; }
-  .project-transition > ol { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--method-line); }
+  .project-transition > ol { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: rgba(203, 162, 105, 0.14); }
   .project-transition li,
   .project-transition li:last-child {
     min-height: 120px;
@@ -399,7 +515,7 @@ const howWeWorkRemediationStyles = `
   .about-gs__mark i { height: 30px; }
   .about-gs__principles { padding: 18px; }
   .about-gs__principles li { padding: 13px 0; }
-  .about-gs__cta { padding: 20px; }
+  .about-gs__cta { padding: 22px 20px; }
 }
 `;
 
