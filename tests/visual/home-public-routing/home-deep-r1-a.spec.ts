@@ -118,6 +118,38 @@ test('Hero keeps deliberate focus, truthful brief authorship, and coherent Build
   await expect(page.locator('.skip-link')).not.toBeFocused();
 });
 
+test('Hero environment progresses materially from K01 through K04 without swapping the production asset', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page);
+
+  const hero = page.locator('#hero');
+  const environment = hero.locator('img.e2-environment');
+  const stateField = hero.locator('.e2-threshold-state-field');
+  const initialEnvironmentSource = await environment.getAttribute('src');
+
+  await expect(environment).toHaveCount(1);
+  await expect(stateField).toHaveCSS('opacity', '0.08');
+
+  await hero.locator('.e2-need-selector button').first().click();
+  await expect(hero).toHaveAttribute('data-stage', 'direction');
+  await expect(stateField).toHaveCSS('opacity', '0.54');
+
+  await hero.locator('.e2-direction-selector button').first().click();
+  await expect(hero).toHaveAttribute('data-stage', 'build');
+  await expect(stateField).toHaveCSS('opacity', '0.78');
+
+  for (let step = 0; step < 3; step += 1) {
+    await hero.locator('.e2-build-workbench button').click();
+  }
+  await hero.locator('#hero-brief').fill('A clear digital journey');
+  await hero.locator('.e2-build-workbench button').click();
+
+  await expect(hero).toHaveAttribute('data-stage', 'launch');
+  await expect(stateField).toHaveCSS('opacity', '0.92');
+  await expect(environment).toHaveCount(1);
+  expect(await environment.getAttribute('src')).toBe(initialEnvironmentSource);
+});
+
 test('S02 hover and focus preview without changing explicit selection', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 900 });
   await openHome(page);

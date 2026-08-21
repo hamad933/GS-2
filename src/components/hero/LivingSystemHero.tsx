@@ -271,6 +271,10 @@ export function LivingSystemHero() {
         <span className="e2-threshold-reveal" />
         <span className="e2-threshold-jamb" />
         <span className="e2-threshold-sill"><i /><i /><i /></span>
+        <span className="e2-threshold-state-field">
+          <i /><i /><i /><i />
+        </span>
+        <span className="e2-threshold-aperture"><i /><i /></span>
         <i className="e2-threshold-cap" />
       </div>
       <svg className="e2-floor-rails" viewBox="0 0 1440 810" preserveAspectRatio="none" aria-hidden="true">
@@ -323,6 +327,7 @@ export function LivingSystemHero() {
               <span className="e2-shell-edge e2-shell-edge-top" />
               <span className="e2-shell-edge e2-shell-edge-side" />
               <span className="e2-shell-edge e2-shell-edge-bottom" />
+              <span className="e2-wall-stage-carriage"><i /><i /><i /><i /></span>
               <i className="e2-shell-joint e2-shell-joint-a" />
               <i className="e2-shell-joint e2-shell-joint-b" />
               <i className="e2-shell-joint e2-shell-joint-c" />
