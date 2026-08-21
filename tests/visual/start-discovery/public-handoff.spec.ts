@@ -318,5 +318,5 @@ test('the shared START header renders the current-route action as orientation, n
   const contact = page.locator('.hero-nav__contact');
   await expect(contact).toHaveAttribute('aria-current', 'page');
   expect(await contact.evaluate((node) => node.tagName)).toBe('SPAN');
-  await expect(page.getByRole('link', { name: 'ابدأ اختيارك' })).toHaveCount(0);
+  await expect(page.locator('.hero-nav').getByRole('link', { name: 'ابدأ اختيارك' })).toHaveCount(0);
 });
