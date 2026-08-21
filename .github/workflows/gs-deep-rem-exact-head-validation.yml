@@ -51,7 +51,8 @@ jobs:
 
   validate_start:
     name: W12-R4 START exact 2dfa3d0
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # Historical lane retained for its prior evidence; this RP-only follow-on must not rerun START.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -639,5 +640,414 @@ jobs:
             echo "- HOME-A executed: NO"
             echo "- HOME-B executed: NO"
             echo "- RP executed: NO"
+            echo "- classification: REFERENCE_ONLY"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  validate_rp_e57:
+    name: W12 RP-e57 exact e57eac0
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      CANDIDATE_SHA: e57eac05628e296a6004d08a512f7b1a0b272645
+      PARENT_SHA: f6dbbef27de687a462866df8faedaeeb12d97955
+      EVIDENCE_DIR: /tmp/gs-w12-rp-e57
+      JOB_NAME: W12 RP-e57 exact e57eac0
+
+    steps:
+      - name: Check out exact pinned RP candidate
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          ref: e57eac05628e296a6004d08a512f7b1a0b272645
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact RP identity ancestry path boundary and diff
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR/logs" "$EVIDENCE_DIR/reports" "$EVIDENCE_DIR/screenshots"
+          {
+            echo "project=General Solutions"
+            echo "project_id=GS"
+            echo "classification=REFERENCE_ONLY"
+            echo "workstream=GS-GOV-W12-RP-E57-EXACT-HEAD-VALIDATION-R1"
+            echo "candidate=REFERENCE_PROJECTS"
+            echo "candidate_pr=79"
+            echo "candidate_sha=$CANDIDATE_SHA"
+            echo "parent_sha=$PARENT_SHA"
+            echo "actual_head=$(git rev-parse HEAD)"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "job_key=$GITHUB_JOB"
+            echo "actual_route=/reference-projects"
+            echo "viewports=1440,1024,768,430,390"
+            echo "home_a_executed=NO"
+            echo "home_b_executed=NO"
+            echo "start_executed=NO"
+          } | tee "$EVIDENCE_DIR/identity.txt"
+
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git merge-base "$PARENT_SHA" "$CANDIDATE_SHA")" = "$PARENT_SHA"
+          read -r behind ahead < <(git rev-list --left-right --count "$PARENT_SHA...$CANDIDATE_SHA")
+          printf 'behind=%s\nahead=%s\nmerge_base=%s\n' "$behind" "$ahead" "$(git merge-base "$PARENT_SHA" "$CANDIDATE_SHA")" | tee "$EVIDENCE_DIR/ahead-behind.txt"
+          test "$behind" -eq 0
+          test "$ahead" -eq 1
+
+          cat > "$EVIDENCE_DIR/expected-paths.txt" <<'EOF'
+          src/assets/gs-public-v1/reference-projects/RP-01/EMBLEM/RP-01-EMB-01.webp
+          src/assets/gs-public-v1/reference-projects/RP-01/MASTER/RP-01-MSC-01.webp
+          src/assets/gs-public-v1/reference-projects/RP-01/MOBILE/RP-01-MOB-01.webp
+          src/assets/gs-public-v1/reference-projects/RP-02/EMBLEM/RP-02-EMB-01.webp
+          src/assets/gs-public-v1/reference-projects/RP-02/MASTER/RP-02-MSC-01.webp
+          src/assets/gs-public-v1/reference-projects/RP-02/MOBILE/RP-02-MOB-01.webp
+          src/assets/gs-public-v1/reference-projects/RP-03/EMBLEM/RP-03-EMB-01.webp
+          src/assets/gs-public-v1/reference-projects/RP-03/MASTER/RP-03-MSC-01.webp
+          src/assets/gs-public-v1/reference-projects/RP-03/MOBILE/RP-03-MOB-01.webp
+          src/assets/gs-public-v1/reference-projects/RP-04/EMBLEM/RP-04-EMB-01.webp
+          src/assets/gs-public-v1/reference-projects/RP-04/MASTER/RP-04-MSC-01.webp
+          src/assets/gs-public-v1/reference-projects/RP-04/MOBILE/RP-04-MOB-01.webp
+          src/features/reference-projects/ReferenceProjectsBody.tsx
+          src/features/reference-projects/reference-projects.css
+          src/features/reference-projects/rpAssetMap.ts
+          tests/visual/reference-projects/reference-projects.visual.spec.ts
+          EOF
+          sed -i 's/^          //' "$EVIDENCE_DIR/expected-paths.txt"
+          sort -o "$EVIDENCE_DIR/expected-paths.txt" "$EVIDENCE_DIR/expected-paths.txt"
+          git diff --name-only "$PARENT_SHA...$CANDIDATE_SHA" | sort | tee "$EVIDENCE_DIR/actual-paths.txt"
+          diff -u "$EVIDENCE_DIR/expected-paths.txt" "$EVIDENCE_DIR/actual-paths.txt" | tee "$EVIDENCE_DIR/path-boundary.diff"
+          test "$(wc -l < "$EVIDENCE_DIR/actual-paths.txt" | tr -d ' ')" -eq 16
+          git diff --stat "$PARENT_SHA...$CANDIDATE_SHA" | tee "$EVIDENCE_DIR/diff-stat.txt"
+          git diff --check "$PARENT_SHA...$CANDIDATE_SHA" 2>&1 | tee "$EVIDENCE_DIR/logs/git-diff-check.log"
+
+      - name: Set up Node 20
+        id: node
+        if: steps.gate.outcome == 'success'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: npm ci
+        id: npm_ci
+        if: steps.node.outcome == 'success'
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | tee "$EVIDENCE_DIR/logs/npm-ci.log"
+
+      - name: Record dependency-security signal without remediation
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f "$EVIDENCE_DIR/logs/npm-ci.log" ]] && grep -Eqi 'vulnerabilit|npm audit' "$EVIDENCE_DIR/logs/npm-ci.log"; then
+            echo 'dependency_security_signal=REPORTED_BY_NPM_CI' | tee "$EVIDENCE_DIR/dependency-security-signal.txt"
+            grep -Ei 'vulnerabilit|npm audit' "$EVIDENCE_DIR/logs/npm-ci.log" | tail -n 20 >> "$EVIDENCE_DIR/dependency-security-signal.txt" || true
+          else
+            echo 'dependency_security_signal=NOT_REPORTED_BY_NPM_CI_OUTPUT' | tee "$EVIDENCE_DIR/dependency-security-signal.txt"
+          fi
+          echo 'dependency_remediation=OUT_OF_SCOPE_NOT_PERFORMED' >> "$EVIDENCE_DIR/dependency-security-signal.txt"
+
+      - name: Lint
+        id: lint
+        if: always() && steps.npm_ci.outcome == 'success'
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run lint 2>&1 | tee "$EVIDENCE_DIR/logs/lint.log"
+
+      - name: Typecheck
+        id: typecheck
+        if: always() && steps.npm_ci.outcome == 'success'
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee "$EVIDENCE_DIR/logs/typecheck.log"
+
+      - name: Build
+        id: build
+        if: always() && steps.npm_ci.outcome == 'success'
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee "$EVIDENCE_DIR/logs/build.log"
+
+      - name: Install deterministic Chromium
+        id: chromium
+        if: always() && steps.npm_ci.outcome == 'success'
+        shell: bash
+        run: |
+          set -o pipefail
+          npx playwright install chromium 2>&1 | tee "$EVIDENCE_DIR/logs/playwright-install.log"
+
+      - name: Run targeted Reference Projects Playwright suite
+        id: rp_suite
+        if: always() && steps.build.outcome == 'success' && steps.chromium.outcome == 'success'
+        shell: bash
+        run: |
+          set +e
+          npx playwright test \
+            tests/visual/reference-projects/reference-projects.visual.spec.ts \
+            --config=tests/visual/reference-projects/playwright.config.ts \
+            --project=chromium \
+            --workers=1 \
+            --reporter=json \
+            > "$EVIDENCE_DIR/reports/reference-projects-targeted.json" \
+            2> "$EVIDENCE_DIR/logs/reference-projects-targeted.stderr.log"
+          rc=$?
+          echo "$rc" > "$EVIDENCE_DIR/reports/reference-projects-targeted.exit"
+          exit "$rc"
+
+      - name: Capture and validate exact built reference-projects route
+        id: actual_route
+        if: always() && steps.build.outcome == 'success' && steps.chromium.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx vite preview --host 127.0.0.1 --port 4197 --strictPort > "$EVIDENCE_DIR/logs/preview.log" 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for _ in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:4197/reference-projects >/dev/null; then ready=1; break; fi
+            if ! kill -0 "$preview_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+
+          cat > "$RUNNER_TEMP/gs-w12-rp-e57-capture.cjs" <<'NODE'
+          const { chromium } = require('@playwright/test');
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const out = process.env.EVIDENCE_DIR;
+          const root = 'http://127.0.0.1:4197';
+          const widths = [1440, 1024, 768, 430, 390];
+          const failures = [];
+          const observations = [];
+          const screenshots = [];
+          const reports = [];
+          const check = (width, label, pass, detail = '') => {
+            const item = { width, label, pass: Boolean(pass), detail: String(detail) };
+            observations.push(item);
+            if (!item.pass) failures.push(item);
+          };
+
+          async function waitForRoute(page) {
+            await page.goto(`${root}/reference-projects`, { waitUntil: 'networkidle' });
+            await page.locator('.reference-projects-body').waitFor({ state: 'visible' });
+            await page.evaluate(() => document.fonts.ready);
+          }
+
+          async function screenshot(page, width, state) {
+            const file = path.join(out, 'screenshots', `reference-projects-${width}-${state}.png`);
+            await page.screenshot({ path: file, fullPage: true, animations: 'disabled' });
+            screenshots.push(path.basename(file));
+          }
+
+          async function assertAssets(page, width) {
+            for (let index = 1; index <= 4; index += 1) {
+              const id = `rp0${index}`;
+              const code = `RP-0${index}`;
+              await page.locator(`[data-project-selector="${id}"]`).click();
+              for (const suffix of ['EMB', 'MSC', 'MOB']) {
+                const asset = page.locator(`img[data-rp-asset="${code}-${suffix}-01"]`).first();
+                const loaded = await asset.evaluate((image) => image.complete && image.naturalWidth > 0);
+                check(width, `asset-${code}-${suffix}-loaded`, loaded, loaded ? '' : 'image did not complete with naturalWidth > 0');
+              }
+            }
+          }
+
+          async function inspect(width) {
+            const height = width === 768 ? 1024 : 900;
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({ viewport: { width, height } });
+            const page = await context.newPage();
+            const consoleErrors = [];
+            const pageErrors = [];
+            page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+            page.on('pageerror', (error) => pageErrors.push(error.message));
+            try {
+              await waitForRoute(page);
+              const body = page.locator('.reference-projects-body');
+              const selector = page.locator('.rp-project-selector');
+              const dimensions = await page.evaluate(() => ({
+                pathname: location.pathname,
+                dir: document.documentElement.getAttribute('dir'),
+                clientWidth: document.documentElement.clientWidth,
+                scrollWidth: document.documentElement.scrollWidth,
+              }));
+              const publicText = await body.innerText();
+              check(width, 'actual-pathname', dimensions.pathname === '/reference-projects', dimensions.pathname);
+              check(width, 'arabic-rtl', (await body.getAttribute('dir')) === 'rtl', await body.getAttribute('dir'));
+              check(width, 'no-horizontal-overflow', dimensions.scrollWidth <= dimensions.clientWidth + 1, `${dimensions.scrollWidth}/${dimensions.clientWidth}`);
+              check(width, 'selector-orientation', (await selector.getAttribute('aria-orientation')) === (width > 900 ? 'vertical' : 'horizontal'), await selector.getAttribute('aria-orientation'));
+              check(width, 'no-visible-machine-control-tokens', !/REFERENCE_ONLY|UNAVAILABLE|ROUTE_NOT_CONFIGURED/.test(publicText), 'machine/control token found in visible text');
+              check(width, 'no-visible-repository-implementation-wording', !/المستودع|repository/i.test(publicText), 'repository implementation wording found in visible text');
+              check(width, 'canonical-unavailable-semantics', publicText.includes('المسار الخارجي الموثوق غير متاح حاليًا') && publicText.includes('لا يتوفر حاليًا رابط موثوق إلى المصدر المستقل.'), 'required unavailable semantics missing');
+              check(width, 'illustrative-not-operational-proof', publicText.includes('ليست واجهة منتج أو دليلاً تشغيلياً'), 'illustrative/not-operational-proof disclaimer missing');
+              check(width, 'five-field-comparison', await page.locator('.rp-comparison__legend > span').count() === 5 && await page.locator('[data-project-row] [data-comparison-field="project"]').count() === 4 && await page.locator('[data-project-row] [data-comparison-field="domain"]').count() === 4 && await page.locator('[data-project-row] [data-comparison-field="capability"]').count() === 4 && await page.locator('[data-project-row] [data-comparison-field="state"]').count() === 4 && await page.locator('[data-project-row] [data-comparison-field="route"]').count() === 4, 'five comparison fields are not preserved for all rows');
+              await screenshot(page, width, 'initial');
+              await page.locator('[data-project-selector="rp02"]').click();
+              await screenshot(page, width, 'rp02');
+              await page.getByRole('button', { name: /سجل الحدود والتحقق/ }).click();
+              await screenshot(page, width, 'ledger-expanded');
+              await assertAssets(page, width);
+
+              if (width === 1024) {
+                await page.locator('[data-project-selector="rp01"]').focus();
+                await page.keyboard.press('ArrowDown');
+                check(width, 'vertical-rtl-keyboard-direction', (await body.getAttribute('data-active-project')) === 'rp02', await body.getAttribute('data-active-project'));
+              }
+              if (width === 768) {
+                await page.locator('[data-project-selector="rp01"]').focus();
+                await page.keyboard.press('ArrowLeft');
+                check(width, 'horizontal-rtl-forward-arrow-left', (await body.getAttribute('data-active-project')) === 'rp02', await body.getAttribute('data-active-project'));
+                await page.keyboard.press('ArrowRight');
+                check(width, 'horizontal-rtl-backward-arrow-right', (await body.getAttribute('data-active-project')) === 'rp01', await body.getAttribute('data-active-project'));
+              }
+            } catch (error) {
+              check(width, 'actual-route-capture-fatal', false, error && error.stack ? error.stack : error);
+            }
+            check(width, 'zero-console-errors', consoleErrors.length === 0, JSON.stringify(consoleErrors));
+            check(width, 'zero-page-errors', pageErrors.length === 0, JSON.stringify(pageErrors));
+            reports.push({ width, consoleErrors, pageErrors });
+            await context.close();
+            await browser.close();
+          }
+
+          (async () => {
+            fs.mkdirSync(path.join(out, 'screenshots'), { recursive: true });
+            for (const width of widths) await inspect(width);
+
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({ viewport: { width: 901, height: 900 } });
+            const page = await context.newPage();
+            await waitForRoute(page);
+            check(901, 'selector-boundary-901-vertical', (await page.locator('.rp-project-selector').getAttribute('aria-orientation')) === 'vertical', await page.locator('.rp-project-selector').getAttribute('aria-orientation'));
+            await page.setViewportSize({ width: 900, height: 900 });
+            check(900, 'selector-boundary-900-horizontal', (await page.locator('.rp-project-selector').getAttribute('aria-orientation')) === 'horizontal', await page.locator('.rp-project-selector').getAttribute('aria-orientation'));
+            await context.close();
+            await browser.close();
+
+            fs.writeFileSync(path.join(out, 'capture-report.json'), JSON.stringify({ reports, observations, failures, ltr_runtime: 'Covered by the targeted fixture suite on the exact candidate; the integrated public route is Arabic-only.' }, null, 2));
+            fs.writeFileSync(path.join(out, 'screenshots-inventory.txt'), screenshots.sort().join('\n') + (screenshots.length ? '\n' : ''));
+            if (failures.length) {
+              console.error(JSON.stringify(failures, null, 2));
+              process.exit(1);
+            }
+          })().catch((error) => { console.error(error); process.exit(1); });
+          NODE
+
+          NODE_PATH="$GITHUB_WORKSPACE/node_modules" node "$RUNNER_TEMP/gs-w12-rp-e57-capture.cjs" 2>&1 | tee "$EVIDENCE_DIR/logs/actual-route-capture.log"
+
+      - name: Summarize exact RP evidence
+        id: summary
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RP_SUITE_OUTCOME: ${{ steps.rp_suite.outcome }}
+          ACTUAL_ROUTE_OUTCOME: ${{ steps.actual_route.outcome }}
+        run: |
+          set -euo pipefail
+          node <<'NODE' | tee "$EVIDENCE_DIR/test-counts.txt"
+          const fs = require('node:fs');
+          const file = `${process.env.EVIDENCE_DIR}/reports/reference-projects-targeted.json`;
+          if (!fs.existsSync(file)) {
+            console.log('reference-projects-targeted.json: not_available');
+            process.exit(0);
+          }
+          try {
+            const report = JSON.parse(fs.readFileSync(file, 'utf8'));
+            const s = report.stats || {};
+            const total = (s.expected || 0) + (s.unexpected || 0) + (s.flaky || 0) + (s.skipped || 0);
+            console.log(`reference-projects-targeted.json: total=${total} expected=${s.expected ?? 'n/a'} unexpected=${s.unexpected ?? 'n/a'} flaky=${s.flaky ?? 'n/a'} skipped=${s.skipped ?? 'n/a'} duration_ms=${s.duration ?? 'n/a'}`);
+          } catch (error) {
+            console.log(`reference-projects-targeted.json: report_parse_error=${error.message}`);
+          }
+          NODE
+
+          {
+            find "$EVIDENCE_DIR/screenshots" -type f -name '*.png' -printf 'actual-route/%f\n' 2>/dev/null
+            find tests/visual/reference-projects/evidence -type f -name '*.png' -printf 'targeted-suite/%f\n' 2>/dev/null
+          } | sort | tee "$EVIDENCE_DIR/screenshots-inventory.txt" || true
+
+          runtime_status="CAPTURE_NOT_AVAILABLE"
+          if [[ -f "$EVIDENCE_DIR/capture-report.json" ]]; then
+            runtime_status="$(node -e 'const r=require(process.argv[1]); const failures=(r.failures||[]).length; const errors=(r.reports||[]).reduce((n,x)=>n+(x.consoleErrors||[]).length+(x.pageErrors||[]).length,0); process.stdout.write(failures ? `FAILURES_${failures}_ERRORS_${errors}` : `ZERO_ERRORS`)' "$EVIDENCE_DIR/capture-report.json")"
+          fi
+
+          result="FAIL"
+          if [[ "$RP_SUITE_OUTCOME" == "success" && "$ACTUAL_ROUTE_OUTCOME" == "success" ]]; then result="PASS"; fi
+          jobs_api="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?per_page=100"
+          job_id="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "$jobs_api" | jq -r --arg name "$JOB_NAME" '.jobs[] | select(.name == $name) | .id' | head -n 1)"
+          [[ -n "$job_id" ]] || job_id="UNKNOWN"
+
+          {
+            echo "project=General Solutions"
+            echo "project_id=GS"
+            echo "workstream=GS-GOV-W12-RP-E57-EXACT-HEAD-VALIDATION-R1"
+            echo "classification=REFERENCE_ONLY"
+            echo "candidate=REFERENCE_PROJECTS"
+            echo "candidate_pr=79"
+            echo "candidate_sha=$CANDIDATE_SHA"
+            echo "parent_sha=$PARENT_SHA"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "job_id=$job_id"
+            echo "job_name=$JOB_NAME"
+            echo "targeted_rp_suite_result=$RP_SUITE_OUTCOME"
+            echo "actual_built_reference_projects_route_result=$ACTUAL_ROUTE_OUTCOME"
+            echo "arabic_rtl_actual_route=CHECKED"
+            echo "english_ltr=TARGETED_FIXTURE_SUITE_ONLY"
+            echo "console_page_error_status=$runtime_status"
+            echo "home_a_executed=NO"
+            echo "home_b_executed=NO"
+            echo "start_executed=NO"
+            echo "overall_validation_result=$result"
+          } | tee "$EVIDENCE_DIR/artifact-metadata.txt"
+
+          {
+            echo "checkout=${{ steps.checkout.outcome }}"
+            echo "gate=${{ steps.gate.outcome }}"
+            echo "node=${{ steps.node.outcome }}"
+            echo "npm_ci=${{ steps.npm_ci.outcome }}"
+            echo "lint=${{ steps.lint.outcome }}"
+            echo "typecheck=${{ steps.typecheck.outcome }}"
+            echo "build=${{ steps.build.outcome }}"
+            echo "chromium=${{ steps.chromium.outcome }}"
+            echo "targeted_rp_suite=${{ steps.rp_suite.outcome }}"
+            echo "actual_built_reference_projects_route=${{ steps.actual_route.outcome }}"
+          } | tee "$EVIDENCE_DIR/step-outcomes.txt"
+
+      - name: Upload RP e57 SHA-bound evidence artifact
+        id: artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gs-w12-rp-e57-${{ env.CANDIDATE_SHA }}
+          path: |
+            ${{ env.EVIDENCE_DIR }}
+            tests/visual/reference-projects/evidence
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish concise execution summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## W12 RP e57 exact-head validation"
+            echo "- candidate: \`$CANDIDATE_SHA\`"
+            echo "- parent: \`$PARENT_SHA\`"
+            echo "- targeted Reference Projects suite: \`${{ steps.rp_suite.outcome }}\`"
+            echo "- actual built /reference-projects route: \`${{ steps.actual_route.outcome }}\`"
+            echo "- artifact id: \`${{ steps.artifact.outputs.artifact-id }}\`"
+            echo "- artifact digest: \`${{ steps.artifact.outputs.artifact-digest }}\`"
+            echo "- HOME-A executed: NO"
+            echo "- HOME-B executed: NO"
+            echo "- START executed: NO"
             echo "- classification: REFERENCE_ONLY"
           } >> "$GITHUB_STEP_SUMMARY"
