@@ -1,0 +1,123 @@
+﻿{
+    "product_sha":  "774634f3b1f104e6c4217e667a566037497a77f8",
+    "pr_number":  83,
+    "workstream":  "GS-START-774634-VISUAL-R1",
+    "evidence_root":  "review-evidence/GS/START/774634",
+    "files":  [
+                  {
+                      "path":  "browser-runtime-summary.txt",
+                      "size_bytes":  4287,
+                      "sha256":  "109A647D77D7CC62245BB10E4767ECD263850A385457410013BA7FFAA63C80E1"
+                  },
+                  {
+                      "path":  "exact-sha.txt",
+                      "size_bytes":  41,
+                      "sha256":  "4C31261FDBBDD7D0766CDA930C221FAF421936E5B1661196B4B924E475EB8A1D"
+                  },
+                  {
+                      "path":  "findings.json",
+                      "size_bytes":  46,
+                      "sha256":  "8BED035DA7CB03659DC84E0A321A052F6AF4BFFE75F5AD0651808AEE99DF2C8C"
+                  },
+                  {
+                      "path":  "review-summary.md",
+                      "size_bytes":  4387,
+                      "sha256":  "0AF03E1AF6B4C7E7D653591EF4A98C62CFBDA7D94A4081DD9EE0355EF03C60F8"
+                  },
+                  {
+                      "path":  "screenshots\\build_1440.png",
+                      "size_bytes":  517238,
+                      "sha256":  "1E7999BED3DD29B1C4B8A9A66C324FD6CCE65C02BF26218CE92B943115B67F70"
+                  },
+                  {
+                      "path":  "screenshots\\build_390.png",
+                      "size_bytes":  203885,
+                      "sha256":  "67325BA2B6E3E2FB6DDD47BB2893A19E8E0B8AD33381B4E6952DAECCE8C7AA51"
+                  },
+                  {
+                      "path":  "screenshots\\build_430.png",
+                      "size_bytes":  222129,
+                      "sha256":  "1E41FA1176748283D612349B3896433E9B71C1BF9335BD912B1FD2F64DE3934E"
+                  },
+                  {
+                      "path":  "screenshots\\build_768.png",
+                      "size_bytes":  333646,
+                      "sha256":  "F0CA708222DE48DF6EC99ADCC84349C8854D8869EF1EFD98B835B653C5FF7949"
+                  },
+                  {
+                      "path":  "screenshots\\discover_1440.png",
+                      "size_bytes":  437668,
+                      "sha256":  "1DEA2F095AB8BF66437A7FB487D9A63486155109E4584D1957EF8E683AE47C8C"
+                  },
+                  {
+                      "path":  "screenshots\\discover_390.png",
+                      "size_bytes":  271335,
+                      "sha256":  "1667FAA748388A42B41E3746B7C01F3C2310CAB438FCE9F55DC52926BAB00285"
+                  },
+                  {
+                      "path":  "screenshots\\discover_430.png",
+                      "size_bytes":  293620,
+                      "sha256":  "7BEA092F70C3FB42BC46DD669F5213ED1E9AAF9CEC68CC1D49508C739AF748AD"
+                  },
+                  {
+                      "path":  "screenshots\\discover_768.png",
+                      "size_bytes":  393988,
+                      "sha256":  "BE2EF6F1AB7580510040F32C739889829DFA661A04E2B4CCBDBCB89900032AC6"
+                  },
+                  {
+                      "path":  "screenshots\\review_1440.png",
+                      "size_bytes":  226709,
+                      "sha256":  "AA6F537C78DD5CE203C011BFB1BF4FC0FCFC8E17ACC8D7DDCEBAE6FCFDD2BC35"
+                  },
+                  {
+                      "path":  "screenshots\\review_390.png",
+                      "size_bytes":  170304,
+                      "sha256":  "4798A62CDC4D41AB23A29C49B5CFC8C8AFB97CAE808336865D019B5F0759BABF"
+                  },
+                  {
+                      "path":  "screenshots\\review_430.png",
+                      "size_bytes":  186834,
+                      "sha256":  "FFD1D368D3BB4EE5C1EBEF204213A902D38C410AC769D8EB6ACB6CBCD1593D86"
+                  },
+                  {
+                      "path":  "screenshots\\review_768.png",
+                      "size_bytes":  139324,
+                      "sha256":  "E1538483F2ECE4A2E3F69EBAD3D9D20B263749824117964A5830D25A18B43F89"
+                  }
+              ],
+    "authority_assets":  [
+                             {
+                                 "path":  "START-L02-DISCOVER.png",
+                                 "size_bytes":  1716247,
+                                 "sha256":  "DBBDF4E7E6721621EF512BA6A067CAB0BADD4DB0033D20C14BCBAAA8828ACA7E"
+                             },
+                             {
+                                 "path":  "START-L03-BUILD.png",
+                                 "size_bytes":  1544114,
+                                 "sha256":  "7AD3C9C3EFD8EAEA9F56E9B7E0A5117033A5A4043DBB99C8AA18552AAD3FAE62"
+                             },
+                             {
+                                 "path":  "START-L04-REVIEW-START.png",
+                                 "size_bytes":  1702503,
+                                 "sha256":  "F30CE1C6B59F5998ED6B98BD278F827B6F2AB5D875AEAECA98982CFF3A1D972A"
+                             },
+                             {
+                                 "path":  "START-L05-FINAL-CONSOLIDATION.png",
+                                 "size_bytes":  1857331,
+                                 "sha256":  "C58F5CC62605207535EAA9002212F14C1821C50C69212066DC664C9EA0E91BA4"
+                             }
+                         ],
+    "viewports_inspected":  [
+                                1440,
+                                768,
+                                430,
+                                390
+                            ],
+    "final_verdict":  "START_REFERENCE_FIDELITY_PASS",
+    "material_finding_count":  0,
+    "minor_finding_count":  0,
+    "source_mutation_count":  0,
+    "omissions":  [
+
+                  ]
+}
