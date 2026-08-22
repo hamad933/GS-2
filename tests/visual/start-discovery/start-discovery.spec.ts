@@ -325,9 +325,9 @@ test('Review preserves recommendation, customer adoption, experience truth, and 
   await expect(summary).toContainText('العقارات والأصول');
   await expect(summary.locator('[data-experience-state="recommended-only"]')).toContainText('مقترح للمراجعة');
   await expect(page.locator('#root')).toHaveAttribute('data-draft-selected-experience', '');
-  await page.getByRole('button', { name: 'ابدأ المشروع بهذا المخطط' }).click();
+  await page.getByRole('button', { name: 'احفظ موجز المشروع محليًا' }).click();
   await expect(page.locator('#root')).toHaveAttribute('data-completed-family', 'assets');
-  await expect(page.getByRole('status')).toContainText('تم تجهيز المخطط محليًا');
+  await expect(page.getByRole('status')).toContainText('تم حفظ موجز هذه النسخة داخل جلسة المتصفح فقط');
 });
 
 test('session restoration retains separate recommendation, selection, decisions, and experience adoption', async ({ page }) => {
