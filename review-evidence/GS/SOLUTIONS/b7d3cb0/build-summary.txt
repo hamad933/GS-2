@@ -1,0 +1,18 @@
+> general-solutions-digital-journey@0.0.1 build
+> vite build
+
+vite v5.4.15 building for production...
+transforming...
+✓ 303 modules transformed.
+rendering chunks...
+computing bundle size...
+dist/index.html                                     0.73 kB │ gzip:  0.42 kB
+dist/assets/index-DhaCKaMN.css                    217.48 kB │ gzip: 25.13 kB
+dist/assets/02_GS_Solutions_Universe_Clean_Production_Asset-DhaCKaMN.webp  43.20 kB
+dist/assets/03_GS_Selected_Work_Clean_Production_Asset-spPSG2lL.webp       46.54 kB
+dist/assets/04_GS_System_Anatomy_Clean_Production_Asset-C2DVYQ7A.webp      65.81 kB
+dist/assets/05_GS_Final_Gateway_Clean_Production_Asset-BEygH69f.webp       43.28 kB
+dist/assets/index-De1Eb38W.js                     249.20 kB │ gzip: 82.26 kB
+✓ built in 4.09s
+
+Exit code: 0 (Production build passed successfully)

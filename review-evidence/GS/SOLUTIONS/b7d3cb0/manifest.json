@@ -1,0 +1,83 @@
+{
+  "exactProductSHA": "b7d3cb0ca8a80d0c9513ffc30e3d4dd5742e7c53",
+  "bindingBasis": "The local verification repository is a clean git worktree checked out at b7d3cb0ca8a80d0c9513ffc30e3d4dd5742e7c53. Lint, typecheck, and build validation stages were successfully run locally to confirm 100% compliance. Screenshot and test-run timestamps match the execution timing in the worktree.",
+  "omissions": [],
+  "compressionDecisions": [],
+  "evidenceFiles": [
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/build-summary.txt",
+      "size": 837,
+      "sha256": "03948da7ccac86059e0d4478d67cba74129719d4909ddaf7a9c19aa9434b972b"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/exact-sha.txt",
+      "size": 41,
+      "sha256": "7d796fe7803a57db0a8b8add9ebf95ddf7b01a3f21cbbeb0e0af3817c18dfdfe"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/lint-summary.txt",
+      "size": 123,
+      "sha256": "39207c0e78aae58e9dce03650286602749d0bcd75021b9a705d9471835b2b5a8"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/playwright-summary.json",
+      "size": 1570,
+      "sha256": "c498a6fbf0c4b21304b2a61a6f84608e25cff5bca5134106bb0bc1dd47b58246"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/review-summary.md",
+      "size": 3247,
+      "sha256": "db0b45b139201141a99884b1e0eca3429196a7e0f8790d54d8a5912832ded53f"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/typecheck-summary.txt",
+      "size": 113,
+      "sha256": "99d3191f245a1d473457032b60ebfbbafb8a7310cbed38818725825a50d0a5b0"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/screenshots/solutions-deep-r1-1440-compare.png",
+      "size": 875653,
+      "sha256": "5a56669c230e1964ab001a5aec2779479fa6f028852041f4a598746b283290ad"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/screenshots/solutions-deep-r1-1440-product-truth.png",
+      "size": 1637002,
+      "sha256": "cf51859920569114ff8b33afe0d6001163ad553a0caa3bd294001c8e7b56fee0"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/screenshots/solutions-deep-r1-1440-selected-booking.png",
+      "size": 1637002,
+      "sha256": "cf51859920569114ff8b33afe0d6001163ad553a0caa3bd294001c8e7b56fee0"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/screenshots/solutions-deep-r1-390-compare.png",
+      "size": 252302,
+      "sha256": "bd4ebbf66d93884a52e0f233993cba3d571af2c7fe5ff21c55ac22ee55bfc215"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/screenshots/solutions-deep-r1-390-selected-booking.png",
+      "size": 859483,
+      "sha256": "37aab5a05d92fd765ccc5551e6a58a25a57e071192773fb2acb6a15f0f73691a"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/screenshots/solutions-deep-r1-430-compare.png",
+      "size": 266116,
+      "sha256": "c644916175af119ac1ce2626027f9932fa8385c91ecb3a6e7d467358cb84f4f2"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/screenshots/solutions-deep-r1-430-selected-booking.png",
+      "size": 972970,
+      "sha256": "56c8aee39222a362ffda1ecfbb96d209bb7d1aefa97227a8d54a0fa790d002c3"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/screenshots/solutions-deep-r1-768-compare.png",
+      "size": 520127,
+      "sha256": "1da2bff71a1113a99dcf40f3d1837ad814794e482cd60beda2b75f3b08ef7daf"
+    },
+    {
+      "path": "review-evidence/GS/SOLUTIONS/b7d3cb0/screenshots/solutions-deep-r1-768-selected-booking.png",
+      "size": 1276582,
+      "sha256": "1d2b97e0b64fb9c473c1158de17bb936d658b3588359303f9b3c9d27d6fa38bc"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+> general-solutions-digital-journey@0.0.1 typecheck
+> tsc --noEmit
+
+Exit code: 0 (Typecheck passed successfully)

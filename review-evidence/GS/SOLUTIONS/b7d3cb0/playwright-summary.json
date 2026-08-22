@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "totalTests": 19,
+  "passed": 19,
+  "failed": 0,
+  "tests": [
+    "preserves the canonical six-family product truth and approved visual recognition",
+    "reference surface remains truthful across all six families",
+    "exploration adapter carries only selected-family user provenance",
+    "DIRECT performs a real route journey into START and Browser Back/Forward restores SOLUTIONS",
+    "COMPARE performs a real USER_COMPARE route and restores the compare decision workspace",
+    "uncertain entry reaches START without fabricating a family or recommendation",
+    "desktop rail uses vertical semantics and retains focus through keyboard selection",
+    "mobile rail uses horizontal RTL keyboard semantics and remains visibly discoverable",
+    "Compare moves focus into the workspace and returns it to the invoking control",
+    "mobile Compare step changes preserve focus continuity",
+    "mixed Arabic/LTR content preserves bidi isolation",
+    "selected family remains readable and overflow-free at 1440px",
+    "compare remains readable and overflow-free at 1440px",
+    "selected family remains readable and overflow-free at 768px",
+    "compare remains readable and overflow-free at 768px",
+    "selected family remains readable and overflow-free at 430px",
+    "compare remains readable and overflow-free at 430px",
+    "selected family remains readable and overflow-free at 390px",
+    "compare remains readable and overflow-free at 390px"
+  ],
+  "screenshotEvidenceDirectory": "review-evidence/GS/SOLUTIONS/b7d3cb0/screenshots"
+}
