@@ -1,0 +1,38 @@
+{
+  "exactProductSHA": "73427a1427755367c83699b4f5afc9267c9a2b2a",
+  "bindingBasis": "HEAD commit SHA matches target SHA and evidence files copied from same commit worktree.",
+  "omissions": [],
+  "compressionDecisions": [],
+  "evidenceFiles": [
+    {
+      "path": "review-evidence/GS/HOME/73427/desktop-w05-v2-a-hero-k01.png",
+      "size": 782566,
+      "sha256": "DEDCE7BDC973E3A83F028ACA69A8AC094032DAC26240E0228AB65123DD30844B"
+    },
+    {
+      "path": "review-evidence/GS/HOME/73427/desktop-w05-v2-a-hero-k02.png",
+      "size": 774468,
+      "sha256": "677056BFB0282011E3CEC624832EE3FA48694CD00153F3A147CB68C9913CF0B3"
+    },
+    {
+      "path": "review-evidence/GS/HOME/73427/desktop-w05-v2-a-hero-k03.png",
+      "size": 763982,
+      "sha256": "26455632D45A4C0E7256ABAC298DD57E51B719A61F2657F6463673A0ECEDA113"
+    },
+    {
+      "path": "review-evidence/GS/HOME/73427/desktop-w05-v2-a-hero-k04.png",
+      "size": 788903,
+      "sha256": "FEF9525ABD015462D653BDFCC73424C2628963F86B06BCE2710281B08644501B"
+    },
+    {
+      "path": "review-evidence/GS/HOME/73427/exact-sha.txt",
+      "size": 42,
+      "sha256": "2DB31E6F0276BDBBF7CAAC3D5B847BECF3A59900294042991EBCE60B86831553"
+    },
+    {
+      "path": "review-evidence/GS/HOME/73427/review-summary.md",
+      "size": 983,
+      "sha256": "8B61AE4E09AD26202CBB7C6F4EB431EA7929853E3C0D8287EF0C9D48A01B4993"
+    }
+  ]
+}
