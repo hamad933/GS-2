@@ -1,15 +1,16 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "project_route": "GS",
   "repository": "hamad933/GS-2",
   "mode": "FAST_CONTROLLER_FAIL_CLOSED",
   "task_budget_total": 30,
   "proven_used": 5,
-  "unverified_preexisting": false,
-  "exact_remaining_ceiling": 25,
-  "task_budget_history_state": "PROVIDER_ENUMERATION_COMPLETE_FOR_REPOSITORY",
+  "unverified_preexisting": true,
+  "exact_remaining_safe_capacity": "UNKNOWN",
+  "provider_inventory_state": "CURRENT_PROVIDER_ENUMERATION_COMPLETE_FOR_REPOSITORY",
+  "lifetime_task_budget_history_state": "UNVERIFIED_PREEXISTING_HISTORY_NOT_PROVEN_BY_CURRENT_ENUMERATION",
   "new_task_creation_by_fast_controller": false,
-  "new_task_creation_gate": "PARENT_CONTROLLER_ONLY",
+  "new_task_creation_gate": "FROZEN_WHILE_LIFETIME_HISTORY_COULD_RISK_TASK_BUDGET_TOTAL",
   "write_actions_allowed": [
     "existing_session_safe_message_after_canary_activation",
     "control_receipt",
@@ -92,6 +93,6 @@
     "session_bindings_required_for_mutation": true,
     "reviewer_a_session_bindings_confirmed": 5,
     "writer_jules_session_bindings_confirmed": 0,
-    "reason": "AUTHENTICATED_READ_AND_PROVIDER_RECONCILIATION_SUCCEEDED; NO_SAFE_CANARY_WRITE_SELECTED"
+    "reason": "AUTHENTICATED_CURRENT_INVENTORY_AND_RECONCILIATION_SUCCEEDED; LIFETIME_TASK_HISTORY_REMAINS_UNPROVEN; NO_SAFE_CANARY_WRITE_SELECTED"
   }
 }
