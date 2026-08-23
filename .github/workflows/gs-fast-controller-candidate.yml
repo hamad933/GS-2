@@ -76,7 +76,6 @@ jobs:
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'hamad933/GS-2' && github.event.pull_request.head.ref == 'automation/gs-two-tier-control-v1')
     permissions:
       contents: read
-      issues: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout trusted controller code only
@@ -97,7 +96,6 @@ jobs:
       - name: Emit sanitized Jules capability summary
         env:
           SHADOW_PATH: ${{ runner.temp }}/gs-jules-shadow.json
-          RECEIPT_PATH: ${{ runner.temp }}/gs-jules-pr-receipt.md
           EXACT_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
@@ -106,12 +104,13 @@ jobs:
           from pathlib import Path
           data = json.loads(Path(os.environ['SHADOW_PATH']).read_text(encoding='utf-8'))
           reconciliation = data.get('reconciliation') or {}
-          safe_mappings = []
           account_count = int(data.get('account_session_count') or len(data.get('session_inventory') or []))
           project_count = int(data.get('project_session_count') or len(data.get('project_session_inventory') or []))
           unattributed = int(data.get('unattributed_session_count') or 0)
           waiting_count = len(data.get('waiting_inputs') or [])
           budget_state = str(data.get('task_budget_history_state') or 'UNAVAILABLE')
+          print('exact_automation_head=' + str(os.environ['EXACT_HEAD']))
+          print('actions_run=' + str(os.environ['RUN_ID']))
           print('capability_state=' + str(data.get('capability_state', 'UNKNOWN')))
           print('control_mode=' + str(data.get('control_mode', 'UNKNOWN')))
           print('account_session_count=' + str(account_count))
@@ -131,66 +130,9 @@ jobs:
                   'startingBranch': session.get('startingBranch'),
                   'pullRequests': session.get('pullRequests'),
               }
-              safe_mappings.append(safe)
               print('mapping=' + json.dumps(safe, sort_keys=True, separators=(',', ':')))
-          unmatched = len(reconciliation.get('unmatched_sessions') or [])
-          print('unmatched_session_count=' + str(unmatched))
-          lines = [
-              '<!-- GS_JULES_API_SHADOW_RECEIPT -->',
-              '### Jules API shadow control receipt',
-              '',
-              f"- exact automation head: `{os.environ['EXACT_HEAD']}`",
-              f"- Actions run: `{os.environ['RUN_ID']}`",
-              f"- capability: `{data.get('capability_state', 'UNKNOWN')}`",
-              f"- control mode: `{data.get('control_mode', 'UNKNOWN')}`",
-              f"- account sessions enumerated: `{account_count}`",
-              f"- GS repository sessions enumerated: `{project_count}`",
-              f"- unattributed sessions: `{unattributed}`",
-              f"- task-budget history state: `{budget_state}`",
-              f"- waiting inputs detected: `{waiting_count}`",
-              f"- reconciliation ambiguous: `{str(bool(reconciliation.get('ambiguous'))).lower()}`",
-              f"- unmatched sessions: `{unmatched}`",
-              '- Jules mutations: `DISABLED_SHADOW_ONLY`',
-              '',
-              'Mappings:',
-          ]
-          for safe in safe_mappings:
-              lines.append('- `' + json.dumps(safe, sort_keys=True, separators=(',', ':')) + '`')
-          lines += ['', 'No credential value, authenticated header, prompt text, waiting-question text, or raw provider payload is included in this receipt.']
-          Path(os.environ['RECEIPT_PATH']).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          print('unmatched_session_count=' + str(len(reconciliation.get('unmatched_sessions') or [])))
           PY
-      - name: Upsert sanitized control receipt on automation PR
-        uses: actions/github-script@v7
-        env:
-          RECEIPT_PATH: ${{ runner.temp }}/gs-jules-pr-receipt.md
-        with:
-          script: |
-            const fs = require('fs');
-            const marker = '<!-- GS_JULES_API_SHADOW_RECEIPT -->';
-            const body = fs.readFileSync(process.env.RECEIPT_PATH, 'utf8');
-            const issue_number = 98;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number,
-              per_page: 100
-            });
-            const existing = comments.find(comment => (comment.body || '').includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number,
-                body
-              });
-            }
       - name: Upload sanitized Jules shadow result
         uses: actions/upload-artifact@v4
         with:
@@ -201,11 +143,9 @@ jobs:
 
 # Activation boundary:
 # - Jules API mutations remain disabled in this candidate.
-# - The secret is scoped only to the trusted automation control branch (push or same-repo PR #98 context).
+# - The secret is scoped only to the trusted automation control branch (push or same-repo automation PR context).
 # - Forks and product-candidate PRs cannot satisfy the secret-bearing job guard.
 # - The secret-bearing job checks out only .project-control at the exact authorized automation head.
-# - pull_request_target is not used.
-# - The PR receipt contains sanitized control metadata only and is replace-in-place.
 # - Waiting-question text remains artifact-only and is never written to logs/comments.
 # - Scheduled/default-branch live activation still requires the authorized activation gate.
 # - No create-session, merge, acceptance, release, deploy, force-push, or main write occurs here.
