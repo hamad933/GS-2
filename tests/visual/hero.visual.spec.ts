@@ -2,7 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
-const EVIDENCE_DIR = resolve('visual-evidence');
+const EVIDENCE_DIR = resolve(process.env.VISUAL_EVIDENCE_DIR ?? 'visual-evidence');
 const HERO = '#hero';
 const S02 = '#solutions-universe';
 const S03 = '#reference-proof';
@@ -87,6 +87,47 @@ test.beforeAll(async () => {
   await mkdir(EVIDENCE_DIR, { recursive: true });
 });
 
+test('captures W05 V2-A Hero states through the real pointer journey', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page);
+  await captureHero(page, 'desktop-w05-v2-a-hero-k01.png');
+
+  await page.getByRole('button', { name: 'إطلاق خدمة رقمية' }).click();
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'direction');
+  await captureHero(page, 'desktop-w05-v2-a-hero-k02.png');
+
+  await page.getByRole('button', { name: 'خطوة رئيسية واحدة' }).click();
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'build');
+  await page.getByRole('button', { name: 'رتّب الرحلة حول الهدف' }).click();
+  await page.getByRole('button', { name: 'وحّد التجربة' }).click();
+  await page.getByRole('button', { name: 'جرّب المسار' }).click();
+  await expect(page.getByLabel('طلبك المختصر')).toBeVisible();
+  await captureHero(page, 'desktop-w05-v2-a-hero-k03.png');
+
+  await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لمراجعة جاهزية المسار');
+  await page.getByRole('button', { name: /إرسال الطلب/ }).click();
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
+  await captureHero(page, 'desktop-w05-v2-a-hero-k04.png');
+});
+
+test('Hero journey supports keyboard activation with visible focus', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page);
+  const need = page.getByRole('button', { name: 'إطلاق خدمة رقمية' });
+  await need.focus();
+  await expect(need).toBeFocused();
+  await expect(need).toHaveCSS('box-shadow', /rgb/);
+  await page.keyboard.press('Enter');
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'direction');
+
+  const direction = page.getByRole('button', { name: 'خطوة رئيسية واحدة' });
+  await direction.focus();
+  await expect(direction).toBeFocused();
+  await expect(direction).toHaveCSS('box-shadow', /rgb/);
+  await page.keyboard.press('Space');
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'build');
+});
+
 test('captures desktop K01, K03, and K04 evidence', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openHome(page);
@@ -98,7 +139,7 @@ test('captures desktop K01, K03, and K04 evidence', async ({ page }) => {
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لاختبار التسليم');
   await page.getByRole('button', { name: /إرسال الطلب/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
-  await expect(page.getByText('تم الاستلام')).toBeVisible();
+  await expect(page.getByText('لم يُرسل شيء بعد؛ ستبقى المراجعة والإرسال بين يديك.')).toBeVisible();
   await captureHero(page, 'desktop-k04-launch.png');
 });
 
@@ -130,8 +171,8 @@ test('captures mobile S02 and S03 evidence', async ({ page }) => {
   await expect(page.locator(S02)).toHaveAttribute('data-active', 'assets');
   await captureSection(page, S02, 'mobile-s02-active.png');
 
-  await page.locator(S03).getByRole('button', { name: /التجارة الرقمية وتجارب العلامات/ }).click();
-  await expect(page.locator(S03)).toHaveAttribute('data-project', 'brand-commerce');
+  await page.locator(S03).getByRole('button', { name: /Enterprise Operations/ }).click();
+  await expect(page.locator(S03)).toHaveAttribute('data-project', 'rp02');
   await captureSection(page, S03, 'mobile-s03-proof.png');
 });
 
@@ -139,8 +180,8 @@ test('captures desktop S04 and S05 evidence', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openHome(page);
   await captureSection(page, S04, 'desktop-s04-anatomy-default.png');
-  await page.locator(S04).getByRole('button', { name: /البيانات/ }).click();
-  await expect(page.locator(S04)).toHaveAttribute('data-active', 'data');
+  await page.locator(S04).getByRole('button', { name: /البناء/ }).click();
+  await expect(page.locator(S04)).toHaveAttribute('data-active', 'build');
   await captureSection(page, S04, 'desktop-s04-anatomy-active.png');
   await captureSection(page, S05, 'desktop-s05-gateway.png');
 });
@@ -148,8 +189,8 @@ test('captures desktop S04 and S05 evidence', async ({ page }) => {
 test('captures mobile S04 and S05 evidence', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openHome(page);
-  await page.locator(S04).getByRole('button', { name: /نقاط الربط/ }).click();
-  await expect(page.locator(S04)).toHaveAttribute('data-active', 'integrations');
+  await page.locator(S04).getByRole('button', { name: /التكامل/ }).click();
+  await expect(page.locator(S04)).toHaveAttribute('data-active', 'integration');
   await captureSection(page, S04, 'mobile-s04-anatomy.png');
   await captureSection(page, S05, 'mobile-s05-gateway.png');
 });
@@ -177,7 +218,7 @@ test('honors prefers-reduced-motion in Chromium', async ({ page }) => {
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'direction');
 });
 
-for (const width of [390, 768, 1024, 1440]) {
+for (const width of [390, 430, 768, 1024, 1440]) {
   test(`has no document horizontal overflow at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await openHome(page);
@@ -194,8 +235,8 @@ test('all homepage hash links resolve and no active link uses a bare hash', asyn
   const links = await page.locator('a[href^="#"]').evaluateAll((anchors) => anchors.map((anchor) => anchor.getAttribute('href')));
   expect(links).not.toContain('#');
   for (const href of links) {
-    expect(href).toBeTruthy();
-    expect(await page.locator(href!).count()).toBe(1);
+    if (!href) throw new Error('Homepage hash link is missing its href');
+    expect(await page.locator(href).count()).toBe(1);
   }
 });
 
@@ -213,41 +254,200 @@ test('representative controls support real clicks, keyboard activation, and sync
   await family.focus();
   await expect(family).toBeFocused();
 
-  const project = page.locator(S03).getByRole('button', { name: /التجارة الرقمية وتجارب العلامات/ });
+  const project = page.locator(S03).getByRole('button', { name: /Enterprise Operations/ });
   await project.click();
-  await expect(project).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator(S03)).toHaveAttribute('data-project', 'brand-commerce');
+  await expect(page.locator(S03)).toHaveAttribute('data-project', 'rp02');
+  await expect(page.locator(S03).locator('.project-index button')).toHaveCount(3);
 
-  const layer = page.locator(S04).getByRole('button', { name: /نقاط الربط/ });
+  const layer = page.locator(S04).getByRole('button', { name: /التكامل/ });
   await layer.click();
   await expect(layer).toHaveAttribute('aria-pressed', 'true');
   await layer.focus();
   await page.keyboard.press('Enter');
-  await expect(page.locator(S04)).toHaveAttribute('data-active', 'integrations');
+  await expect(page.locator(S04)).toHaveAttribute('data-active', 'integration');
 
-  const gateway = page.locator(S05).getByRole('link', { name: 'ابدأ مشروعك' });
-  await expect(gateway).toHaveAttribute('href', /^mailto:hello@generalsolutions\.co\?/);
+  const gateway = page.locator(S05).getByRole('link', { name: 'ابدأ اختيارك' });
+  await expect(gateway).toHaveAttribute('href', '/start');
+  await gateway.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/start$/);
+  await expect(page.locator('#start-discovery-title')).toBeFocused();
 });
 
-test('captures final W04 desktop integration evidence', async ({ page }) => {
+test('all S02 stations and S03 projects support pointer and keyboard selection', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openHome(page);
-  await captureFullPage(page, 'desktop-home-full.png');
+
+  for (const family of [
+    'business',
+    'commerce',
+    'booking',
+    'assets',
+    'portals',
+    'knowledge',
+  ]) {
+    const station = page.locator(S02).locator(`.s02-station-${[
+      'business',
+      'commerce',
+      'booking',
+      'assets',
+      'portals',
+      'knowledge',
+    ].indexOf(family) + 1}`);
+    await expect(station).toHaveCount(1);
+    await station.click();
+    await expect(page.locator(S02)).toHaveAttribute('data-active', family);
+    await station.focus();
+    await expect(station).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator(S02)).toHaveAttribute('data-active', family);
+  }
+
+  for (const projectId of ['rp02', 'rp03', 'rp04', 'rp01']) {
+    const pointerSelector = page.locator(S03).locator(`[data-project-selector="${projectId}"]`);
+    await expect(pointerSelector).toHaveCount(1);
+    await pointerSelector.click();
+    await expect(page.locator(S03)).toHaveAttribute('data-project', projectId);
+  }
+
+  for (const [index, projectId] of ['rp02', 'rp03', 'rp04', 'rp01'].entries()) {
+    const keyboardSelector = page.locator(S03).locator(`[data-project-selector="${projectId}"]`);
+    await expect(keyboardSelector).toHaveCount(1);
+    await keyboardSelector.focus();
+    await expect(keyboardSelector).toBeFocused();
+    await page.keyboard.press(index % 2 === 0 ? 'Enter' : 'Space');
+    await expect(page.locator(S03)).toHaveAttribute('data-project', projectId);
+  }
+});
+
+for (const width of [1440, 1024, 768, 430, 390]) {
+  test(`has no console or page errors through representative interactions at ${width}px`, async ({ page }) => {
+    const consoleErrors: string[] = [];
+    const pageErrors: string[] = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+
+    await page.setViewportSize({ width, height: 900 });
+    await openHome(page);
+    await page.locator(S02).locator('.s02-station-5').click();
+    await page.locator(S03).locator('[data-project-selector="rp02"]').click();
+
+    expect(consoleErrors).toEqual([]);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
+test('captures final R3 desktop integration evidence', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page);
+  await captureFullPage(page, 'desktop-w05-r3-home-full.png');
   await captureTransition(page, HERO, S02, 'desktop-s01-s02-transition.png');
   await captureTransition(page, S03, S04, 'desktop-s03-s04-transition.png');
   await captureTransition(page, S05, FOOTER, 'desktop-s05-footer.png');
 });
 
-test('captures final W04 tablet integration evidence', async ({ page }) => {
+test('captures final R3 tablet integration evidence', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await openHome(page);
-  await captureFullPage(page, 'tablet-home-full.png');
+  await captureFullPage(page, 'tablet-w05-r3-home-full.png');
 });
 
-test('captures final W04 mobile integration evidence', async ({ page }) => {
+test('captures final R3 mobile integration evidence', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openHome(page);
-  await captureFullPage(page, 'mobile-home-full.png');
+  await captureFullPage(page, 'mobile-w05-r3-home-full.png');
   await captureTransition(page, S03, S04, 'mobile-s03-s04-transition.png');
   await captureTransition(page, S05, FOOTER, 'mobile-s05-footer.png');
 });
+
+test('captures complete W05-R3 review evidence with real pointer interactions', async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openHome(page);
+  await captureHero(page, 'desktop-w05-r3-hero-need.png');
+  await page.getByRole('button', { name: 'إطلاق خدمة رقمية' }).click();
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'direction');
+  await captureHero(page, 'desktop-w05-r3-hero-direction.png');
+  await page.getByRole('button', { name: 'ابدأ بحاجة أخرى' }).click();
+  await reachK03(page);
+  await captureHero(page, 'desktop-w05-r3-hero-build.png');
+  await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لمراجعة التفاعل');
+  await page.getByRole('button', { name: /إرسال الطلب/ }).click();
+  await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
+  await captureHero(page, 'desktop-w05-r3-hero-launch.png');
+
+  await captureSection(page, S02, 'desktop-w05-r3-solutions-default.png');
+  await page.locator(S02).getByRole('button', { name: /التجارة الرقمية وتجارب العلامات/ }).click();
+  await page.locator(S02).getByRole('button', { name: /الأنظمة التشغيلية والبوابات/ }).click();
+  await expect(page.locator(S02)).toHaveAttribute('data-active', 'portals');
+  await captureSection(page, S02, 'desktop-w05-r3-solutions-active.png');
+
+  await page.locator(S03).getByRole('button', { name: /Enterprise Operations/ }).click();
+  await page.locator(S03).getByRole('button', { name: /Bayt & Style/ }).click();
+  await captureSection(page, S03, 'desktop-w05-r3-project-rp01.png');
+  await page.locator(S03).getByRole('button', { name: /Enterprise Operations/ }).click();
+  await expect(page.locator(S03)).toHaveAttribute('data-project', 'rp02');
+  await captureSection(page, S03, 'desktop-w05-r3-project-rp02.png');
+  await page.locator(S03).getByRole('button', { name: /Booking & Services/ }).click();
+
+  await page.locator(S04).getByRole('button', { name: /التكامل/ }).click();
+  await expect(page.locator(S04)).toHaveAttribute('data-active', 'integration');
+  await captureSection(page, S04, 'desktop-w05-r3-anatomy-active.png');
+  await captureSection(page, S05, 'desktop-w05-r3-gateway.png');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openHome(page);
+  await reachK03(page);
+  await captureHero(page, 'mobile-w05-r3-hero-build.png');
+  await page.locator(S02).getByRole('button', { name: /العقارات والأصول/ }).click();
+  await captureSection(page, S02, 'mobile-w05-r3-solutions-active.png');
+  await page.locator(S03).getByRole('button', { name: /Booking & Services/ }).click();
+  await captureSection(page, S03, 'mobile-w05-r3-project.png');
+  await page.locator(S04).getByRole('button', { name: /البناء/ }).click();
+  await captureSection(page, S04, 'mobile-w05-r3-anatomy.png');
+  await captureSection(page, S05, 'mobile-w05-r3-gateway.png');
+});
+
+for (const width of [1440, 1024, 768, 430, 390]) {
+  test(`captures mandatory W05-R4 homepage evidence at ${width}px`, async ({ page }) => {
+    test.slow();
+    const height = width >= 1024 ? 900 : width === 768 ? 1024 : 900;
+    await page.setViewportSize({ width, height });
+    await openHome(page);
+
+    await captureFullPage(page, `r4-${width}-home-full.png`);
+    await captureHero(page, `r4-${width}-hero.png`);
+    await captureSection(page, S02, `r4-${width}-s02-default.png`);
+
+    const activeFamily = page.locator(S02).locator('.s02-station-5');
+    await expect(activeFamily).toHaveCount(1);
+    await activeFamily.click();
+    await expect(page.locator(S02)).toHaveAttribute('data-active', 'portals');
+    await captureSection(page, S02, `r4-${width}-s02-active.png`);
+
+    for (const projectId of ['rp01', 'rp02', 'rp03', 'rp04']) {
+      if (await page.locator(S03).getAttribute('data-project') !== projectId) {
+        const selector = page.locator(S03).locator(`[data-project-selector="${projectId}"]`);
+        await expect(selector).toHaveCount(1);
+        await selector.click();
+      }
+
+      await expect(page.locator(S03)).toHaveAttribute('data-project', projectId);
+      await captureSection(page, S03, `r4-${width}-s03-${projectId}.png`);
+
+      if (width === 1440) {
+        for (const aperture of ['desktop', 'mobile', 'detail']) {
+          await page.locator(S03).locator(`.media-${aperture}`).screenshot({
+            path: resolve(EVIDENCE_DIR, `r4-1440-s03-${projectId}-${aperture}-close.png`),
+            animations: 'disabled',
+          });
+        }
+      }
+    }
+
+    await captureSection(page, S04, `r4-${width}-s04.png`);
+    await captureSection(page, S05, `r4-${width}-s05.png`);
+  });
+}
