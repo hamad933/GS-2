@@ -105,7 +105,7 @@ test('captures W05 V2-A Hero states through the real pointer journey', async ({ 
   await captureHero(page, 'desktop-w05-v2-a-hero-k03.png');
 
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لمراجعة جاهزية المسار');
-  await page.getByRole('button', { name: /إرسال الطلب/ }).click();
+  await page.getByRole('button', { name: /إرسال الطلب|جهّز الملخّص/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
   await captureHero(page, 'desktop-w05-v2-a-hero-k04.png');
 });
@@ -137,7 +137,7 @@ test('captures desktop K01, K03, and K04 evidence', async ({ page }) => {
   await captureHero(page, 'desktop-k03-build.png');
 
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لاختبار التسليم');
-  await page.getByRole('button', { name: /إرسال الطلب/ }).click();
+  await page.getByRole('button', { name: /إرسال الطلب|جهّز الملخّص/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
   await expect(page.getByText('لم يُرسل شيء بعد؛ ستبقى المراجعة والإرسال بين يديك.')).toBeVisible();
   await captureHero(page, 'desktop-k04-launch.png');
@@ -245,7 +245,7 @@ test('representative controls support real clicks, keyboard activation, and sync
   await openHome(page);
   await reachK03(page);
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لاختبار التسليم');
-  await page.getByRole('button', { name: /إرسال الطلب/ }).click();
+  await page.getByRole('button', { name: /إرسال الطلب|جهّز الملخّص/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
 
   const family = page.locator(S02).getByRole('button', { name: /الأنظمة التشغيلية والبوابات/ });
@@ -374,7 +374,7 @@ test('captures complete W05-R3 review evidence with real pointer interactions', 
   await reachK03(page);
   await captureHero(page, 'desktop-w05-r3-hero-build.png');
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لمراجعة التفاعل');
-  await page.getByRole('button', { name: /إرسال الطلب/ }).click();
+  await page.getByRole('button', { name: /إرسال الطلب|جهّز الملخّص/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
   await captureHero(page, 'desktop-w05-r3-hero-launch.png');
 
