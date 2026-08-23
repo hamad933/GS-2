@@ -35,6 +35,8 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run deterministic control matrix
+        env:
+          PYTHONPATH: ${{ github.workspace }}/.project-control
         run: python -m unittest discover -s .project-control/tests -v
 
   fast-read-only-cycle:
@@ -49,6 +51,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python .project-control/github_live_snapshot.py --out "$RUNNER_TEMP/gs-live-snapshot.json"
       - name: Produce fail-closed control receipts
+        env:
+          PYTHONPATH: ${{ github.workspace }}/.project-control
         run: python .project-control/fast_live_cycle.py "$RUNNER_TEMP/gs-live-snapshot.json" --out "$RUNNER_TEMP/gs-fast-receipts.json"
       - name: Upload control receipts
         uses: actions/upload-artifact@v4
