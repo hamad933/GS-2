@@ -70,7 +70,10 @@ jobs:
           retention-days: 7
 
   jules-auth-reconciliation-shadow:
-    if: github.event_name == 'push' && github.repository == 'hamad933/GS-2' && github.ref == 'refs/heads/automation/gs-two-tier-control-v1'
+    if: >-
+      (github.event_name == 'push' && github.repository == 'hamad933/GS-2' && github.ref == 'refs/heads/automation/gs-two-tier-control-v1')
+      ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'hamad933/GS-2' && github.event.pull_request.head.ref == 'automation/gs-two-tier-control-v1')
     permissions:
       contents: read
       issues: write
@@ -79,7 +82,7 @@ jobs:
       - name: Checkout trusted controller code only
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           sparse-checkout: |
             .project-control
           sparse-checkout-cone-mode: false
@@ -95,7 +98,7 @@ jobs:
         env:
           SHADOW_PATH: ${{ runner.temp }}/gs-jules-shadow.json
           RECEIPT_PATH: ${{ runner.temp }}/gs-jules-pr-receipt.md
-          EXACT_HEAD: ${{ github.sha }}
+          EXACT_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
           python - <<'PY'
@@ -198,8 +201,10 @@ jobs:
 
 # Activation boundary:
 # - Jules API mutations remain disabled in this candidate.
-# - The secret is scoped only to the trusted push-only probe/reconciliation step above.
-# - PR/fork/product-candidate execution never receives JULES_API_KEY.
+# - The secret is scoped only to the trusted automation control branch (push or same-repo PR #98 context).
+# - Forks and product-candidate PRs cannot satisfy the secret-bearing job guard.
+# - The secret-bearing job checks out only .project-control at the exact authorized automation head.
+# - pull_request_target is not used.
 # - The PR receipt contains sanitized control metadata only and is replace-in-place.
 # - Waiting-question text remains artifact-only and is never written to logs/comments.
 # - Scheduled/default-branch live activation still requires the authorized activation gate.
