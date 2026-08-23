@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "task_budget_total": 30,
+  "proven_used": 5,
+  "unverified_preexisting": "PROVIDER_HISTORY_NOT_DIRECTLY_INSPECTABLE",
+  "exact_remaining_safe_capacity": "UNKNOWN",
+  "tasks": [
+    {
+      "task_id": "10184598302611242915",
+      "role": "REVIEWER_A",
+      "page": "HOME",
+      "route": "/",
+      "issue": 89,
+      "result_pr": 95,
+      "state": "COMPLETED_OUTPUT_PUBLISHED",
+      "review_state": "REVIEWER_MUTATION_DETECTED",
+      "binding": "SOURCE_BINDING_FAILED",
+      "budget_unit": 1
+    },
+    {
+      "task_id": "9636739461828141981",
+      "role": "REVIEWER_A",
+      "page": "SOLUTIONS",
+      "route": "/solutions",
+      "issue": 90,
+      "result_pr": 97,
+      "state": "COMPLETED_OUTPUT_PUBLISHED",
+      "review_state": "REVIEWER_MUTATION_DETECTED",
+      "binding": "CLAIMED_EXACT_REQUIRES_PARENT_ADJUDICATION",
+      "budget_unit": 1
+    },
+    {
+      "task_id": "8151804665897815512",
+      "role": "REVIEWER_A",
+      "page": "START",
+      "route": "/start",
+      "issue": 91,
+      "result_pr": null,
+      "state": "ACTIVE_ACKNOWLEDGED",
+      "review_state": "REVIEW_IN_PROGRESS",
+      "binding": "TARGET_EXACT_SHA",
+      "budget_unit": 1
+    },
+    {
+      "task_id": "4638630989161925753",
+      "role": "REVIEWER_A",
+      "page": "REFERENCE_PROJECTS",
+      "route": "/reference-projects",
+      "issue": 92,
+      "result_pr": 94,
+      "state": "COMPLETED_OUTPUT_PUBLISHED",
+      "review_state": "REVIEWER_MUTATION_DETECTED",
+      "binding": "SOURCE_BINDING_FAILED",
+      "budget_unit": 1
+    },
+    {
+      "task_id": "3706376172785639949",
+      "role": "REVIEWER_A",
+      "page": "HOW_WE_WORK",
+      "route": "/how-we-work",
+      "issue": 93,
+      "result_pr": 96,
+      "state": "COMPLETED_OUTPUT_PUBLISHED",
+      "review_state": "REVIEWER_MUTATION_DETECTED",
+      "binding": "CLAIMED_EXACT_REQUIRES_PARENT_ADJUDICATION",
+      "budget_unit": 1
+    }
+  ]
+}
