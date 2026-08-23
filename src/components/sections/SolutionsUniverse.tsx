@@ -1,44 +1,247 @@
 import { useState } from 'react';
-import { ArrowDownLeft, MoveLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { solutionFamilies } from '../../data/homeShowcase';
+import solutionsEnvironment from '../../assets/gs-home-v2/02_GS_Solutions_Universe_Clean_Production_Asset.webp';
+import './SolutionsUniverse.v2.css';
+
+type GlyphProps = {
+  familyId: string;
+};
+
+const S02_READABILITY_STYLES = `
+.s02-universe .s02-segment-band span,
+.s02-universe .s02-selected-label,
+.s02-universe .s02-station-copy small,
+.s02-universe .s02-family-detail > p,
+.s02-universe .s02-family-detail li small,
+.s02-universe .s02-context-cue,
+.s02-universe .s02-continuity-title span,
+.s02-universe .s02-continuity-outcomes > span {
+  font-size: 10px;
+}
+
+.s02-universe .s02-segment-band b,
+.s02-universe .s02-station-index,
+.s02-universe .s02-eyebrow span,
+.s02-universe .s02-outcome-icon b,
+.s02-universe .s02-continuity-outcomes i {
+  font-size: 9px;
+}
+
+.s02-universe .s02-family-detail li strong,
+.s02-universe .s02-station-copy strong {
+  font-size: 11px;
+}
+
+.s02-universe .s02-actions a,
+.s02-universe .s02-actions button {
+  min-height: 44px;
+  font-size: 11px;
+}
+
+.s02-universe .s02-station.is-preview:not([aria-pressed='true']) {
+  color: #f0e4d5;
+  transform: translateY(-3px);
+}
+
+@media (min-width: 801px) {
+  .s02-universe .s02-family-detail > p,
+  .s02-universe .s02-family-detail li strong,
+  .s02-universe .s02-actions a,
+  .s02-universe .s02-actions button {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 520px) {
+  .s02-universe .s02-architecture {
+    left: 10px;
+    width: calc(100% - 20px);
+  }
+
+  .s02-universe .s02-station-2 {
+    left: 1%;
+  }
+
+  .s02-universe .s02-station-5 {
+    right: 1%;
+  }
+
+  .s02-universe .s02-station:focus-visible {
+    outline-offset: 2px;
+  }
+}
+`;
+
+function FamilyGlyph({ familyId }: GlyphProps) {
+  const common = {
+    viewBox: '0 0 48 48',
+    fill: 'none',
+    'aria-hidden': true,
+  } as const;
+
+  if (familyId === 'business') {
+    return <svg {...common}><path d="M11 38V14l13-6 13 6v24M17 20h4m6 0h4m-14 7h4m6 0h4M9 38h30" /><path d="M21 38v-6h6v6" /></svg>;
+  }
+
+  if (familyId === 'commerce') {
+    return <svg {...common}><path d="M10 16h5l3 19h18l3-14H17M21 16a4 4 0 0 1 8 0" /><circle cx="22" cy="39" r="2" /><circle cx="34" cy="39" r="2" /></svg>;
+  }
+
+  if (familyId === 'booking') {
+    return <svg {...common}><rect x="10" y="13" width="28" height="26" rx="2" /><path d="M10 21h28M17 9v8m14-8v8M17 27h4m6 0h4m-14 6h4m6 0h4" /></svg>;
+  }
+
+  if (familyId === 'assets') {
+    return <svg {...common}><path d="M9 39h30M13 39V22h8v17m6 0V12h8v27M16 27h2m-2 5h2m14-14h2m-2 6h2m-2 6h2" /><path d="m11 22 6-5 6 5" /></svg>;
+  }
+
+  if (familyId === 'portals') {
+    return <svg {...common}><path d="m24 8 4 5 6-1 1 6 5 3-3 6 1 6-6 1-3 5-5-4-6 3-2-6-6-2 2-6-2-5 6-3 1-6 6 1z" /><circle cx="24" cy="24" r="6" /></svg>;
+  }
+
+  return <svg {...common}><path d="M9 13h12c3 0 5 2 5 5v22c0-3-2-5-5-5H9zM39 13H27v27c0-3 2-5 5-5h7z" /><path d="M14 20h7m-7 6h7m12-6h-3m3 6h-3" /></svg>;
+}
+
+function DirectionArrow() {
+  return <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16 10H4m5-5-5 5 5 5" /></svg>;
+}
 
 export function SolutionsUniverse() {
   const [activeId, setActiveId] = useState(solutionFamilies[0].id);
-  const active = solutionFamilies.find((family) => family.id === activeId) ?? solutionFamilies[0];
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const activeIndex = Math.max(0, solutionFamilies.findIndex((family) => family.id === activeId));
+  const active = solutionFamilies[activeIndex];
+  const previewIndex = previewId === null
+    ? -1
+    : solutionFamilies.findIndex((family) => family.id === previewId);
+  const previewing = previewIndex >= 0 && previewId !== activeId;
+  const presentedIndex = previewing ? previewIndex : activeIndex;
+  const presented = solutionFamilies[presentedIndex];
+
+  const clearPreview = (familyId: string) => {
+    setPreviewId((current) => current === familyId ? null : current);
+  };
+
+  const selectFamily = (familyId: string) => {
+    setActiveId(familyId);
+    setPreviewId(null);
+  };
+
+  const activateNext = () => {
+    setPreviewId(null);
+    setActiveId(solutionFamilies[(activeIndex + 1) % solutionFamilies.length].id);
+  };
 
   return (
-    <section id="solutions-universe" className="solutions-universe" aria-labelledby="solutions-title" data-active={active.id}>
-      <div className="universe-heading">
-        <p><span>02</span> فضاء الحلول</p>
-        <h2 id="solutions-title">ستة مسارات.<br />نظام واحد يتشكّل حول احتياجك.</h2>
-        <div className="universe-intro">اختر مساراً لترى ما يصبح واضحاً داخله.<ArrowDownLeft aria-hidden="true" /></div>
+    <section
+      id="solutions-universe"
+      className="solutions-universe s02-universe"
+      aria-labelledby="solutions-title"
+      data-active={active.id}
+      data-preview={previewing ? presented.id : undefined}
+    >
+      <style>{S02_READABILITY_STYLES}</style>
+      <img
+        className="s02-environment"
+        src={solutionsEnvironment}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+      />
+
+      <div className="s02-segment-band" aria-hidden="true">
+        <span className="is-current"><b>0{presentedIndex + 1}</b> {previewing ? 'المجال المعروض' : 'المجال المختار'}</span>
+        <span>ستة مجالات</span>
+        <span>تفاصيل تتغيّر مع اختيارك</span>
       </div>
 
-      <div className="universe-field">
-        <svg className="universe-lines" viewBox="0 0 1000 610" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M84 84 C295 84 315 288 500 305" /><path d="M86 250 C285 250 326 292 500 305" />
-          <path d="M100 504 C290 504 335 336 500 305" /><path d="M916 80 C700 80 694 277 500 305" />
-          <path d="M920 270 C720 270 670 295 500 305" /><path d="M900 515 C700 515 680 337 500 305" />
-          <circle cx="500" cy="305" r="8" /><circle cx="500" cy="305" r="28" />
+      <div className="s02-architecture" aria-label="اختر إحدى عائلات الحلول الست">
+        <svg className="s02-connectors" viewBox="0 0 700 760" preserveAspectRatio="none" aria-hidden="true">
+          <path className={`s02-connector ${presentedIndex === 0 ? 'is-active' : ''}`} d="M350 390 C300 330 266 276 227 238" />
+          <path className={`s02-connector ${presentedIndex === 1 ? 'is-active' : ''}`} d="M350 390 C270 390 145 390 58 382" />
+          <path className={`s02-connector ${presentedIndex === 2 ? 'is-active' : ''}`} d="M350 390 C292 472 230 534 150 574" />
+          <path className={`s02-connector ${presentedIndex === 3 ? 'is-active' : ''}`} d="M350 390 C402 493 430 548 476 598" />
+          <path className={`s02-connector ${presentedIndex === 4 ? 'is-active' : ''}`} d="M350 390 C438 398 534 403 625 400" />
+          <path className={`s02-connector ${presentedIndex === 5 ? 'is-active' : ''}`} d="M350 390 C408 320 426 272 460 234" />
+          <circle className="s02-core-signal" cx="350" cy="390" r="8" />
         </svg>
-        <div className="universe-core" aria-hidden="true"><span>GS</span><small>نقطة الالتقاء</small></div>
-        <div className="family-branches" role="group" aria-label="عائلات الحلول الست">
+
+        <div className="s02-core-label" aria-hidden="true">
+          <span>GS</span>
+          <small>حلول مترابطة</small>
+        </div>
+
+        <div className="s02-stations" role="group" aria-label="عائلات الحلول الست">
           {solutionFamilies.map((family, index) => {
-            const selected = family.id === active.id;
+            const selected = index === activeIndex;
+            const previewed = previewing && index === presentedIndex;
             return (
-              <button key={family.id} type="button" className={`family-branch branch-${index + 1}`} aria-pressed={selected}
-                onPointerEnter={() => setActiveId(family.id)} onFocus={() => setActiveId(family.id)} onClick={() => setActiveId(family.id)}>
-                <i>0{index + 1}</i><span><strong>{family.title}</strong><small>{family.cue}</small></span><MoveLeft aria-hidden="true" />
+              <button
+                key={family.id}
+                type="button"
+                className={`s02-station s02-station-${index + 1}${previewed ? ' is-preview' : ''}`}
+                aria-pressed={selected}
+                aria-controls="s02-family-detail"
+                onPointerEnter={() => setPreviewId(family.id)}
+                onPointerLeave={() => clearPreview(family.id)}
+                onFocus={() => setPreviewId(family.id)}
+                onBlur={() => clearPreview(family.id)}
+                onClick={() => selectFamily(family.id)}
+              >
+                <span className="s02-station-copy">
+                  <span className="s02-station-index">0{index + 1}</span>
+                  <strong>{family.title}</strong>
+                  <small>{family.cue}<br />{family.outcomes[0]}</small>
+                </span>
+                <span className="s02-station-node" aria-hidden="true">
+                  <span className="s02-station-glyph"><FamilyGlyph familyId={family.id} /></span>
+                  <i />
+                </span>
               </button>
             );
           })}
         </div>
-        <div className="family-reveal" aria-live="polite">
-          <span>المسار المختار</span><h3>{active.title}</h3><p>{active.description}</p>
-          <ul>{active.outcomes.map((outcome) => <li key={outcome}>{outcome}</li>)}</ul>
-        </div>
       </div>
-      <div className="universe-convergence" aria-hidden="true"><i /><i /><i /><span>من الإمكانية إلى صورةٍ قابلة للرؤية</span></div>
+
+      <div className="s02-narrative">
+        <div className="s02-eyebrow"><i /> <span>02</span> عالم الحلول</div>
+        <h2 id="solutions-title">حلول مترابطة<br />تبدأ من احتياجك.</h2>
+        <p className="s02-intro">ستة مجالات تنظّم الاحتياج في مسارات واضحة، وتصل الحضور الرقمي بالخدمة والتشغيل والمعرفة.</p>
+
+        <div id="s02-family-detail" className="s02-family-detail" aria-live="polite" aria-atomic="true">
+          <div className="s02-selected-label"><span>{previewing ? 'المجال المعروض' : 'المجال المختار'}</span><b>0{presentedIndex + 1} / 06</b></div>
+          <h3>{presented.title}</h3>
+          <p>{presented.description}</p>
+          <ul>
+            {presented.outcomes.map((outcome, index) => (
+              <li key={outcome}>
+                <span className="s02-outcome-icon" aria-hidden="true"><i /><b>0{index + 1}</b></span>
+                <span><small>يشمل</small><strong>{outcome}</strong></span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="s02-actions">
+          <Link to="/solutions">استكشف جميع الحلول <DirectionArrow /></Link>
+          <button type="button" onClick={activateNext}>المجال التالي <DirectionArrow /></button>
+        </div>
+        <p className="s02-context-cue"><span /> اختر محطة أخرى لعرض تفاصيلها.</p>
+      </div>
+
+      <div className="s02-continuity" aria-live="polite">
+        <div className="s02-continuity-title">
+          <span>{previewing ? 'المجال المعروض' : 'ستة مجالات مترابطة'}</span>
+          <strong>{presented.title}</strong>
+        </div>
+        <div className="s02-continuity-outcomes">
+          {presented.outcomes.map((outcome, index) => (
+            <span key={outcome}><i>0{index + 1}</i>{outcome}</span>
+          ))}
+        </div>
+        <div className="s02-continuity-mark" aria-hidden="true"><i /><i /><i /></div>
+      </div>
     </section>
   );
 }
