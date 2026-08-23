@@ -26,6 +26,10 @@ permissions:
   pull-requests: read
   actions: read
 
+concurrency:
+  group: gs-fast-controller-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deterministic-tests:
     runs-on: ubuntu-latest
@@ -37,6 +41,7 @@ jobs:
       - name: Run deterministic control matrix
         env:
           PYTHONPATH: ${{ github.workspace }}/.project-control
+          GS_TEST_WORKFLOW: ${{ github.workspace }}/.github/workflows/gs-fast-controller-candidate.yml
         run: python -m unittest discover -s .project-control/tests -v
 
   fast-read-only-cycle:
@@ -64,9 +69,36 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  jules-auth-reconciliation-shadow:
+    if: github.event_name == 'push' && github.repository == 'hamad933/GS-2' && github.ref == 'refs/heads/automation/gs-two-tier-control-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout trusted controller code only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: |
+            .project-control
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Jules authenticated read-only probe and shadow reconciliation
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+          PYTHONPATH: ${{ github.workspace }}/.project-control
+        run: python .project-control/jules_shadow_cycle.py --out "$RUNNER_TEMP/gs-jules-shadow.json"
+      - name: Upload sanitized Jules shadow result
+        uses: actions/upload-artifact@v4
+        with:
+          name: gs-jules-shadow-${{ github.run_id }}
+          path: ${{ runner.temp }}/gs-jules-shadow.json
+          if-no-files-found: error
+          retention-days: 7
+
 # Activation boundary:
-# Scheduled and repository-event triggers become live only when this reviewed
-# workflow exists on the repository default branch. This Draft candidate must
-# not be treated as production activation merely because the YAML declares them.
-# No write permission, Jules task creation, merge, acceptance, release or deploy
-# action exists in this workflow.
+# - Jules API mutations remain disabled in this candidate.
+# - The secret is scoped only to the trusted push-only shadow step above.
+# - PR/fork/product-candidate execution never receives JULES_API_KEY.
+# - Scheduled/default-branch live activation still requires the authorized activation gate.
+# - No create-session, merge, acceptance, release, deploy, force-push, or main write occurs here.
