@@ -8,13 +8,23 @@ on:
       - '.project-control/**'
       - '.github/workflows/gs-fast-controller-candidate.yml'
   pull_request:
-    paths:
-      - '.project-control/**'
-      - '.github/workflows/gs-fast-controller-candidate.yml'
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, closed]
+  issues:
+    types: [opened, edited, labeled, unlabeled, closed, reopened]
+  issue_comment:
+    types: [created, edited]
+  workflow_run:
+    workflows: ['CI', 'Visual Evidence']
+    types: [completed]
+  schedule:
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
+  issues: read
+  pull-requests: read
+  actions: read
 
 jobs:
   deterministic-tests:
@@ -26,3 +36,33 @@ jobs:
           python-version: '3.12'
       - name: Run deterministic control matrix
         run: python -m unittest discover -s .project-control/tests -v
+
+  fast-read-only-cycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Collect authoritative GitHub snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .project-control/github_live_snapshot.py --out "$RUNNER_TEMP/gs-live-snapshot.json"
+      - name: Produce fail-closed control receipts
+        run: python .project-control/fast_live_cycle.py "$RUNNER_TEMP/gs-live-snapshot.json" --out "$RUNNER_TEMP/gs-fast-receipts.json"
+      - name: Upload control receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gs-fast-controller-receipts-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/gs-live-snapshot.json
+            ${{ runner.temp }}/gs-fast-receipts.json
+          if-no-files-found: error
+          retention-days: 7
+
+# Activation boundary:
+# Scheduled and repository-event triggers become live only when this reviewed
+# workflow exists on the repository default branch. This Draft candidate must
+# not be treated as production activation merely because the YAML declares them.
+# No write permission, Jules task creation, merge, acceptance, release or deploy
+# action exists in this workflow.
