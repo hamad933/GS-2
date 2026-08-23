@@ -1,16 +1,18 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "task_budget_total": 30,
   "proven_used": 5,
-  "unverified_preexisting": 0,
-  "provider_history_state": "PROVIDER_ENUMERATION_COMPLETE_FOR_REPOSITORY",
-  "exact_remaining_safe_capacity": 25,
+  "unverified_preexisting": "PROVIDER_LIFETIME_HISTORY_NOT_PROVEN_BY_CURRENT_ENUMERATION",
+  "provider_inventory_state": "CURRENT_PROVIDER_ENUMERATION_COMPLETE_FOR_REPOSITORY",
+  "exact_remaining_safe_capacity": "UNKNOWN",
+  "new_task_creation_gate": "FROZEN_WHILE_LIFETIME_HISTORY_COULD_RISK_TASK_BUDGET_TOTAL",
   "provider_evidence": {
     "account_session_count": 13,
     "project_session_count": 5,
     "unattributed_session_count": 0,
     "repository": "hamad933/GS-2",
-    "captured_from": "Jules API sessions + sources shadow enumeration"
+    "captured_from": "Jules API current Sessions + Sources shadow enumeration",
+    "historical_boundary": "CURRENT_ENUMERATION_DOES_NOT_PROVE_DELETED_EXPIRED_OR_NON_ENUMERABLE_LIFETIME_SESSIONS_ABSENT"
   },
   "tasks": [
     {
@@ -53,6 +55,7 @@
       "review_state": "FAILED_NO_REVIEW_OUTPUT",
       "candidate_binding": "TARGET_EXACT_SHA_REQUESTED",
       "session_binding": "BOUND_CONFIRMED_PROVIDER_TASK_ID_REPO",
+      "continuation_state": "SESSION_CONTINUATION_UNAVAILABLE",
       "budget_unit": 1
     },
     {
@@ -63,7 +66,7 @@
       "route": "/reference-projects",
       "issue": 92,
       "result_pr": 94,
-      "provider_state": "IN_PROGRESS",
+      "provider_state": "COMPLETED",
       "review_state": "REVIEWER_MUTATION_DETECTED",
       "candidate_binding": "SOURCE_BINDING_FAILED_PREVIOUS_OUTPUT",
       "session_binding": "BOUND_CONFIRMED_PROVIDER_TASK_ID_REPO_PR",
