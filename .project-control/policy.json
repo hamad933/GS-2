@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "project_route": "GS",
+  "repository": "hamad933/GS-2",
+  "mode": "FAST_CONTROLLER_FAIL_CLOSED",
+  "task_budget_total": 30,
+  "proven_used": 5,
+  "unverified_preexisting": true,
+  "new_task_creation_by_fast_controller": false,
+  "new_task_creation_gate": "FROZEN_WHILE_HISTORICAL_USAGE_UNVERIFIED",
+  "write_actions_allowed": [
+    "existing_session_safe_message",
+    "control_receipt",
+    "bounded_same_sha_ci_recovery"
+  ],
+  "write_actions_forbidden": [
+    "create_jules_task",
+    "create_replacement_writer",
+    "create_replacement_reviewer",
+    "accept_page",
+    "merge",
+    "release",
+    "deploy",
+    "final_acceptance",
+    "widen_scope",
+    "main_or_integration_write",
+    "weaken_tests",
+    "self_modify_policy"
+  ],
+  "safe_waiting_classes": ["POLICY_RESOLVABLE"],
+  "always_escalate_waiting_classes": [
+    "REVIEW_DEPENDENT",
+    "CI_EVIDENCE_DEPENDENT",
+    "ENVIRONMENT_MISMATCH",
+    "TOOL_CAPABILITY_LIMIT",
+    "SHARED_CONTRACT_REQUIRED",
+    "CROSS_WORKSTREAM_CONFLICT",
+    "BASELINE_OR_HEAD_DRIFT",
+    "WRITE_OUTCOME_UNKNOWN",
+    "CONTEXT_EXHAUSTION_CLAIM",
+    "SCOPE_CHANGE_REQUIRED",
+    "NEW_TASK_REQUEST",
+    "OWNER_OR_CONTROLLER_AUTHORITY_REQUIRED",
+    "UNCLASSIFIED_INPUT_REQUIRED"
+  ],
+  "operation_key_fields": [
+    "repo",
+    "workstream",
+    "role",
+    "task_session",
+    "pr",
+    "head_sha",
+    "input_digest",
+    "action_type"
+  ],
+  "current_candidate": "22766701b74ab25e2f62e74ea35d1bf054fa4dee",
+  "current_candidate_branch": "remediation/gs-dependency-remediation-r1",
+  "reference_mirror": "9553e5801450c5c25f2ce964125b7f05167038ec",
+  "live_activation": {
+    "event_mode": "CANDIDATE_ONLY",
+    "scheduled_fallback_minutes": 10,
+    "production_writes": false,
+    "jules_api_bound": false,
+    "reason": "NO_DIRECT_JULES_API_CREDENTIAL_OR_CONNECTOR_IN_CONTROLLER_SURFACE"
+  }
+}
