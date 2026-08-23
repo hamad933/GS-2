@@ -1,10 +1,12 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "repository": "hamad933/GS-2",
   "candidate": {
     "branch": "remediation/gs-dependency-remediation-r1",
     "sha": "22766701b74ab25e2f62e74ea35d1bf054fa4dee",
-    "pr": 88
+    "pr": 88,
+    "base_branch": "integration/gs-final-assembled-g58-r1",
+    "base_sha": "e00aa750fa90fd55bc26c31e73d632592f5727bd"
   },
   "reviewer_a": [
     {"page":"HOME","route":"/","issue":89,"task_id":"10184598302611242915","session_id":"10184598302611242915","binding_status":"BOUND_CONFIRMED_PROVIDER_TASK_ID_REPO_PR"},
