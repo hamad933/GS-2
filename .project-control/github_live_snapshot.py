@@ -24,23 +24,39 @@ class GitHubReadOnly:
         with urlopen(Request(url, headers=headers), timeout=self.timeout) as r:
             return json.loads(r.read())
 
+    def get_all(self, path: str, params: dict | None = None, *, item_key: str | None = None,
+                max_pages: int = 20) -> list[dict]:
+        base = dict(params or {})
+        base["per_page"] = 100
+        items: list[dict] = []
+        for page in range(1, max_pages + 1):
+            payload = self.get(path, {**base, "page": page})
+            batch = payload.get(item_key, []) if item_key else payload
+            if not isinstance(batch, list):
+                raise ValueError(f"Expected list page for {path}")
+            items.extend(batch)
+            if len(batch) < 100:
+                return items
+        raise RuntimeError(f"Pagination limit reached for {path}; refusing partial inventory")
+
     def issue(self, number: int):
         return self.get(f"/repos/{self.repo}/issues/{number}")
 
     def issue_comments(self, number: int):
-        return self.get(f"/repos/{self.repo}/issues/{number}/comments", {"per_page":100})
+        return self.get_all(f"/repos/{self.repo}/issues/{number}/comments")
 
     def pull(self, number: int):
         return self.get(f"/repos/{self.repo}/pulls/{number}")
 
     def pull_files(self, number: int):
-        return self.get(f"/repos/{self.repo}/pulls/{number}/files", {"per_page":100})
+        return self.get_all(f"/repos/{self.repo}/pulls/{number}/files")
 
     def pulls(self):
-        return self.get(f"/repos/{self.repo}/pulls", {"state":"all","per_page":100,"sort":"created","direction":"desc"})
+        return self.get_all(f"/repos/{self.repo}/pulls", {"state":"all","sort":"created","direction":"desc"})
 
     def workflow_runs(self, head_sha: str):
-        return self.get(f"/repos/{self.repo}/actions/runs", {"head_sha":head_sha,"per_page":100})
+        runs = self.get_all(f"/repos/{self.repo}/actions/runs", {"head_sha":head_sha}, item_key="workflow_runs")
+        return {"workflow_runs": runs}
 
     def statuses(self, sha: str):
         return self.get(f"/repos/{self.repo}/commits/{sha}/status")
@@ -71,10 +87,13 @@ def build(config: dict, gh: GitHubReadOnly) -> dict:
         "candidate":{
             "registered_sha":candidate["sha"],
             "registered_branch":candidate["branch"],
+            "registered_base_sha":candidate.get("base_sha"),
+            "registered_base_ref":candidate.get("base_branch"),
             "pr":candidate["pr"],
             "live_head_sha":candidate_sha,
             "live_head_ref":candidate_pr["head"]["ref"],
             "live_base_sha":candidate_pr["base"]["sha"],
+            "live_base_ref":candidate_pr["base"]["ref"],
             "draft":candidate_pr.get("draft"),
             "state":candidate_pr.get("state"),
             "merged":bool(candidate_pr.get("merged_at")),
