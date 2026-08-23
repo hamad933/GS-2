@@ -108,7 +108,10 @@ jobs:
           project_count = int(data.get('project_session_count') or len(data.get('project_session_inventory') or []))
           unattributed = int(data.get('unattributed_session_count') or 0)
           waiting_count = len(data.get('waiting_inputs') or [])
-          budget_state = str(data.get('task_budget_history_state') or 'UNAVAILABLE')
+          inventory_state = str(data.get('provider_inventory_state') or 'UNAVAILABLE')
+          lifetime_state = str(data.get('lifetime_task_budget_history_state') or 'UNAVAILABLE')
+          remaining_capacity = str(data.get('exact_remaining_safe_capacity') or 'UNKNOWN')
+          creation_safety = str(data.get('new_task_creation_safety') or 'UNKNOWN')
           print('exact_automation_head=' + str(os.environ['EXACT_HEAD']))
           print('actions_run=' + str(os.environ['RUN_ID']))
           print('capability_state=' + str(data.get('capability_state', 'UNKNOWN')))
@@ -116,7 +119,10 @@ jobs:
           print('account_session_count=' + str(account_count))
           print('project_session_count=' + str(project_count))
           print('unattributed_session_count=' + str(unattributed))
-          print('task_budget_history_state=' + budget_state)
+          print('provider_inventory_state=' + inventory_state)
+          print('lifetime_task_budget_history_state=' + lifetime_state)
+          print('exact_remaining_safe_capacity=' + remaining_capacity)
+          print('new_task_creation_safety=' + creation_safety)
           print('waiting_input_count=' + str(waiting_count))
           print('reconciliation_ambiguous=' + str(bool(reconciliation.get('ambiguous'))).lower())
           for mapping in reconciliation.get('mappings') or []:
@@ -147,5 +153,6 @@ jobs:
 # - Forks and product-candidate PRs cannot satisfy the secret-bearing job guard.
 # - The secret-bearing job checks out only .project-control at the exact authorized automation head.
 # - Waiting-question text remains artifact-only and is never written to logs/comments.
+# - Current provider inventory must never be treated as proof of complete lifetime Jules task consumption history.
 # - Scheduled/default-branch live activation still requires the authorized activation gate.
 # - No create-session, merge, acceptance, release, deploy, force-push, or main write occurs here.
