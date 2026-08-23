@@ -104,9 +104,18 @@ jobs:
           data = json.loads(Path(os.environ['SHADOW_PATH']).read_text(encoding='utf-8'))
           reconciliation = data.get('reconciliation') or {}
           safe_mappings = []
+          account_count = int(data.get('account_session_count') or len(data.get('session_inventory') or []))
+          project_count = int(data.get('project_session_count') or len(data.get('project_session_inventory') or []))
+          unattributed = int(data.get('unattributed_session_count') or 0)
+          waiting_count = len(data.get('waiting_inputs') or [])
+          budget_state = str(data.get('task_budget_history_state') or 'UNAVAILABLE')
           print('capability_state=' + str(data.get('capability_state', 'UNKNOWN')))
           print('control_mode=' + str(data.get('control_mode', 'UNKNOWN')))
-          print('session_count=' + str(len(data.get('session_inventory') or [])))
+          print('account_session_count=' + str(account_count))
+          print('project_session_count=' + str(project_count))
+          print('unattributed_session_count=' + str(unattributed))
+          print('task_budget_history_state=' + budget_state)
+          print('waiting_input_count=' + str(waiting_count))
           print('reconciliation_ambiguous=' + str(bool(reconciliation.get('ambiguous'))).lower())
           for mapping in reconciliation.get('mappings') or []:
               session = mapping.get('session') or {}
@@ -115,6 +124,7 @@ jobs:
                   'status': mapping.get('status'),
                   'session_id': session.get('id'),
                   'state': session.get('state'),
+                  'repository': session.get('repository'),
                   'startingBranch': session.get('startingBranch'),
                   'pullRequests': session.get('pullRequests'),
               }
@@ -130,7 +140,11 @@ jobs:
               f"- Actions run: `{os.environ['RUN_ID']}`",
               f"- capability: `{data.get('capability_state', 'UNKNOWN')}`",
               f"- control mode: `{data.get('control_mode', 'UNKNOWN')}`",
-              f"- enumerated sessions on account: `{len(data.get('session_inventory') or [])}`",
+              f"- account sessions enumerated: `{account_count}`",
+              f"- GS repository sessions enumerated: `{project_count}`",
+              f"- unattributed sessions: `{unattributed}`",
+              f"- task-budget history state: `{budget_state}`",
+              f"- waiting inputs detected: `{waiting_count}`",
               f"- reconciliation ambiguous: `{str(bool(reconciliation.get('ambiguous'))).lower()}`",
               f"- unmatched sessions: `{unmatched}`",
               '- Jules mutations: `DISABLED_SHADOW_ONLY`',
@@ -139,7 +153,7 @@ jobs:
           ]
           for safe in safe_mappings:
               lines.append('- `' + json.dumps(safe, sort_keys=True, separators=(',', ':')) + '`')
-          lines += ['', 'No credential value, authenticated header, prompt text, or raw provider payload is included in this receipt.']
+          lines += ['', 'No credential value, authenticated header, prompt text, waiting-question text, or raw provider payload is included in this receipt.']
           Path(os.environ['RECEIPT_PATH']).write_text('\n'.join(lines) + '\n', encoding='utf-8')
           PY
       - name: Upsert sanitized control receipt on automation PR
@@ -187,5 +201,6 @@ jobs:
 # - The secret is scoped only to the trusted push-only probe/reconciliation step above.
 # - PR/fork/product-candidate execution never receives JULES_API_KEY.
 # - The PR receipt contains sanitized control metadata only and is replace-in-place.
+# - Waiting-question text remains artifact-only and is never written to logs/comments.
 # - Scheduled/default-branch live activation still requires the authorized activation gate.
 # - No create-session, merge, acceptance, release, deploy, force-push, or main write occurs here.
