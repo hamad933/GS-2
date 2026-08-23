@@ -3,7 +3,7 @@ import unittest
 
 from jules_client import HttpResponseError, JulesClient
 from jules_reconciliation import build_source_index, reconcile, session_repository
-from jules_shadow_cycle import _latest_waiting_question
+from jules_shadow_cycle import _budget_history_view, _latest_waiting_question
 
 
 class FakeTransport:
@@ -61,6 +61,24 @@ class JulesSourcesWaitingTests(unittest.TestCase):
         result = client.list_all_activities("session-1", max_pages=2)
         self.assertTrue(result.ok)
         self.assertEqual([x["id"] for x in result.payload["activities"]], ["a1","a2"])
+
+    def test_current_provider_inventory_never_proves_lifetime_task_budget(self):
+        view = _budget_history_view(unattributed_session_count=0)
+        self.assertEqual(view["provider_inventory_state"], "CURRENT_PROVIDER_ENUMERATION_COMPLETE_FOR_REPOSITORY")
+        self.assertEqual(
+            view["lifetime_task_budget_history_state"],
+            "UNVERIFIED_PREEXISTING_HISTORY_NOT_PROVEN_BY_CURRENT_ENUMERATION",
+        )
+        self.assertEqual(view["exact_remaining_safe_capacity"], "UNKNOWN")
+        self.assertEqual(
+            view["new_task_creation_safety"],
+            "FROZEN_WHILE_LIFETIME_HISTORY_COULD_RISK_TASK_BUDGET_TOTAL",
+        )
+
+    def test_partial_current_inventory_is_also_lifetime_unknown(self):
+        view = _budget_history_view(unattributed_session_count=2)
+        self.assertEqual(view["provider_inventory_state"], "CURRENT_PROVIDER_ENUMERATION_PARTIAL_UNATTRIBUTED_SESSIONS")
+        self.assertEqual(view["exact_remaining_safe_capacity"], "UNKNOWN")
 
 
 if __name__ == "__main__":
