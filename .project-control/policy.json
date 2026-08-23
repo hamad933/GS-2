@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "project_route": "GS",
   "repository": "hamad933/GS-2",
   "mode": "FAST_CONTROLLER_FAIL_CLOSED",
@@ -9,7 +9,7 @@
   "new_task_creation_by_fast_controller": false,
   "new_task_creation_gate": "FROZEN_WHILE_HISTORICAL_USAGE_UNVERIFIED",
   "write_actions_allowed": [
-    "existing_session_safe_message",
+    "existing_session_safe_message_after_canary_activation",
     "control_receipt",
     "bounded_same_sha_ci_recovery"
   ],
@@ -56,11 +56,33 @@
   "current_candidate": "22766701b74ab25e2f62e74ea35d1bf054fa4dee",
   "current_candidate_branch": "remediation/gs-dependency-remediation-r1",
   "reference_mirror": "9553e5801450c5c25f2ce964125b7f05167038ec",
+  "jules_api_contract": {
+    "verified_date": "2026-08-23",
+    "authority": "https://jules.google/docs/api/reference/",
+    "base_url": "https://jules.googleapis.com/v1alpha",
+    "authentication_header": "x-goog-api-key",
+    "session_states": [
+      "QUEUED",
+      "PLANNING",
+      "AWAITING_PLAN_APPROVAL",
+      "AWAITING_USER_FEEDBACK",
+      "IN_PROGRESS",
+      "PAUSED",
+      "COMPLETED",
+      "FAILED"
+    ],
+    "send_message_scope": "ACTIVE_SESSION_ONLY_FAIL_CLOSED",
+    "alpha_contract": true
+  },
   "live_activation": {
     "event_mode": "CANDIDATE_ONLY",
     "scheduled_fallback_minutes": 10,
     "production_writes": false,
-    "jules_api_bound": false,
-    "reason": "NO_DIRECT_JULES_API_CREDENTIAL_OR_CONNECTOR_IN_CONTROLLER_SURFACE"
+    "jules_secret_name": "JULES_API_KEY",
+    "jules_secret_configuration": "OWNER_REPORTED_ADDED",
+    "jules_api_phase": "AUTH_PROBE_RECONCILIATION_SHADOW",
+    "jules_mutations_enabled": false,
+    "session_bindings_required_for_mutation": true,
+    "reason": "SECRET_AVAILABLE_BY_NAME; AUTH_AND_RECONCILIATION_MUST_PASS_BEFORE_CANARY"
   }
 }
