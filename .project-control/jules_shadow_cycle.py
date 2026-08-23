@@ -3,66 +3,122 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any, Mapping
 
 from jules_client import JulesClient, sanitize
-from jules_reconciliation import reconcile, sanitize_session
+from jules_reconciliation import build_source_index, reconcile, sanitize_session, session_repository
 from operation_safety import CircuitBreaker
+
+
+def _failure(*, phase: str, classification: str, breaker: CircuitBreaker,
+             status_code: int | None = None, retry_after: float | None = None) -> dict:
+    return {
+        "schema_version": 2,
+        "phase": phase,
+        "capability_state": classification,
+        "control_mode": "DEGRADED_GITHUB_ONLY",
+        "http_status": status_code,
+        "retry_after": retry_after,
+        "jules_mutations_enabled": False,
+        "session_inventory": [],
+        "project_session_inventory": [],
+        "reconciliation": None,
+        "waiting_inputs": [],
+        "circuit_open": breaker.open,
+    }
+
+
+def _latest_waiting_question(activities: list[Mapping[str, Any]]) -> dict[str, Any] | None:
+    ordered = sorted(activities, key=lambda activity: str(activity.get("createTime") or ""), reverse=True)
+    for activity in ordered:
+        event = activity.get("agentMessaged")
+        if isinstance(event, Mapping) and event.get("agentMessage"):
+            return {
+                "activity_id": str(activity.get("id") or ""),
+                "create_time": activity.get("createTime"),
+                "originator": activity.get("originator"),
+                "question_text": str(event.get("agentMessage")),
+            }
+    return None
 
 
 def run(config: dict) -> dict:
     client = JulesClient()
     breaker = CircuitBreaker()
     if not client.available:
-        return {
-            "schema_version": 1,
-            "phase": "AUTH_PROBE",
-            "capability_state": "JULES_API_SECRET_MISSING",
-            "control_mode": "DEGRADED_GITHUB_ONLY",
-            "jules_mutations_enabled": False,
-            "session_inventory": [],
-            "reconciliation": None,
-            "circuit_open": True,
-        }
+        return _failure(phase="AUTH_PROBE", classification="JULES_API_SECRET_MISSING", breaker=breaker)
+
     probe = client.probe()
     breaker.record(probe.classification)
     if not probe.ok:
-        return {
-            "schema_version": 1,
-            "phase": "AUTH_PROBE",
-            "capability_state": probe.classification,
-            "control_mode": "DEGRADED_GITHUB_ONLY",
-            "http_status": probe.status_code,
-            "retry_after": probe.retry_after,
-            "jules_mutations_enabled": False,
-            "session_inventory": [],
-            "reconciliation": None,
-            "circuit_open": breaker.open,
-        }
+        return _failure(phase="AUTH_PROBE", classification=probe.classification, breaker=breaker,
+                        status_code=probe.status_code, retry_after=probe.retry_after)
+
     all_sessions = client.list_all_sessions(page_size=100)
     breaker.record(all_sessions.classification)
     if not all_sessions.ok:
-        return {
-            "schema_version": 1,
-            "phase": "RECONCILIATION_DRY_RUN",
-            "capability_state": all_sessions.classification,
-            "control_mode": "DEGRADED_GITHUB_ONLY",
-            "http_status": all_sessions.status_code,
-            "retry_after": all_sessions.retry_after,
-            "jules_mutations_enabled": False,
-            "session_inventory": [],
-            "reconciliation": None,
-            "circuit_open": breaker.open,
-        }
+        return _failure(phase="RECONCILIATION_DRY_RUN", classification=all_sessions.classification,
+                        breaker=breaker, status_code=all_sessions.status_code, retry_after=all_sessions.retry_after)
+
+    all_sources = client.list_all_sources(page_size=100)
+    breaker.record(all_sources.classification)
+    if not all_sources.ok:
+        return _failure(phase="RECONCILIATION_DRY_RUN", classification=all_sources.classification,
+                        breaker=breaker, status_code=all_sources.status_code, retry_after=all_sources.retry_after)
+
     sessions = all_sessions.payload.get("sessions", [])
-    rec = reconcile(config, sessions)
+    sources = all_sources.payload.get("sources", [])
+    source_index = build_source_index(sources)
+    target_repo = str(config.get("repository") or "")
+    project_sessions = [s for s in sessions if session_repository(s, source_index) == target_repo]
+    unattributed_sessions = [s for s in sessions if session_repository(s, source_index) is None]
+
+    rec = reconcile(config, sessions, sources)
+    waiting_inputs: list[dict[str, Any]] = []
+    for mapping in rec.get("mappings") or []:
+        session = mapping.get("session") or {}
+        if session.get("state") != "AWAITING_USER_FEEDBACK" or not session.get("id"):
+            continue
+        activities = client.list_all_activities(str(session["id"]), page_size=100)
+        breaker.record(activities.classification)
+        if not activities.ok:
+            waiting_inputs.append({
+                "lane_id": mapping.get("lane_id"),
+                "session_id": session.get("id"),
+                "state": session.get("state"),
+                "activity_probe_state": activities.classification,
+                "waiting_class": "UNCLASSIFIED_INPUT_REQUIRED",
+            })
+            continue
+        question = _latest_waiting_question(activities.payload.get("activities", []))
+        waiting_inputs.append({
+            "lane_id": mapping.get("lane_id"),
+            "session_id": session.get("id"),
+            "state": session.get("state"),
+            "activity_probe_state": "OK",
+            "waiting_class": "UNCLASSIFIED_INPUT_REQUIRED",
+            "latest_agent_question": question,
+        })
+
+    budget_history_state = (
+        "PROVIDER_ENUMERATION_COMPLETE_FOR_REPOSITORY"
+        if not unattributed_sessions else
+        "PROVIDER_ENUMERATION_PARTIAL_UNATTRIBUTED_SESSIONS"
+    )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "phase": "SHADOW_ROUTING",
         "capability_state": "JULES_API_READY",
         "control_mode": "SHADOW_NO_MUTATION",
         "jules_mutations_enabled": False,
-        "session_inventory": [sanitize_session(s) for s in sessions],
+        "account_session_count": len(sessions),
+        "project_session_count": len(project_sessions),
+        "unattributed_session_count": len(unattributed_sessions),
+        "task_budget_history_state": budget_history_state,
+        "session_inventory": [sanitize_session(s, source_index) for s in sessions],
+        "project_session_inventory": [sanitize_session(s, source_index) for s in project_sessions],
         "reconciliation": sanitize(rec),
+        "waiting_inputs": sanitize(waiting_inputs),
         "circuit_open": breaker.open,
     }
 
