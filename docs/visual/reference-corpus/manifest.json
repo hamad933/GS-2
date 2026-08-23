@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "corpusId": "GS-G65-CURRENT-REFERENCE-CORPUS-R1-COMPACT",
+  "authorityRoute": "GS",
+  "controlStateBasis": "G65",
+  "repository": "hamad933/GS-2",
+  "classification": "REFERENCE_LAYER_COMPACT_LOSSLESS",
+  "coreRule": "REFERENCE IMAGE != PRODUCT CONTENT TRUTH != RUNTIME ASSET",
+  "counts": {
+    "START": 4,
+    "SOLUTIONS": 2,
+    "REFERENCE_PROJECTS": 1,
+    "GLOBAL_VISUAL_DNA": 2,
+    "TOTAL": 9
+  },
+  "conversionPolicy": "PNG -> lossless WebP with decoded pixel equality verification; JPEG preserved byte-for-byte",
+  "references": [
+    {
+      "domain": "START",
+      "sourceFilename": "START-L02-DISCOVER.png",
+      "driveFileId": "1cpNq42QMi2qmiVo0k82S6elQKV_VeUqU",
+      "sourceSha256": "dbbdf4e7e6721621ef512ba6a067cab0badd4db0033d20c14bcbaaa8828aca7e",
+      "sourceBytes": 1716247,
+      "sourceDimensions": [
+        1536,
+        1024
+      ],
+      "repoDestination": "docs/visual/reference-corpus/approved-page-references/START/START-L02-DISCOVER.webp",
+      "repoFilename": "START-L02-DISCOVER.webp",
+      "repoSha256": "8aca6e1a6251e5fd6b81d8780ce4d35196c3ea0018a964d878ecee64ccb309d7",
+      "repoBytes": 1210916,
+      "conversion": "LOSSLESS_WEBP_PIXEL_IDENTICAL",
+      "losslessPixelRoundtripVerified": true
+    },
+    {
+      "domain": "START",
+      "sourceFilename": "START-L03-BUILD.png",
+      "driveFileId": "1J9YcNcOle2OMbboBEWwOD0ZMBILjcUYi",
+      "sourceSha256": "7ad3c9c3efd8eaea9f56e9b7e0a5117033a5a4043dbb99c8aa18552aad3fae62",
+      "sourceBytes": 1544114,
+      "sourceDimensions": [
+        1672,
+        941
+      ],
+      "repoDestination": "docs/visual/reference-corpus/approved-page-references/START/START-L03-BUILD.webp",
+      "repoFilename": "START-L03-BUILD.webp",
+      "repoSha256": "5078c62e42f063421e9daab45de42c61ac25880e25f1b762fed2cf2ad5d8caa1",
+      "repoBytes": 1180816,
+      "conversion": "LOSSLESS_WEBP_PIXEL_IDENTICAL",
+      "losslessPixelRoundtripVerified": true
+    },
+    {
+      "domain": "START",
+      "sourceFilename": "START-L04-REVIEW-START.png",
+      "driveFileId": "1JaSjFSbe29eM_wB6J_ek35zS4cVdw5Aa",
+      "sourceSha256": "f30ce1c6b59f5998ed6b98bd278f827b6f2ab5d875aeaeca98982cff3a1d972a",
+      "sourceBytes": 1702503,
+      "sourceDimensions": [
+        1672,
+        941
+      ],
+      "repoDestination": "docs/visual/reference-corpus/approved-page-references/START/START-L04-REVIEW-START.webp",
+      "repoFilename": "START-L04-REVIEW-START.webp",
+      "repoSha256": "92933b2b3615bbc67a0f125c9229ddd760dba8836751943867ffddd9f6cb90a6",
+      "repoBytes": 1323786,
+      "conversion": "LOSSLESS_WEBP_PIXEL_IDENTICAL",
+      "losslessPixelRoundtripVerified": true
+    },
+    {
+      "domain": "START",
+      "sourceFilename": "START-L05-FINAL-CONSOLIDATION.png",
+      "driveFileId": "173uK5G6EoJtOIzB9Fehz3tkhCUIWcifN",
+      "sourceSha256": "c58f5cc62605207535eaa9002212f14c1821c50c69212066dc664c9ea0e91ba4",
+      "sourceBytes": 1857331,
+      "sourceDimensions": [
+        1536,
+        1024
+      ],
+      "repoDestination": "docs/visual/reference-corpus/approved-page-references/START/START-L05-FINAL-CONSOLIDATION.webp",
+      "repoFilename": "START-L05-FINAL-CONSOLIDATION.webp",
+      "repoSha256": "50cb6b02a1fc70045f1cc0e267c61f8fabe5e289c2419f80c7caa83a18a3d07b",
+      "repoBytes": 1331422,
+      "conversion": "LOSSLESS_WEBP_PIXEL_IDENTICAL",
+      "losslessPixelRoundtripVerified": true
+    },
+    {
+      "domain": "SOLUTIONS",
+      "sourceFilename": "SOLUTIONS-L01-FAMILY-EXPLORATION.png",
+      "driveFileId": "177-N_bSCGAtVhQ9yWEi8xMeYa0KZ1_r-",
+      "sourceSha256": "1d567e635e7598a3a4eb7669ac1ce77cb885104775ee99cebee89e4fd58a3c16",
+      "sourceBytes": 1772638,
+      "sourceDimensions": [
+        1672,
+        941
+      ],
+      "repoDestination": "docs/visual/reference-corpus/approved-page-references/SOLUTIONS/SOLUTIONS-L01-FAMILY-EXPLORATION.webp",
+      "repoFilename": "SOLUTIONS-L01-FAMILY-EXPLORATION.webp",
+      "repoSha256": "ac632ea47c3b2ad8c3e7b936582f7c76513286727b66a980c7e62c583a94ea8f",
+      "repoBytes": 1382344,
+      "conversion": "LOSSLESS_WEBP_PIXEL_IDENTICAL",
+      "losslessPixelRoundtripVerified": true
+    },
+    {
+      "domain": "SOLUTIONS",
+      "sourceFilename": "SOLUTIONS-L02-LIGHTWEIGHT-COMPARE.png",
+      "driveFileId": "1MlpPjYkqUZQaWqEzJ3H22NSyPIb57QK5",
+      "sourceSha256": "65e2a6ebb473e1186cb86900511892e792ddb26e19a4c6b0bfc43117c4582a97",
+      "sourceBytes": 1803498,
+      "sourceDimensions": [
+        1672,
+        941
+      ],
+      "repoDestination": "docs/visual/reference-corpus/approved-page-references/SOLUTIONS/SOLUTIONS-L02-LIGHTWEIGHT-COMPARE.webp",
+      "repoFilename": "SOLUTIONS-L02-LIGHTWEIGHT-COMPARE.webp",
+      "repoSha256": "c959cff709f8cd8775b9184f6203c98d1e14994996587442b6cc15d9e63706f5",
+      "repoBytes": 1390582,
+      "conversion": "LOSSLESS_WEBP_PIXEL_IDENTICAL",
+      "losslessPixelRoundtripVerified": true
+    },
+    {
+      "domain": "REFERENCE_PROJECTS",
+      "sourceFilename": "REFERENCE-PROJECTS-L01-SHOWROOM-HUB.png",
+      "driveFileId": "1bzxe9JPKxontlXUmjQKVhc4AasiiNiPX",
+      "sourceSha256": "d91a4d7477384c6cd9e1eb6ad8a6986eff8b9e21220f4060133c33c13636d800",
+      "sourceBytes": 1755322,
+      "sourceDimensions": [
+        1672,
+        941
+      ],
+      "repoDestination": "docs/visual/reference-corpus/approved-page-references/REFERENCE_PROJECTS/REFERENCE-PROJECTS-L01-SHOWROOM-HUB.webp",
+      "repoFilename": "REFERENCE-PROJECTS-L01-SHOWROOM-HUB.webp",
+      "repoSha256": "e1154d20a7fdad541f1d8a3bac798b39e828c21ced24562a390dc220133537c2",
+      "repoBytes": 1367590,
+      "conversion": "LOSSLESS_WEBP_PIXEL_IDENTICAL",
+      "losslessPixelRoundtripVerified": true
+    },
+    {
+      "domain": "GLOBAL_VISUAL_DNA",
+      "sourceFilename": "GS-W07-Visual-Review-Desktop-Tablet.jpg",
+      "driveFileId": "1wOlcFpq42HbP-gbCnRuVhAOwkLOUWWnd",
+      "sourceSha256": "122054e4b2232557c57aadb4bc8a01b41ad84511011c57cab4261865800d10b5",
+      "sourceBytes": 494248,
+      "sourceDimensions": [
+        2048,
+        1830
+      ],
+      "repoDestination": "docs/visual/reference-corpus/global-visual-dna/GS-W07-Visual-Review-Desktop-Tablet.jpg",
+      "repoFilename": "GS-W07-Visual-Review-Desktop-Tablet.jpg",
+      "repoSha256": "122054e4b2232557c57aadb4bc8a01b41ad84511011c57cab4261865800d10b5",
+      "repoBytes": 494248,
+      "conversion": "BYTE_PRESERVED_JPEG",
+      "losslessPixelRoundtripVerified": null
+    },
+    {
+      "domain": "GLOBAL_VISUAL_DNA",
+      "sourceFilename": "GS-W07-Visual-Review-Mobile-States.jpg",
+      "driveFileId": "1bLQ-VsOvlt27ddmOvBAGd2ZSCEcOOmMz",
+      "sourceSha256": "199ba49f57a5706df0698533d451dc42d6ad6b8965df0c2c44f454a3e07aab7a",
+      "sourceBytes": 359859,
+      "sourceDimensions": [
+        2048,
+        1973
+      ],
+      "repoDestination": "docs/visual/reference-corpus/global-visual-dna/GS-W07-Visual-Review-Mobile-States.jpg",
+      "repoFilename": "GS-W07-Visual-Review-Mobile-States.jpg",
+      "repoSha256": "199ba49f57a5706df0698533d451dc42d6ad6b8965df0c2c44f454a3e07aab7a",
+      "repoBytes": 359859,
+      "conversion": "BYTE_PRESERVED_JPEG",
+      "losslessPixelRoundtripVerified": null
+    }
+  ]
+}
