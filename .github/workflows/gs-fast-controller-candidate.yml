@@ -88,6 +88,32 @@ jobs:
           JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
           PYTHONPATH: ${{ github.workspace }}/.project-control
         run: python .project-control/jules_shadow_cycle.py --out "$RUNNER_TEMP/gs-jules-shadow.json"
+      - name: Emit sanitized Jules capability summary
+        env:
+          SHADOW_PATH: ${{ runner.temp }}/gs-jules-shadow.json
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          data = json.loads(Path(os.environ['SHADOW_PATH']).read_text(encoding='utf-8'))
+          print('capability_state=' + str(data.get('capability_state', 'UNKNOWN')))
+          print('control_mode=' + str(data.get('control_mode', 'UNKNOWN')))
+          print('session_count=' + str(len(data.get('session_inventory') or [])))
+          reconciliation = data.get('reconciliation') or {}
+          print('reconciliation_ambiguous=' + str(bool(reconciliation.get('ambiguous'))).lower())
+          for mapping in reconciliation.get('mappings') or []:
+              session = mapping.get('session') or {}
+              safe = {
+                  'lane_id': mapping.get('lane_id'),
+                  'status': mapping.get('status'),
+                  'session_id': session.get('id'),
+                  'state': session.get('state'),
+                  'startingBranch': session.get('startingBranch'),
+                  'pullRequests': session.get('pullRequests'),
+              }
+              print('mapping=' + json.dumps(safe, sort_keys=True, separators=(',', ':')))
+          print('unmatched_session_count=' + str(len(reconciliation.get('unmatched_sessions') or [])))
+          PY
       - name: Upload sanitized Jules shadow result
         uses: actions/upload-artifact@v4
         with:
