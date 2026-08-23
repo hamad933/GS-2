@@ -1,13 +1,15 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "project_route": "GS",
   "repository": "hamad933/GS-2",
   "mode": "FAST_CONTROLLER_FAIL_CLOSED",
   "task_budget_total": 30,
   "proven_used": 5,
-  "unverified_preexisting": true,
+  "unverified_preexisting": false,
+  "exact_remaining_ceiling": 25,
+  "task_budget_history_state": "PROVIDER_ENUMERATION_COMPLETE_FOR_REPOSITORY",
   "new_task_creation_by_fast_controller": false,
-  "new_task_creation_gate": "FROZEN_WHILE_HISTORICAL_USAGE_UNVERIFIED",
+  "new_task_creation_gate": "PARENT_CONTROLLER_ONLY",
   "write_actions_allowed": [
     "existing_session_safe_message_after_canary_activation",
     "control_receipt",
@@ -62,6 +64,7 @@
     "base_url": "https://jules.googleapis.com/v1alpha",
     "authentication_header": "x-goog-api-key",
     "session_states": [
+      "STATE_UNSPECIFIED",
       "QUEUED",
       "PLANNING",
       "AWAITING_PLAN_APPROVAL",
@@ -72,6 +75,9 @@
       "FAILED"
     ],
     "send_message_scope": "ACTIVE_SESSION_ONLY_FAIL_CLOSED",
+    "pagination": "pageSize_and_pageToken",
+    "published_numeric_rate_limit": null,
+    "retry_after_policy": "respect_when_present_otherwise_bounded_backoff",
     "alpha_contract": true
   },
   "live_activation": {
@@ -80,9 +86,12 @@
     "production_writes": false,
     "jules_secret_name": "JULES_API_KEY",
     "jules_secret_configuration": "OWNER_REPORTED_ADDED",
-    "jules_api_phase": "AUTH_PROBE_RECONCILIATION_SHADOW",
+    "jules_api_capability": "JULES_API_READY_OBSERVED_IN_SHADOW_RUN",
+    "jules_api_phase": "SHADOW_ROUTING",
     "jules_mutations_enabled": false,
     "session_bindings_required_for_mutation": true,
-    "reason": "SECRET_AVAILABLE_BY_NAME; AUTH_AND_RECONCILIATION_MUST_PASS_BEFORE_CANARY"
+    "reviewer_a_session_bindings_confirmed": 5,
+    "writer_jules_session_bindings_confirmed": 0,
+    "reason": "AUTHENTICATED_READ_AND_PROVIDER_RECONCILIATION_SUCCEEDED; NO_SAFE_CANARY_WRITE_SELECTED"
   }
 }
