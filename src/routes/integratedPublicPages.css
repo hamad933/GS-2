@@ -1,0 +1,11 @@
+.integrated-public-page {
+  min-width: 0;
+  padding-top: 80px;
+  background: #03080d;
+}
+
+@media (max-width: 800px) {
+  .integrated-public-page {
+    padding-top: 72px;
+  }
+}

@@ -1,0 +1,41 @@
+.route-loading-state {
+  min-height: max(70vh, 32rem);
+  padding: clamp(8rem, 18vh, 12rem) clamp(1.25rem, 5vw, 5rem);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.75rem;
+  color: rgba(238, 246, 250, 0.76);
+  background: #03080d;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+
+.route-loading-state__signal {
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-top: 0.32rem;
+  flex: 0 0 auto;
+  border: 1px solid rgba(101, 221, 200, 0.7);
+  border-radius: 50%;
+  box-shadow: 0 0 1rem rgba(61, 202, 183, 0.45);
+  animation: route-loading-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes route-loading-pulse {
+  from {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-state__signal {
+    animation: none;
+  }
+}
