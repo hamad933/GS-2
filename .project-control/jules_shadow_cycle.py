@@ -13,7 +13,7 @@ from operation_safety import CircuitBreaker
 def _failure(*, phase: str, classification: str, breaker: CircuitBreaker,
              status_code: int | None = None, retry_after: float | None = None) -> dict:
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "phase": phase,
         "capability_state": classification,
         "control_mode": "DEGRADED_GITHUB_ONLY",
@@ -40,6 +40,27 @@ def _latest_waiting_question(activities: list[Mapping[str, Any]]) -> dict[str, A
                 "question_text": str(event.get("agentMessage")),
             }
     return None
+
+
+def _budget_history_view(*, unattributed_session_count: int) -> dict[str, str]:
+    """Separate current provider inventory from lifetime project task history.
+
+    A complete current Sessions/Sources enumeration proves only the inventory visible
+    through the current provider API. It does not prove that deleted, expired, or
+    otherwise non-enumerable historical sessions never consumed the governed project
+    task budget.
+    """
+    inventory_state = (
+        "CURRENT_PROVIDER_ENUMERATION_COMPLETE_FOR_REPOSITORY"
+        if unattributed_session_count == 0
+        else "CURRENT_PROVIDER_ENUMERATION_PARTIAL_UNATTRIBUTED_SESSIONS"
+    )
+    return {
+        "provider_inventory_state": inventory_state,
+        "lifetime_task_budget_history_state": "UNVERIFIED_PREEXISTING_HISTORY_NOT_PROVEN_BY_CURRENT_ENUMERATION",
+        "exact_remaining_safe_capacity": "UNKNOWN",
+        "new_task_creation_safety": "FROZEN_WHILE_LIFETIME_HISTORY_COULD_RISK_TASK_BUDGET_TOTAL",
+    }
 
 
 def run(config: dict) -> dict:
@@ -100,13 +121,9 @@ def run(config: dict) -> dict:
             "latest_agent_question": question,
         })
 
-    budget_history_state = (
-        "PROVIDER_ENUMERATION_COMPLETE_FOR_REPOSITORY"
-        if not unattributed_sessions else
-        "PROVIDER_ENUMERATION_PARTIAL_UNATTRIBUTED_SESSIONS"
-    )
+    budget_view = _budget_history_view(unattributed_session_count=len(unattributed_sessions))
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "phase": "SHADOW_ROUTING",
         "capability_state": "JULES_API_READY",
         "control_mode": "SHADOW_NO_MUTATION",
@@ -114,7 +131,7 @@ def run(config: dict) -> dict:
         "account_session_count": len(sessions),
         "project_session_count": len(project_sessions),
         "unattributed_session_count": len(unattributed_sessions),
-        "task_budget_history_state": budget_history_state,
+        **budget_view,
         "session_inventory": [sanitize_session(s, source_index) for s in sessions],
         "project_session_inventory": [sanitize_session(s, source_index) for s in project_sessions],
         "reconciliation": sanitize(rec),
