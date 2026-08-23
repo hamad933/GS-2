@@ -77,6 +77,12 @@ jobs:
         (github.event_name == 'push' && github.ref == 'refs/heads/automation/gs-two-tier-control-v1')
         ||
         (
+          github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == 'hamad933/GS-2'
+          && github.event.pull_request.head.ref == 'automation/gs-two-tier-control-v1'
+        )
+        ||
+        (
           contains(fromJSON('["schedule","workflow_dispatch","issues","issue_comment","workflow_run"]'), github.event_name)
           && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         )
@@ -88,7 +94,7 @@ jobs:
       - name: Checkout trusted controller code only
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           sparse-checkout: |
             .project-control
           sparse-checkout-cone-mode: false
@@ -103,7 +109,7 @@ jobs:
       - name: Emit sanitized Jules capability summary
         env:
           SHADOW_PATH: ${{ runner.temp }}/gs-jules-shadow.json
-          EXACT_HEAD: ${{ github.sha }}
+          EXACT_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
           python - <<'PY'
@@ -156,11 +162,10 @@ jobs:
 
 # Activation boundary:
 # - Jules API mutations remain disabled in this candidate.
-# - Before merge/activation, the secret-bearing shadow job runs only on trusted pushes to the dedicated automation branch.
-# - Pull-request code never receives JULES_API_KEY.
+# - Before merge/activation, the secret-bearing shadow job is limited to the dedicated automation branch in this same repository (push or its exact same-repo PR context).
+# - Forks, arbitrary PRs, and product-candidate PRs cannot satisfy the secret-bearing job guard.
 # - After an explicitly authorized merge/activation, scheduled, manual, issue, issue-comment, and workflow-run events may read Jules only from trusted default-branch controller code.
-# - Forks and product-candidate PRs cannot satisfy the secret-bearing job guard.
-# - The secret-bearing job checks out only .project-control at the exact trusted event SHA.
+# - The secret-bearing job checks out only .project-control at the exact trusted event/candidate SHA.
 # - Waiting-question text remains artifact-only and is never written to logs/comments.
 # - Current provider inventory must never be treated as proof of complete lifetime Jules task consumption history.
 # - No create-session, merge, acceptance, release, deploy, force-push, or main write occurs here.
