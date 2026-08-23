@@ -74,9 +74,6 @@ def operation_key(*, repo:str, workstream:str, role:str, task_session:str|None, 
 def normalize_jules(raw: str|None) -> JulesState:
     if not raw: return JulesState.UNKNOWN_JULES_STATE
     key=raw.strip().upper().replace("-","_").replace(" ","_")
-    aliases={"RUNNING":"IN_PROGRESS","WAITING_FOR_USER":"AWAITING_USER_FEEDBACK",
-             "WAITING_FOR_FEEDBACK":"AWAITING_USER_FEEDBACK","DONE":"COMPLETED","ERROR":"FAILED"}
-    key=aliases.get(key,key)
     try: return JulesState(key)
     except ValueError: return JulesState.UNKNOWN_JULES_STATE
 
