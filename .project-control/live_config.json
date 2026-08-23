@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "repository": "hamad933/GS-2",
+  "candidate": {
+    "branch": "remediation/gs-dependency-remediation-r1",
+    "sha": "22766701b74ab25e2f62e74ea35d1bf054fa4dee",
+    "pr": 88
+  },
+  "reviewer_a": [
+    {"page":"HOME","route":"/","issue":89,"task_id":"10184598302611242915","session_id":null},
+    {"page":"SOLUTIONS","route":"/solutions","issue":90,"task_id":"9636739461828141981","session_id":null},
+    {"page":"START","route":"/start","issue":91,"task_id":"8151804665897815512","session_id":null},
+    {"page":"REFERENCE_PROJECTS","route":"/reference-projects","issue":92,"task_id":"4638630989161925753","session_id":null},
+    {"page":"HOW_WE_WORK","route":"/how-we-work","issue":93,"task_id":"3706376172785639949","session_id":null}
+  ],
+  "writer_lineages": {
+    "HOME_PRIMARY":{"pr":82,"head":"73427a1427755367c83699b4f5afc9267c9a2b2a"},
+    "HOME_SUPPLEMENTAL":{"pr":81,"head":"c07a3e9515bbd7e522f239f1bc010b1aa505e5e0"},
+    "START":{"pr":83,"head":"774634f3b1f104e6c4217e667a566037497a77f8"},
+    "SOLUTIONS":{"pr":85,"head":"b7d3cb0ca8a80d0c9513ffc30e3d4dd5742e7c53"},
+    "REFERENCE_PROJECTS":{"pr":79,"head":"e57eac05628e296a6004d08a512f7b1a0b272645"},
+    "HOW_WE_WORK":{"pr":80,"head":"c88eb227476f14a79c67544403d22b70b5572e93"}
+  }
+}
