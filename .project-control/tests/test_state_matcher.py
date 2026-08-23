@@ -86,9 +86,11 @@ class Matrix(unittest.TestCase):
         self.assertEqual(normalize_ci("success"),CIState.SUCCESS)
         self.assertNotEqual(review_decision(verdict=None,reviewed_sha=CAND,candidate_sha=CAND).state,ReviewState.PASS_FOR_PARENT_REVIEW)
     def test_35_unknown_future_state_escalates(self):
+        undocumented=("CANCELLED","CANCELED","RUNNING","WAITING_FOR_USER","WAITING_FOR_FEEDBACK","DONE","ERROR")
+        for raw in undocumented:
+            with self.subTest(raw=raw):
+                self.assertEqual(normalize_jules(raw),JulesState.UNKNOWN_JULES_STATE)
         self.assertEqual(normalize_jules("FUTURE_WEIRD"),JulesState.UNKNOWN_JULES_STATE)
-        self.assertEqual(normalize_jules("CANCELLED"),JulesState.UNKNOWN_JULES_STATE)
-        self.assertEqual(normalize_jules("CANCELED"),JulesState.UNKNOWN_JULES_STATE)
         self.assertEqual(normalize_ci("FUTURE_WEIRD"),CIState.UNKNOWN_CI_STATE)
     def test_36_matcher_weakness_is_not_self_modification(self):
         d=waiting_decision({"unexpected_new_condition":True})
