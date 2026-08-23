@@ -1,5 +1,5 @@
 export type FamilyAssetFamily = 'FAM-01' | 'FAM-02' | 'FAM-03' | 'FAM-04' | 'FAM-05' | 'FAM-06';
-export type FamilyAssetRole = 'MASTER' | 'DIRECTION' | 'CONTEXTUAL_CUSTOMER' | 'CONTEXTUAL_OPERATIONS';
+export type FamilyAssetRole = 'MASTER' | 'EMBLEM' | 'COMPARE' | 'DIRECTION' | 'CONTEXTUAL_CUSTOMER' | 'CONTEXTUAL_OPERATIONS';
 export type FamilyAssetStatus = 'APPROVED_BOUND';
 
 export interface FamilyVisualAsset {
@@ -48,6 +48,14 @@ const runtimeAssets: Record<string, string> = {
   'FAM-06-DIR-03': new URL('../../assets/gs-public-v1/families/FAM-06/DIRECTIONS/FAM-06-DIR-03.webp', import.meta.url).href,
   'FAM-06-CTX-01': new URL('../../assets/gs-public-v1/families/FAM-06/CONTEXTUAL/FAM-06-CTX-01.webp', import.meta.url).href,
   'FAM-06-CTX-02': new URL('../../assets/gs-public-v1/families/FAM-06/CONTEXTUAL/FAM-06-CTX-02.webp', import.meta.url).href,
+  'FAM-01-EMB-01': new URL('../../assets/gs-public-v1/families/FAM-01/EMBLEM/FAM-01-EMB-01.webp', import.meta.url).href,
+  'FAM-02-EMB-01': new URL('../../assets/gs-public-v1/families/FAM-02/EMBLEM/FAM-02-EMB-01.webp', import.meta.url).href,
+  'FAM-03-EMB-01': new URL('../../assets/gs-public-v1/families/FAM-03/EMBLEM/FAM-03-EMB-01.webp', import.meta.url).href,
+  'FAM-04-EMB-01': new URL('../../assets/gs-public-v1/families/FAM-04/EMBLEM/FAM-04-EMB-01.webp', import.meta.url).href,
+  'FAM-05-EMB-01': new URL('../../assets/gs-public-v1/families/FAM-05/EMBLEM/FAM-05-EMB-01.webp', import.meta.url).href,
+  'FAM-06-EMB-01': new URL('../../assets/gs-public-v1/families/FAM-06/EMBLEM/FAM-06-EMB-01.webp', import.meta.url).href,
+  'FAM-03-CMP-01': new URL('../../assets/gs-public-v1/families/FAM-03/COMPARE/FAM-03-CMP-01.webp', import.meta.url).href,
+  'FAM-05-CMP-01': new URL('../../assets/gs-public-v1/families/FAM-05/COMPARE/FAM-05-CMP-01.webp', import.meta.url).href,
 };
 
 const approved = (id: string, family: FamilyAssetFamily, role: FamilyAssetRole, canonicalPath: string): FamilyVisualAsset => ({ id, family, role, status: 'APPROVED_BOUND', runtimeUrl: runtimeAssets[id], canonicalPath });
@@ -95,6 +103,15 @@ export const familyVisualAssets: Record<string, FamilyVisualAsset> = {
   'FAM-06-CTX-01': approved('FAM-06-CTX-01', 'FAM-06', 'CONTEXTUAL_CUSTOMER', 'src/assets/gs-public-v1/families/FAM-06/CONTEXTUAL/FAM-06-CTX-01.webp'),
   'FAM-06-CTX-02': approved('FAM-06-CTX-02', 'FAM-06', 'CONTEXTUAL_OPERATIONS', 'src/assets/gs-public-v1/families/FAM-06/CONTEXTUAL/FAM-06-CTX-02.webp'),
 
+  'FAM-01-EMB-01': approved('FAM-01-EMB-01', 'FAM-01', 'EMBLEM', 'src/assets/gs-public-v1/families/FAM-01/EMBLEM/FAM-01-EMB-01.webp'),
+  'FAM-02-EMB-01': approved('FAM-02-EMB-01', 'FAM-02', 'EMBLEM', 'src/assets/gs-public-v1/families/FAM-02/EMBLEM/FAM-02-EMB-01.webp'),
+  'FAM-03-EMB-01': approved('FAM-03-EMB-01', 'FAM-03', 'EMBLEM', 'src/assets/gs-public-v1/families/FAM-03/EMBLEM/FAM-03-EMB-01.webp'),
+  'FAM-04-EMB-01': approved('FAM-04-EMB-01', 'FAM-04', 'EMBLEM', 'src/assets/gs-public-v1/families/FAM-04/EMBLEM/FAM-04-EMB-01.webp'),
+  'FAM-05-EMB-01': approved('FAM-05-EMB-01', 'FAM-05', 'EMBLEM', 'src/assets/gs-public-v1/families/FAM-05/EMBLEM/FAM-05-EMB-01.webp'),
+  'FAM-06-EMB-01': approved('FAM-06-EMB-01', 'FAM-06', 'EMBLEM', 'src/assets/gs-public-v1/families/FAM-06/EMBLEM/FAM-06-EMB-01.webp'),
+  'FAM-03-CMP-01': approved('FAM-03-CMP-01', 'FAM-03', 'COMPARE', 'src/assets/gs-public-v1/families/FAM-03/COMPARE/FAM-03-CMP-01.webp'),
+  'FAM-05-CMP-01': approved('FAM-05-CMP-01', 'FAM-05', 'COMPARE', 'src/assets/gs-public-v1/families/FAM-05/COMPARE/FAM-05-CMP-01.webp'),
+
 };
 
 const familyNumbers: Record<string, FamilyAssetFamily> = {
@@ -108,11 +125,13 @@ const familyNumbers: Record<string, FamilyAssetFamily> = {
 
 export function getFamilyAssetId(
   familyId: string,
-  role: 'MASTER' | 'DIR-01' | 'DIR-02' | 'DIR-03' | 'CTX-01' | 'CTX-02',
+  role: 'MASTER' | 'EMBLEM' | 'COMPARE' | 'DIR-01' | 'DIR-02' | 'DIR-03' | 'CTX-01' | 'CTX-02',
 ) {
   const family = familyNumbers[familyId];
   if (!family) return undefined;
   if (role === 'MASTER') return `${family}-MSC-01`;
+  if (role === 'EMBLEM') return `${family}-EMB-01`;
+  if (role === 'COMPARE') return `${family}-CMP-01`;
   return `${family}-${role}`;
 }
 

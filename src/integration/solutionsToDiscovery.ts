@@ -9,8 +9,9 @@ import {
   type DiscoveryCapabilitySelection,
   type DiscoveryCapturedFacts,
   type StartDiscoveryPrefill,
+  type DiscoveryDecisionOrigin,
 } from '../types/start-discovery';
-import type { DecisionSnapshot, EvidenceState } from '../types/solutions';
+import type { DecisionSnapshot, EvidenceState, SolutionFamilyId } from '../types/solutions';
 
 export interface StartDiscoveryRouteState {
   discoveryPrefill: StartDiscoveryPrefill;
@@ -126,6 +127,37 @@ export function createStartDiscoveryRouteState(
   snapshot: DecisionSnapshot,
 ): StartDiscoveryRouteState {
   return { discoveryPrefill: mapSolutionsDecisionToDiscovery(snapshot) };
+}
+
+// INTEGRATION_ONLY_SHARED_RESOLUTION – added for SOLUTIONS exploration adapter
+export type SolutionsExplorationStartOrigin = Extract<
+  DiscoveryDecisionOrigin,
+  'USER_DIRECT' | 'USER_COMPARE'
+>;
+
+export function mapSolutionsExplorationToDiscovery(
+  familyId: SolutionFamilyId,
+  decisionOrigin: SolutionsExplorationStartOrigin = 'USER_DIRECT',
+): StartDiscoveryPrefill {
+  return {
+    version: START_DISCOVERY_PREFILL_VERSION,
+    source: {
+      adapter: 'solutions-exploration',
+      label: 'استكشاف الحلول',
+      referenceId: familyId,
+    },
+    solutionFamilyId: familyId,
+    decisionOrigin,
+  };
+}
+
+export function createStartDiscoveryRouteStateFromExploration(
+  familyId: SolutionFamilyId,
+  decisionOrigin: SolutionsExplorationStartOrigin = 'USER_DIRECT',
+): StartDiscoveryRouteState {
+  return {
+    discoveryPrefill: mapSolutionsExplorationToDiscovery(familyId, decisionOrigin),
+  };
 }
 
 // Backward-compatible public export; route-state validation has one canonical implementation.
