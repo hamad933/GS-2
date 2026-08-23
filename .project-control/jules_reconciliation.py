@@ -130,6 +130,22 @@ def reconcile(config: Mapping[str, Any], sessions: Iterable[Mapping[str, Any]],
         if explicit:
             direct = [s for s in session_list if str(s.get("id") or "") == explicit]
             if len(direct) == 1:
+                repository = session_repository(direct[0], source_index)
+                expected_repository = str(lane.get("repository") or "")
+                if not repository:
+                    mappings.append({
+                        "lane_id": lane["lane_id"],
+                        "status": "EXPLICIT_SESSION_SOURCE_UNVERIFIED",
+                        "session": sanitize_session(direct[0], source_index),
+                    })
+                    continue
+                if expected_repository and repository != expected_repository:
+                    mappings.append({
+                        "lane_id": lane["lane_id"],
+                        "status": "EXPLICIT_SESSION_REPOSITORY_MISMATCH",
+                        "session": sanitize_session(direct[0], source_index),
+                    })
+                    continue
                 mappings.append({"lane_id": lane["lane_id"], "status": "BOUND_EXPLICIT",
                                  "session": sanitize_session(direct[0], source_index), "score": 1000})
                 used[explicit].append(lane["lane_id"])
@@ -159,7 +175,11 @@ def reconcile(config: Mapping[str, Any], sessions: Iterable[Mapping[str, Any]],
                 mapping["status"] = "SESSION_OWNERSHIP_AMBIGUOUS"
                 mapping["conflicting_lanes"] = duplicate_sessions[sid]
     return {
-        "schema_version": 2, "mode": "RECONCILIATION_DRY_RUN", "mappings": mappings,
+        "schema_version": 3, "mode": "RECONCILIATION_DRY_RUN", "mappings": mappings,
         "unmatched_sessions": [sanitize_session(s, source_index) for s in session_list if str(s.get("id") or "") not in used],
-        "ambiguous": any(m["status"] == "SESSION_OWNERSHIP_AMBIGUOUS" for m in mappings),
+        "ambiguous": any(m["status"] in {
+            "SESSION_OWNERSHIP_AMBIGUOUS",
+            "EXPLICIT_SESSION_SOURCE_UNVERIFIED",
+            "EXPLICIT_SESSION_REPOSITORY_MISMATCH",
+        } for m in mappings),
     }
