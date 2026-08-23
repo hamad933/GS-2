@@ -1,0 +1,171 @@
+name: GS Fast Controller Candidate
+
+on:
+  push:
+    branches:
+      - automation/gs-two-tier-control-v1
+    paths:
+      - '.project-control/**'
+      - '.github/workflows/gs-fast-controller-candidate.yml'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, closed]
+  issues:
+    types: [opened, edited, labeled, unlabeled, closed, reopened]
+  issue_comment:
+    types: [created, edited]
+  workflow_run:
+    workflows: ['CI', 'Visual Evidence']
+    types: [completed]
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  actions: read
+
+concurrency:
+  group: gs-fast-controller-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deterministic-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run deterministic control matrix
+        env:
+          PYTHONPATH: ${{ github.workspace }}/.project-control
+          GS_TEST_WORKFLOW: ${{ github.workspace }}/.github/workflows/gs-fast-controller-candidate.yml
+        run: python -m unittest discover -s .project-control/tests -v
+
+  fast-read-only-cycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Collect authoritative GitHub snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .project-control/github_live_snapshot.py --out "$RUNNER_TEMP/gs-live-snapshot.json"
+      - name: Produce fail-closed control receipts
+        env:
+          PYTHONPATH: ${{ github.workspace }}/.project-control
+        run: python .project-control/fast_live_cycle.py "$RUNNER_TEMP/gs-live-snapshot.json" --out "$RUNNER_TEMP/gs-fast-receipts.json"
+      - name: Upload control receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gs-fast-controller-receipts-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/gs-live-snapshot.json
+            ${{ runner.temp }}/gs-fast-receipts.json
+          if-no-files-found: error
+          retention-days: 7
+
+  jules-auth-reconciliation-shadow:
+    if: >-
+      github.repository == 'hamad933/GS-2'
+      &&
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/automation/gs-two-tier-control-v1')
+        ||
+        (
+          github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == 'hamad933/GS-2'
+          && github.event.pull_request.head.ref == 'automation/gs-two-tier-control-v1'
+        )
+        ||
+        (
+          contains(fromJSON('["schedule","workflow_dispatch","issues","issue_comment","workflow_run"]'), github.event_name)
+          && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        )
+      )
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout trusted controller code only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .project-control
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Jules authenticated read-only probe and shadow reconciliation
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+          PYTHONPATH: ${{ github.workspace }}/.project-control
+        run: python .project-control/jules_shadow_cycle.py --out "$RUNNER_TEMP/gs-jules-shadow.json"
+      - name: Emit sanitized Jules capability summary
+        env:
+          SHADOW_PATH: ${{ runner.temp }}/gs-jules-shadow.json
+          EXACT_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          data = json.loads(Path(os.environ['SHADOW_PATH']).read_text(encoding='utf-8'))
+          reconciliation = data.get('reconciliation') or {}
+          account_count = int(data.get('account_session_count') or len(data.get('session_inventory') or []))
+          project_count = int(data.get('project_session_count') or len(data.get('project_session_inventory') or []))
+          unattributed = int(data.get('unattributed_session_count') or 0)
+          waiting_count = len(data.get('waiting_inputs') or [])
+          inventory_state = str(data.get('provider_inventory_state') or 'UNAVAILABLE')
+          lifetime_state = str(data.get('lifetime_task_budget_history_state') or 'UNAVAILABLE')
+          remaining_capacity = str(data.get('exact_remaining_safe_capacity') or 'UNKNOWN')
+          creation_safety = str(data.get('new_task_creation_safety') or 'UNKNOWN')
+          print('exact_automation_head=' + str(os.environ['EXACT_HEAD']))
+          print('actions_run=' + str(os.environ['RUN_ID']))
+          print('capability_state=' + str(data.get('capability_state', 'UNKNOWN')))
+          print('control_mode=' + str(data.get('control_mode', 'UNKNOWN')))
+          print('account_session_count=' + str(account_count))
+          print('project_session_count=' + str(project_count))
+          print('unattributed_session_count=' + str(unattributed))
+          print('provider_inventory_state=' + inventory_state)
+          print('lifetime_task_budget_history_state=' + lifetime_state)
+          print('exact_remaining_safe_capacity=' + remaining_capacity)
+          print('new_task_creation_safety=' + creation_safety)
+          print('waiting_input_count=' + str(waiting_count))
+          print('reconciliation_ambiguous=' + str(bool(reconciliation.get('ambiguous'))).lower())
+          for mapping in reconciliation.get('mappings') or []:
+              session = mapping.get('session') or {}
+              safe = {
+                  'lane_id': mapping.get('lane_id'),
+                  'status': mapping.get('status'),
+                  'session_id': session.get('id'),
+                  'state': session.get('state'),
+                  'repository': session.get('repository'),
+                  'startingBranch': session.get('startingBranch'),
+                  'pullRequests': session.get('pullRequests'),
+              }
+              print('mapping=' + json.dumps(safe, sort_keys=True, separators=(',', ':')))
+          print('unmatched_session_count=' + str(len(reconciliation.get('unmatched_sessions') or [])))
+          PY
+      - name: Upload sanitized Jules shadow result
+        uses: actions/upload-artifact@v4
+        with:
+          name: gs-jules-shadow-${{ github.run_id }}
+          path: ${{ runner.temp }}/gs-jules-shadow.json
+          if-no-files-found: error
+          retention-days: 7
+
+# Activation boundary:
+# - Jules API mutations remain disabled in this candidate.
+# - Before merge/activation, the secret-bearing shadow job is limited to the dedicated automation branch in this same repository (push or its exact same-repo PR context).
+# - Forks, arbitrary PRs, and product-candidate PRs cannot satisfy the secret-bearing job guard.
+# - After an explicitly authorized merge/activation, scheduled, manual, issue, issue-comment, and workflow-run events may read Jules only from trusted default-branch controller code.
+# - The secret-bearing job checks out only .project-control at the exact trusted event/candidate SHA.
+# - Waiting-question text remains artifact-only and is never written to logs/comments.
+# - Current provider inventory must never be treated as proof of complete lifetime Jules task consumption history.
+# - No create-session, merge, acceptance, release, deploy, force-push, or main write occurs here.
