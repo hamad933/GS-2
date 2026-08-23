@@ -6,7 +6,7 @@ const EVIDENCE_DIR = resolve(process.env.VISUAL_EVIDENCE_DIR ?? 'visual-evidence
 
 const PUBLIC_ROUTES = [
   { path: '/', label: 'الرئيسية', focusSelector: '#main-content' },
-  { path: '/solutions', label: 'الحلول', focusSelector: '#gsdw-entry-title' },
+  { path: '/solutions', label: 'الحلول', focusSelector: '.integrated-public-page--solutions' },
   { path: '/reference-projects', label: 'المشاريع المرجعية', focusSelector: '#reference-projects-title' },
   { path: '/how-we-work', label: 'كيف نعمل', focusSelector: '#how-we-work-title' },
   { path: '/start', label: 'ابدأ اختيارك', focusSelector: '#start-discovery-title' },
@@ -50,7 +50,7 @@ for (const route of PUBLIC_ROUTES) {
 test('supports browser back, forward, and saved scroll restoration', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 560 });
   await page.goto('/solutions');
-  await expect(page.locator('#gsdw-entry-title')).toBeFocused();
+  await expect(page.locator('.integrated-public-page--solutions')).toBeFocused();
   await page.evaluate(() => window.scrollTo(0, 240));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(150);
 
@@ -122,7 +122,7 @@ for (const width of [1440, 1024, 768, 430, 390]) {
     const errors = await collectRuntimeErrors(page);
     await page.setViewportSize({ width, height: width === 768 ? 1024 : 900 });
     await page.goto('/solutions');
-    await expect(page.locator('#gsdw-entry-title')).toBeVisible();
+    await expect(page.locator('.integrated-public-page--solutions')).toBeVisible();
 
     if (width <= 800) {
       await page.getByRole('button', { name: 'فتح قائمة التنقل' }).click();
@@ -142,7 +142,7 @@ for (const width of [1440, 1024, 768, 430, 390]) {
 test('captures W01 shell reference evidence', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/solutions');
-  await expect(page.locator('#gsdw-entry-title')).toBeVisible();
+  await expect(page.locator('.integrated-public-page--solutions')).toBeVisible();
   await page.screenshot({
     path: resolve(EVIDENCE_DIR, 'w01-shell-solutions-1440.png'),
     fullPage: true,
