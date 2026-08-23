@@ -233,6 +233,35 @@ class JulesClient:
                 return JulesApiResult(True, "OK", {"sessions": sessions}, result.status_code, request_id=result.request_id)
         return JulesApiResult(False, "JULES_API_RESPONSE_INVALID", {"reason": "pagination_page_limit_exceeded"})
 
+    def list_sources(self, *, page_size: int = 30, page_token: str | None = None) -> JulesApiResult:
+        query = {"pageSize": max(1, min(100, int(page_size)))}
+        if page_token:
+            query["pageToken"] = page_token
+        result = self._request("GET", f"/sources?{urllib.parse.urlencode(query)}", read=True)
+        if not result.ok:
+            return result
+        payload = result.payload
+        if not isinstance(payload, dict) or not isinstance(payload.get("sources", []), list):
+            return JulesApiResult(False, "JULES_API_PROTOCOL_CHANGED", None, result.status_code, request_id=result.request_id)
+        for source in payload.get("sources", []):
+            repo = source.get("githubRepo") if isinstance(source, dict) else None
+            if not isinstance(source, dict) or not source.get("name") or not isinstance(repo, dict) or not repo.get("owner") or not repo.get("repo"):
+                return JulesApiResult(False, "JULES_API_PROTOCOL_CHANGED", None, result.status_code, request_id=result.request_id)
+        return result
+
+    def list_all_sources(self, *, page_size: int = 100, max_pages: int = 20) -> JulesApiResult:
+        sources: list[dict[str, Any]] = []
+        token: str | None = None
+        for _ in range(max_pages):
+            result = self.list_sources(page_size=page_size, page_token=token)
+            if not result.ok:
+                return result
+            sources.extend(result.payload.get("sources", []))
+            token = result.payload.get("nextPageToken") or None
+            if not token:
+                return JulesApiResult(True, "OK", {"sources": sources}, result.status_code, request_id=result.request_id)
+        return JulesApiResult(False, "JULES_API_RESPONSE_INVALID", {"reason": "source_pagination_page_limit_exceeded"})
+
     def get_session(self, session_id: str) -> JulesApiResult:
         if not session_id:
             return JulesApiResult(False, "JULES_API_SESSION_ID_MISSING")
@@ -255,6 +284,19 @@ class JulesClient:
         if not isinstance(result.payload, dict) or not isinstance(result.payload.get("activities", []), list):
             return JulesApiResult(False, "JULES_API_PROTOCOL_CHANGED", None, result.status_code, request_id=result.request_id)
         return result
+
+    def list_all_activities(self, session_id: str, *, page_size: int = 100, max_pages: int = 20) -> JulesApiResult:
+        activities: list[dict[str, Any]] = []
+        token: str | None = None
+        for _ in range(max_pages):
+            result = self.list_activities(session_id, page_size=page_size, page_token=token)
+            if not result.ok:
+                return result
+            activities.extend(result.payload.get("activities", []))
+            token = result.payload.get("nextPageToken") or None
+            if not token:
+                return JulesApiResult(True, "OK", {"activities": activities}, result.status_code, request_id=result.request_id)
+        return JulesApiResult(False, "JULES_API_RESPONSE_INVALID", {"reason": "activity_pagination_page_limit_exceeded"})
 
     def send_message(self, session_id: str, prompt: str, *, known_state: str, mutation_authorized: bool) -> JulesApiResult:
         if not mutation_authorized:
