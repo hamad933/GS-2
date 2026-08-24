@@ -390,7 +390,7 @@ test('captures complete W05-R3 review evidence with real pointer interactions', 
   await page.locator(S03).getByRole('button', { name: /Enterprise Operations/ }).click();
   await expect(page.locator(S03)).toHaveAttribute('data-project', 'rp02');
   await captureSection(page, S03, 'desktop-w05-r3-project-rp02.png');
-  await page.locator(S03).getByRole('button', { name: /Booking & Services/ }).click();
+  await page.locator(S03).getByRole('button', { name: /Booking & Service Operations/ }).click();
 
   await page.locator(S04).getByRole('button', { name: /التكامل/ }).click();
   await expect(page.locator(S04)).toHaveAttribute('data-active', 'integration');
@@ -403,7 +403,7 @@ test('captures complete W05-R3 review evidence with real pointer interactions', 
   await captureHero(page, 'mobile-w05-r3-hero-build.png');
   await page.locator(S02).getByRole('button', { name: /العقارات والأصول/ }).click();
   await captureSection(page, S02, 'mobile-w05-r3-solutions-active.png');
-  await page.locator(S03).getByRole('button', { name: /Booking & Services/ }).click();
+  await page.locator(S03).getByRole('button', { name: /Booking & Service Operations/ }).click();
   await captureSection(page, S03, 'mobile-w05-r3-project.png');
   await page.locator(S04).getByRole('button', { name: /البناء/ }).click();
   await captureSection(page, S04, 'mobile-w05-r3-anatomy.png');
