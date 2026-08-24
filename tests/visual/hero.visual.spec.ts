@@ -105,7 +105,7 @@ test('captures W05 V2-A Hero states through the real pointer journey', async ({ 
   await captureHero(page, 'desktop-w05-v2-a-hero-k03.png');
 
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لمراجعة جاهزية المسار');
-  await page.getByRole('button', { name: /إرسال الطلب/ }).click();
+  await page.getByRole('button', { name: /جهّز الملخّص/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
   await captureHero(page, 'desktop-w05-v2-a-hero-k04.png');
 });
@@ -137,7 +137,7 @@ test('captures desktop K01, K03, and K04 evidence', async ({ page }) => {
   await captureHero(page, 'desktop-k03-build.png');
 
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لاختبار التسليم');
-  await page.getByRole('button', { name: /إرسال الطلب/ }).click();
+  await page.getByRole('button', { name: /جهّز الملخّص/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
   await expect(page.getByText('لم يُرسل شيء بعد؛ ستبقى المراجعة والإرسال بين يديك.')).toBeVisible();
   await captureHero(page, 'desktop-k04-launch.png');
@@ -245,7 +245,7 @@ test('representative controls support real clicks, keyboard activation, and sync
   await openHome(page);
   await reachK03(page);
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لاختبار التسليم');
-  await page.getByRole('button', { name: /إرسال الطلب/ }).click();
+  await page.getByRole('button', { name: /جهّز الملخّص/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
 
   const family = page.locator(S02).getByRole('button', { name: /الأنظمة التشغيلية والبوابات/ });
@@ -374,7 +374,7 @@ test('captures complete W05-R3 review evidence with real pointer interactions', 
   await reachK03(page);
   await captureHero(page, 'desktop-w05-r3-hero-build.png');
   await page.getByLabel('طلبك المختصر').fill('طلب توضيحي لمراجعة التفاعل');
-  await page.getByRole('button', { name: /إرسال الطلب/ }).click();
+  await page.getByRole('button', { name: /جهّز الملخّص/ }).click();
   await expect(page.locator(HERO)).toHaveAttribute('data-stage', 'launch');
   await captureHero(page, 'desktop-w05-r3-hero-launch.png');
 
@@ -390,7 +390,7 @@ test('captures complete W05-R3 review evidence with real pointer interactions', 
   await page.locator(S03).getByRole('button', { name: /Enterprise Operations/ }).click();
   await expect(page.locator(S03)).toHaveAttribute('data-project', 'rp02');
   await captureSection(page, S03, 'desktop-w05-r3-project-rp02.png');
-  await page.locator(S03).getByRole('button', { name: /Booking & Services/ }).click();
+  await page.locator(S03).getByRole('button', { name: /Booking & Service Operations/ }).click();
 
   await page.locator(S04).getByRole('button', { name: /التكامل/ }).click();
   await expect(page.locator(S04)).toHaveAttribute('data-active', 'integration');
@@ -403,7 +403,7 @@ test('captures complete W05-R3 review evidence with real pointer interactions', 
   await captureHero(page, 'mobile-w05-r3-hero-build.png');
   await page.locator(S02).getByRole('button', { name: /العقارات والأصول/ }).click();
   await captureSection(page, S02, 'mobile-w05-r3-solutions-active.png');
-  await page.locator(S03).getByRole('button', { name: /Booking & Services/ }).click();
+  await page.locator(S03).getByRole('button', { name: /Booking & Service Operations/ }).click();
   await captureSection(page, S03, 'mobile-w05-r3-project.png');
   await page.locator(S04).getByRole('button', { name: /البناء/ }).click();
   await captureSection(page, S04, 'mobile-w05-r3-anatomy.png');
