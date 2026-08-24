@@ -3,9 +3,6 @@ name: Visual Evidence
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - main
-      - codex/implement-living-system-hero-s01
     types: [opened, synchronize, reopened]
     paths:
       - 'src/**'
