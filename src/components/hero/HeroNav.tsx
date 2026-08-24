@@ -9,6 +9,7 @@ export function HeroNav() {
   const menuId = useId();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const location = useLocation();
+  const isStartRoute = location.pathname === '/start';
 
   useEffect(() => {
     setIsMenuOpen(false);
@@ -46,11 +47,17 @@ export function HeroNav() {
         ))}
       </div>
 
-      <NavLink
-        to="/start"
-        className="hero-nav__contact">
-        ابدأ اختيارك
-      </NavLink>
+      {isStartRoute ? (
+        <span className="hero-nav__contact" aria-current="page">
+          ابدأ اختيارك
+        </span>
+      ) : (
+        <NavLink
+          to="/start"
+          className="hero-nav__contact">
+          ابدأ اختيارك
+        </NavLink>
+      )}
 
       <button
         ref={menuButtonRef}

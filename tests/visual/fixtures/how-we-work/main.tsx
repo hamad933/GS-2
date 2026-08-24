@@ -1,6 +1,8 @@
 import ReactDOM from 'react-dom/client';
 import { HowWeWorkBody } from '../../../../src/features/how-we-work';
 import type { ReferenceLocale } from '../../../../src/data/reference-projects';
+import '../../../../src/routes/integratedPublicPages.css';
+
 
 const locale: ReferenceLocale = new URLSearchParams(window.location.search).get('locale') === 'en' ? 'en' : 'ar';
 document.documentElement.lang = locale;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -23,6 +23,8 @@ type HeroGlyphName =
   | 'gear'
   | 'share'
   | 'check';
+
+type PendingHeroFocus = 'need' | 'direction' | 'build-action' | 'brief' | 'launch';
 
 function HeroGlyph({ name }: { name: HeroGlyphName }) {
   const common = {
@@ -129,11 +131,18 @@ const STAGES: { id: StageId; label: string }[] = [
   { id: 'launch', label: 'الإطلاق' },
 ];
 
+const OPERATING_WALL_LABEL: Record<StageId, string> = {
+  need: 'اختيار احتياج المشروع',
+  direction: 'اختيار اتجاه الحل',
+  build: 'إعداد ملخّص المشروع',
+  launch: 'مراجعة ملخّص الإطلاق',
+};
+
 const BUILD_PHASES = [
   { label: 'رتّب الرحلة حول الهدف', note: 'نصل البداية بالقرار والنتيجة.', icon: 'tools' },
   { label: 'وحّد التجربة', note: 'تتّسق الرسالة والفعل في سطح واحد.', icon: 'code' },
-  { label: 'قرّبها من المستخدم', note: 'يتحوّل الهيكل إلى تجربة قابلة للمحاولة.', icon: 'shield' },
-  { label: 'جرّب المسار', note: 'أضف طلبك المختصر لإكمال الملخّص.', icon: 'gear' },
+  { label: 'جرّب المسار', note: 'يتحوّل الهيكل إلى تجربة قابلة للمحاولة.', icon: 'shield' },
+  { label: 'جهّز الملخّص', note: 'أضف طلبك المختصر لإكمال الملخّص.', icon: 'gear' },
 ] as const;
 
 const CTA_COPY: Record<StageId, { secondary: string; secondaryTo: string }> = {
@@ -171,25 +180,63 @@ export function LivingSystemHero() {
   const [need, setNeed] = useState<(typeof NEEDS)[number] | null>(null);
   const [direction, setDirection] = useState<(typeof DIRECTIONS)[number] | null>(null);
   const [buildStep, setBuildStep] = useState(0);
-  const [brief, setBrief] = useState('أريد بدء رحلة واضحة');
+  const [brief, setBrief] = useState('');
+  const firstNeedRef = useRef<HTMLButtonElement>(null);
+  const firstDirectionRef = useRef<HTMLButtonElement>(null);
+  const buildActionRef = useRef<HTMLButtonElement>(null);
+  const briefInputRef = useRef<HTMLInputElement>(null);
+  const launchSurfaceRef = useRef<HTMLDivElement>(null);
+  const pendingFocusRef = useRef<PendingHeroFocus | null>(null);
   const stageIndex = STAGES.findIndex((item) => item.id === stage);
 
+  useEffect(() => {
+    const pendingFocus = pendingFocusRef.current;
+    if (!pendingFocus) return;
+
+    pendingFocusRef.current = null;
+    const target = pendingFocus === 'need'
+      ? firstNeedRef.current
+      : pendingFocus === 'direction'
+        ? firstDirectionRef.current
+        : pendingFocus === 'build-action'
+          ? buildActionRef.current
+          : pendingFocus === 'brief'
+            ? briefInputRef.current
+            : launchSurfaceRef.current;
+
+    target?.focus({ preventScroll: true });
+  }, [stage, buildStep]);
+
   const restart = () => {
+    pendingFocusRef.current = 'need';
     setStage('need');
     setNeed(null);
     setDirection(null);
     setBuildStep(0);
-    setBrief('أريد بدء رحلة واضحة');
+    setBrief('');
+  };
+
+  const chooseNeed = (choice: (typeof NEEDS)[number]) => {
+    pendingFocusRef.current = 'direction';
+    setNeed(choice);
+    setStage('direction');
   };
 
   const chooseDirection = (choice: (typeof DIRECTIONS)[number]) => {
+    pendingFocusRef.current = 'build-action';
     setDirection(choice);
     setStage('build');
     setBuildStep(0);
   };
 
+  const advanceBuild = (nextStep: number, focusTarget: 'build-action' | 'brief') => {
+    pendingFocusRef.current = focusTarget;
+    setBuildStep(nextStep);
+  };
+
   const submitProductAction = () => {
     if (!brief.trim()) return;
+    pendingFocusRef.current = 'launch';
     setStage('launch');
   };
 
@@ -224,6 +271,10 @@ export function LivingSystemHero() {
         <span className="e2-threshold-reveal" />
         <span className="e2-threshold-jamb" />
         <span className="e2-threshold-sill"><i /><i /><i /></span>
+        <span className="e2-threshold-state-field">
+          <i /><i /><i /><i />
+        </span>
+        <span className="e2-threshold-aperture"><i /><i /></span>
         <i className="e2-threshold-cap" />
       </div>
       <svg className="e2-floor-rails" viewBox="0 0 1440 810" preserveAspectRatio="none" aria-hidden="true">
@@ -270,12 +321,13 @@ export function LivingSystemHero() {
         </div>
 
         <div className="system-field e2-system-field" aria-live="polite">
-          <aside className="e2-operating-wall" aria-label="اختيار احتياج المشروع">
+          <aside className="e2-operating-wall" aria-label={OPERATING_WALL_LABEL[stage]}>
             <div className="e2-wall-depth" aria-hidden="true" />
             <div className="e2-wall-shell" aria-hidden="true">
               <span className="e2-shell-edge e2-shell-edge-top" />
               <span className="e2-shell-edge e2-shell-edge-side" />
               <span className="e2-shell-edge e2-shell-edge-bottom" />
+              <span className="e2-wall-stage-carriage"><i /><i /><i /><i /></span>
               <i className="e2-shell-joint e2-shell-joint-a" />
               <i className="e2-shell-joint e2-shell-joint-b" />
               <i className="e2-shell-joint e2-shell-joint-c" />
@@ -314,18 +366,16 @@ export function LivingSystemHero() {
               <div className="e2-control-chamber">
                 <div className="e2-control-mount" aria-hidden="true"><i /><i /><i /></div>
 
-                <div className="need-selector e2-need-selector" aria-label="اختر احتياجك">
+                <div className="need-selector e2-need-selector" aria-label="اختر احتياجك" hidden={stage !== 'need'}>
                   <p className="e2-wall-intro"><span aria-hidden="true" /> اختر ما تريد تغييره</p>
                   {NEEDS.map((choice, index) => {
                     return (
                       <button
+                        ref={index === 0 ? firstNeedRef : undefined}
                         type="button"
                         key={choice.id}
                         className={need?.id === choice.id ? 'selected' : ''}
-                        onClick={() => {
-                          setNeed(choice);
-                          setStage('direction');
-                        }}>
+                        onClick={() => chooseNeed(choice)}>
                         <span className="e2-choice-index" aria-hidden="true">0{index + 1}</span>
                         <span className="e2-choice-icon" aria-hidden="true"><HeroGlyph name={choice.icon} /></span>
                         <span className="e2-choice-label">{choice.label}</span>
@@ -336,14 +386,14 @@ export function LivingSystemHero() {
                   })}
                 </div>
 
-                <div className="direction-selector e2-direction-selector" aria-label="اختر اتجاه الحل">
+                <div className="direction-selector e2-direction-selector" aria-label="اختر اتجاه الحل" hidden={stage !== 'direction'}>
                   <p><HeroGlyph name="flow" /> الحاجة المختارة: <strong>{need?.label}</strong></p>
                   {DIRECTIONS.map((choice, index) => {
                     return (
                       <button
+                        ref={index === 0 ? firstDirectionRef : undefined}
                         type="button"
                         key={choice.id}
-                        className={index === 0 ? 'preview' : ''}
                         onClick={() => chooseDirection(choice)}>
                         <span className="e2-choice-index" aria-hidden="true">0{index + 1}</span>
                         <span className="e2-choice-icon" aria-hidden="true"><HeroGlyph name={choice.icon} /></span>
@@ -387,16 +437,22 @@ export function LivingSystemHero() {
                     </ol>
 
                     <div className="e2-build-workbench">
-                      {buildStep === 0 && <button type="button" onClick={() => setBuildStep(1)}>رتّب الرحلة حول الهدف <ArrowLeft aria-hidden="true" /></button>}
-                      {buildStep === 1 && <button type="button" onClick={() => setBuildStep(2)}>وحّد التجربة <ArrowLeft aria-hidden="true" /></button>}
-                      {buildStep === 2 && <button type="button" onClick={() => setBuildStep(3)}>جرّب المسار <Sparkles aria-hidden="true" /></button>}
+                      {buildStep === 0 && <button ref={buildActionRef} type="button" onClick={() => advanceBuild(1, 'build-action')}>رتّب الرحلة حول الهدف <ArrowLeft aria-hidden="true" /></button>}
+                      {buildStep === 1 && <button ref={buildActionRef} type="button" onClick={() => advanceBuild(2, 'build-action')}>وحّد التجربة <ArrowLeft aria-hidden="true" /></button>}
+                      {buildStep === 2 && <button ref={buildActionRef} type="button" onClick={() => advanceBuild(3, 'brief')}>جرّب المسار <Sparkles aria-hidden="true" /></button>}
                       {buildStep === 3 && (
                         <form onSubmit={(event) => { event.preventDefault(); submitProductAction(); }}>
                           <label htmlFor="hero-brief">طلبك المختصر</label>
-                          <input id="hero-brief" value={brief} onChange={(event) => setBrief(event.target.value)} />
+                          <input
+                            ref={briefInputRef}
+                            id="hero-brief"
+                            value={brief}
+                            placeholder="اكتب باختصار ما تريد تحقيقه"
+                            onChange={(event) => setBrief(event.target.value)}
+                          />
                           <button
                             type="submit"
-                            aria-label="إرسال الطلب إلى الملخّص"
+                            aria-label="جهّز الملخّص"
                             disabled={!brief.trim()}>
                             جهّز الملخّص <Send aria-hidden="true" />
                           </button>
@@ -407,7 +463,11 @@ export function LivingSystemHero() {
                 )}
 
                 {stage === 'launch' && (
-                  <div className="e2-launch-chamber">
+                  <div
+                    ref={launchSurfaceRef}
+                    className="e2-launch-chamber"
+                    tabIndex={-1}
+                    aria-label="ملخّص الإطلاق">
                     <header>
                       <small>ملخّص الاختيارات</small>
                       <strong>أصبحت نقطة البداية واضحة</strong>

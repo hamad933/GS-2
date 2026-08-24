@@ -87,13 +87,18 @@ export function recommendFromFacts(facts: DecisionFacts): Recommendation {
 
   const reasons: string[] = [];
   const missing: string[] = [];
+  let substantiveFactCount = 0;
 
   finderQuestions.forEach((question) => {
     const selected = optionFor(question.key, facts[question.key]);
-    if (!selected || selected.id === 'unknown' || selected.id === 'mixed') {
+    const unresolved = !selected || selected.id === 'unknown' || selected.id === 'mixed';
+    if (unresolved) {
       missing.push(missingLabels[question.key]);
+    } else {
+      substantiveFactCount += 1;
     }
     if (!selected) return;
+
     Object.entries(selected.weights).forEach(([familyId, weight]) => {
       scores[familyId as SolutionFamilyId] += weight ?? 0;
     });
@@ -103,18 +108,43 @@ export function recommendFromFacts(facts: DecisionFacts): Recommendation {
   });
 
   const ranked = solutionFamilies
-    .map((family, index) => ({ id: family.id, score: scores[family.id], index }))
-    .sort((left, right) => right.score - left.score || left.index - right.index);
-
-  const recommendedId = ranked[0].id;
-  const alternativeId = ranked[1].score > 0 ? ranked[1].id : undefined;
+    .map((family) => ({ id: family.id, score: scores[family.id] }))
+    .sort((left, right) => right.score - left.score);
+  const topScore = ranked[0]?.score ?? 0;
+  const topIds = ranked.filter((item) => item.score === topScore).map((item) => item.id);
 
   if (facts.constraints.trim().length === 0) {
     missing.push('القيود الخاصة غير مذكورة');
   }
 
+  if (topScore <= 0 || substantiveFactCount < 2) {
+    const positiveDirections = ranked.filter((item) => item.score > 0).map((item) => item.id);
+    return {
+      resolution: 'insufficient',
+      candidateIds: positiveDirections.length > 1
+        ? positiveDirections
+        : solutionFamilies.map((family) => family.id),
+      reasons,
+      missing,
+    };
+  }
+
+  if (topIds.length > 1) {
+    return {
+      resolution: 'tied',
+      candidateIds: topIds,
+      reasons,
+      missing,
+    };
+  }
+
+  const recommendedId = topIds[0];
+  const alternativeId = ranked.find((item) => item.id !== recommendedId && item.score > 0)?.id;
+
   return {
+    resolution: 'decisive',
     recommendedId,
+    candidateIds: [recommendedId],
     alternativeId,
     reasons,
     missing,

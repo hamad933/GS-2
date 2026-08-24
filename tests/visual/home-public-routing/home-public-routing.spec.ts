@@ -16,7 +16,7 @@ const homepageRoutes = [
     section: '#solutions-universe',
     label: 'استكشف جميع الحلول',
     path: '/solutions',
-    focus: '#gsdw-entry-title',
+    focus: '.integrated-public-page--solutions',
     activeNavigation: '.hero-nav__links a[href="/solutions"]',
   },
   {
@@ -152,7 +152,7 @@ test('Homepage interactions remain functional across Hero, S02, S03, and S04', a
     await page.getByRole('button', { name: action, exact: true }).click();
   }
   await page.getByLabel('طلبك المختصر', { exact: true }).fill('طلب توضيحي لمسار البداية');
-  await page.getByRole('button', { name: 'إرسال الطلب إلى الملخّص', exact: true }).click();
+  await page.getByRole('button', { name: 'جهّز الملخّص', exact: true }).click();
   await expect(hero).toHaveAttribute('data-stage', 'launch');
   await expect(hero).toContainText('لن يُرسل شيء تلقائيًا');
   await expect(hero).not.toContainText('فتح رسالة المشروع');
