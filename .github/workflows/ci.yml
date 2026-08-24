@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - integration/gs-final-assembled-g58-r1
       - codex/implement-visual-reconstruction-for-homepage
       - controller/gs-home-w05-v2-visual-authority
   push:
