@@ -10,7 +10,7 @@ export function Home() {
   return (
     <main
       dir="rtl"
-      className="relative min-h-screen w-full overflow-hidden bg-mineral-50 text-navy-900">
+      className="gs-home relative min-h-screen w-full overflow-hidden bg-mineral-50 text-navy-900">
       
       <HeroNav />
       <LivingSystemHero />

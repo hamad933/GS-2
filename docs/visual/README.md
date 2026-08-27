@@ -2,6 +2,10 @@
 
 This file records stable implementation boundaries for future authorized visual work. It does not authorize design or implementation by itself.
 
+## W05 visual authority
+
+[`GS_HOMEPAGE_VISUAL_MASTER_V1.png`](./GS_HOMEPAGE_VISUAL_MASTER_V1.png) is the owner-approved visual contract governing W05 homepage art direction. Its image-generated copy and data are not factual product content; functional and product truth remain governed separately.
+
 ## Homepage blueprint
 
 Future bounded homepage work uses this structure:

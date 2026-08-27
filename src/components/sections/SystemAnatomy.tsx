@@ -1,11 +1,11 @@
 import { useState } from 'react';
 
 const layers = [
-  { id: 'experience', index: '01', title: 'التجربة', role: 'السطح الذي يراه الناس ويتحركون خلاله بوضوح.' },
-  { id: 'operations', index: '02', title: 'التشغيل', role: 'المسارات التي تنظّم العمل وتحوّل الإجراء إلى خطوة قابلة للمتابعة.' },
-  { id: 'data', index: '03', title: 'البيانات', role: 'المعلومات التي تنتقل بين التجربة والعمل وتبقي السياق متصلاً.' },
-  { id: 'integrations', index: '04', title: 'نقاط الربط', role: 'المواضع المحددة التي يمكن أن تصل النظام بخدماته المحيطة عند الحاجة.' },
-  { id: 'architecture', index: '05', title: 'البنية', role: 'الأساس المنظّم الذي يحمل أجزاء النظام ويحدد علاقتها ببعضها.' },
+  { id: 'discovery', index: '01', title: 'الاكتشاف', role: 'نفهم الاحتياج والسياق والقيود قبل أن نرسم شكل الحل.' },
+  { id: 'direction', index: '02', title: 'الاتجاه', role: 'نحوّل ما تعلّمناه إلى قرار واضح وبنية يمكن البناء عليها.' },
+  { id: 'build', index: '03', title: 'البناء', role: 'تتشكّل الواجهات والمكوّنات والمسارات كمنتج واحد متماسك.' },
+  { id: 'integration', index: '04', title: 'التكامل', role: 'تلتقي أجزاء التجربة مع التشغيل ونقاط الربط اللازمة.' },
+  { id: 'launch', index: '05', title: 'الإطلاق والنمو', role: 'نطلق أساسًا منظمًا يمكن تطويره مع تغيّر العمل.' },
 ];
 
 export function SystemAnatomy() {
@@ -14,9 +14,9 @@ export function SystemAnatomy() {
   return (
     <section id="system-anatomy" className="system-anatomy" aria-labelledby="anatomy-title" data-active={active.id}>
       <header className="anatomy-heading">
-        <p><span>04</span> تشريح النظام</p>
-        <h2 id="anatomy-title">ما يظهر على السطح<br />تحمله منظومة كاملة.</h2>
-        <p>نفتح المنتج إلى طبقاته المترابطة؛ كل طبقة تؤدي دوراً، ولا تعمل بمعزل عن التي تليها.</p>
+        <p><span>04</span> كيف نبني الأنظمة الرقمية</p>
+        <h2 id="anatomy-title">المنتج الجيد<br />منظومة مترابطة.</h2>
+        <p>نفتح النظام إلى مستوياته؛ كل مستوى يضيف وضوحًا ويحافظ على صلته بما قبله وما بعده.</p>
       </header>
       <div className="anatomy-field">
         <div className="anatomy-spine" aria-hidden="true"><i /><i /><i /><i /><i /></div>

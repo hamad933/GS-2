@@ -13,7 +13,7 @@ export function Footer() {
                 GS
               </div>
               <div>
-                <span className="font-kufi text-base font-bold text-white block leading-tight">General Solutions</span>
+                <span className="font-kufi text-base font-bold text-white block leading-tight">الحلول العامة</span>
                 <span className="text-[10px] text-bronze-300 font-semibold">حلول رقمية تُبنى بإتقان</span>
               </div>
             </div>

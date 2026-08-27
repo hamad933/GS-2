@@ -10,7 +10,7 @@ export function HeroNav() {
       <div className="flex items-center gap-3">
         <LogoMark />
         <div className="text-right leading-none">
-          <p className="font-kufi text-[15px] font-semibold text-navy-900">General Solutions</p>
+          <p className="font-kufi text-[15px] font-semibold text-navy-900">الحلول العامة</p>
           <p className="mt-1 text-[11px] text-navy-900/45">حلول رقمية تُبنى بإتقان</p>
         </div>
       </div>
